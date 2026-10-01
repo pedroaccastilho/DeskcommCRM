@@ -40,6 +40,8 @@ import {
   useRemarcarAgendamento,
 } from "@/hooks/agenda/useRemarcarAgendamento";
 import { useClinicaEu } from "@/components/clinica/ProntuarioDoPaciente";
+import { LegendaDasModalidades, useCoresDaAgenda } from "@/components/clinica/LegendaDasModalidades";
+import { corDaModalidade, modalidadeDoTipo } from "@/lib/clinica/cores-da-agenda";
 import { usePessoasDaAgenda } from "@/hooks/agenda/usePessoasDaAgenda";
 import { CalendarPlus, CaretLeft, CaretRight } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
@@ -429,9 +431,22 @@ export function AgendaClient({
   // histórico, que lê `agendamentos` (cheio) e o separa sozinha em `separar()`.
   // Mesma fonte, dois recortes: a grade responde "o que está de pé", o
   // histórico responde "o que aconteceu", cancelado incluso.
+  // Módulo clínica (fork TOQ): com o módulo instalado, a grade pode ser pintada pela
+  // MODALIDADE do atendimento em vez da pessoa — é o que a recepção lê primeiro. A
+  // escolha é de quem olha e fica no navegador; sem o módulo, nada muda.
+  const [coresDaAgenda, setCoresDaAgenda] = useCoresDaAgenda();
+  const pintaPorModalidade = clinica.data?.instalado === true && coresDaAgenda === "modalidade";
+
   const agendamentosDaGrade = React.useMemo(
-    () => agendamentos.filter((a) => a.situacao !== "cancelled"),
-    [agendamentos],
+    () =>
+      agendamentos
+        .filter((a) => a.situacao !== "cancelled")
+        .map((a) =>
+          pintaPorModalidade && a.origem !== "google_sync"
+            ? { ...a, corDoBloco: corDaModalidade(modalidadeDoTipo(a.tipo ?? a.titulo)) }
+            : a,
+        ),
+    [agendamentos, pintaPorModalidade],
   );
 
   /**
@@ -603,6 +618,33 @@ export function AgendaClient({
             alternador de visão em silêncio. */}
         <div className="flex flex-wrap items-center gap-3">
           <FiltroDePessoas pessoas={pessoas} isolada={isolada} onIsolar={setIsolada} />
+          {clinica.data?.instalado === true && (
+            <div
+              data-testid="alternador-de-cores"
+              role="group"
+              aria-label={t("Cores da agenda")}
+              className="flex items-center gap-0.5 rounded-md border border-border bg-surface p-0.5"
+            >
+              {(["modalidade", "profissional"] as const).map((modo) => (
+                <button
+                  key={modo}
+                  type="button"
+                  data-testid={`cores-${modo}`}
+                  aria-pressed={coresDaAgenda === modo}
+                  onClick={() => setCoresDaAgenda(modo)}
+                  className={cn(
+                    "rounded-sm px-2.5 py-1 text-xs transition-colors duration-fast ease-out",
+                    "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500",
+                    coresDaAgenda === modo
+                      ? "bg-accent-soft font-semibold text-text"
+                      : "text-text-muted hover:text-text",
+                  )}
+                >
+                  {modo === "modalidade" ? t("Modalidade") : t("Profissional")}
+                </button>
+              ))}
+            </div>
+          )}
           <div
             data-testid="alternador-de-visao"
             className="flex items-center gap-0.5 rounded-md border border-border bg-surface p-0.5"
@@ -1160,6 +1202,7 @@ export function AgendaClient({
           remarca. Toda a fiação (a consulta de horários da janela desenhada, a
           proposta de remarcação, o otimismo com volta atrás) mora em
           `AgendaInterativa`; aqui fica só o que esta tela já sabia. */}
+      {pintaPorModalidade && <LegendaDasModalidades />}
       <AgendaInterativa
         fuso={fusoDaAgenda}
         visao={visao}

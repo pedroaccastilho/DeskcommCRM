@@ -35,7 +35,12 @@ export function corDaTrilha(trilha: TrilhaDeCor): string {
  * mantém o contraste do texto previsível nos dois temas.
  */
 export function fundoDaTrilha(trilha: TrilhaDeCor, porcento = 12): string {
-  return `color-mix(in oklab, ${corDaTrilha(trilha)} ${porcento}%, var(--color-surface))`;
+  return fundoDaCor(corDaTrilha(trilha), porcento);
+}
+
+/** O mesmo fundo, para uma cor que não é trilha (`Agendamento.corDoBloco`). */
+export function fundoDaCor(cor: string, porcento = 12): string {
+  return `color-mix(in oklab, ${cor} ${porcento}%, var(--color-surface))`;
 }
 
 /**

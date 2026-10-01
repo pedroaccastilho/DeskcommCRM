@@ -214,6 +214,16 @@
   --agenda-pessoa-6: #608bda;   /* índigo */
   --agenda-pessoa-7: #7b5bad;   /* violeta */
   --agenda-pessoa-8: #cc77b1;   /* framboesa */
+  /* ---- Agenda · cor de MODALIDADE (módulo clínica) ---------------------
+   * Alternativa à cor de pessoa, ligada pelo alternador "Cores" da Agenda
+   * quando o módulo clínica está instalado. Fora da faixa da Sage (113-165)
+   * como as trilhas; quem atende continua visível pela inicial no bloco.
+   */
+  --agenda-modalidade-fisioterapia: #1d6fa3;  /* azul */
+  --agenda-modalidade-pilates: #c2652a;       /* laranja */
+  --agenda-modalidade-medicina: #6a4fa8;      /* violeta */
+  --agenda-modalidade-enfermagem: #b3446c;    /* framboesa */
+  --agenda-modalidade-outra: #7d786c;         /* greige */
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -324,6 +334,16 @@
   --agenda-pessoa-6: #608bda;   /* índigo */
   --agenda-pessoa-7: #7b5bad;   /* violeta */
   --agenda-pessoa-8: #cc77b1;   /* framboesa */
+  /* ---- Agenda · cor de MODALIDADE (módulo clínica) ---------------------
+   * Alternativa à cor de pessoa, ligada pelo alternador "Cores" da Agenda
+   * quando o módulo clínica está instalado. Fora da faixa da Sage (113-165)
+   * como as trilhas; quem atende continua visível pela inicial no bloco.
+   */
+  --agenda-modalidade-fisioterapia: #1d6fa3;  /* azul */
+  --agenda-modalidade-pilates: #c2652a;       /* laranja */
+  --agenda-modalidade-medicina: #6a4fa8;      /* violeta */
+  --agenda-modalidade-enfermagem: #b3446c;    /* framboesa */
+  --agenda-modalidade-outra: #7d786c;         /* greige */
 }
 
 [data-theme="dark"] {
@@ -424,6 +444,11 @@
   --agenda-pessoa-6: #6c97e7;
   --agenda-pessoa-7: #be9ef6;
   --agenda-pessoa-8: #cc77b1;
+  --agenda-modalidade-fisioterapia: #5aa9dc;
+  --agenda-modalidade-pilates: #e08a52;
+  --agenda-modalidade-medicina: #a58be0;
+  --agenda-modalidade-enfermagem: #e07aa0;
+  --agenda-modalidade-outra: #a9a395;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

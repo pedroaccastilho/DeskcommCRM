@@ -75,6 +75,10 @@ unset $(git rev-parse --local-env-vars)
 export GIT_CEILING_DIRECTORIES="$TMP"
 export GIT_AUTHOR_NAME="Teste" GIT_AUTHOR_EMAIL="teste@exemplo.invalid"
 export GIT_COMMITTER_NAME="Teste" GIT_COMMITTER_EMAIL="teste@exemplo.invalid"
+# O gate lê o número do PR de quem roda em GITHUB_REF (refs/pull/N/merge). Herdado do CI,
+# ele vazava para os cenários: no PR #8 de verdade, o "#8" falso do caso 18 virava "o seu"
+# e saía da conta. Os cenários dizem por conta própria qual PR é de quem roda.
+unset GITHUB_REF
 
 # ── gh FALSO, para TODOS os casos: sem rede e sem depender do gh de quem roda ──────────
 # Ele HONRA o contrato da chamada real — se ignorasse os argumentos, trocar `--state open`

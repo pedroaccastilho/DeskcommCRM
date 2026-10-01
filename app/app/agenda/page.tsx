@@ -52,6 +52,14 @@ function contatoDoEmbed(c: ContatoNomeavel | ContatoNomeavel[] | null): string |
   return nomeDoContato(Array.isArray(c) ? (c[0] ?? null) : c) ?? undefined;
 }
 
+/** O embed do tipo vem objeto ou array conforme o gerador de tipos — o mesmo caso de cima. */
+function nomeDoTipoDoEmbed(
+  t: { name: string | null } | Array<{ name: string | null }> | null,
+): string | undefined {
+  const linha = Array.isArray(t) ? (t[0] ?? null) : t;
+  return linha?.name ?? undefined;
+}
+
 export default async function AgendaPage() {
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
@@ -138,7 +146,7 @@ export default async function AgendaPage() {
     supabase
       .from("calendar_appointments")
       .select(
-        "id, revision, title, starts_at, ends_at, status, owner_user_id, contact_id, event_type_id, location_kind, contacts(name, display_name)",
+        "id, revision, title, starts_at, ends_at, status, owner_user_id, contact_id, event_type_id, location_kind, contacts(name, display_name), calendar_event_types(name)",
       )
       .eq("organization_id", activeOrg.orgId)
       .gte("starts_at", inicio.toISOString())
@@ -315,6 +323,10 @@ export default async function AgendaPage() {
           // são reescritas pelo cascade de LGPD, então nenhuma vaza titular
           // anonimizado.
           quemSeraAtendido: contatoDoEmbed(a.contacts),
+          // O NOME do tipo, inclusive de tipo já desativado (o embed não passa
+          // pelo filtro `is_active` da lista de cima). Quem lê é a cor de
+          // modalidade do módulo clínica (`lib/clinica/cores-da-agenda.ts`).
+          tipo: nomeDoTipoDoEmbed(a.calendar_event_types),
         })) as AgendamentoDaTela[]
       ).concat(
         /**
