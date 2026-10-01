@@ -1,7 +1,13 @@
 /** Validação (Zod) do que entra pelas rotas do módulo clínica. */
 import { z } from "zod";
 
-import { CONSELHOS, MODALIDADES, TIPOS_DE_REGISTRO, UFS } from "@/lib/clinica/vocabulario";
+import {
+  CONSELHOS,
+  MODALIDADES,
+  TIPOS_DE_REGISTRO,
+  UFS,
+  camposObrigatoriosFaltando,
+} from "@/lib/clinica/vocabulario";
 
 export const profissionalSchema = z.object({
   nome_profissional: z.string().trim().min(2).max(200),
@@ -33,4 +39,14 @@ export const criarRegistroSchema = z
   })
   .refine((v) => (v.tipo === "adendo") === Boolean(v.adendo_de), {
     message: "Adendo precisa apontar o registro original, e só adendo aponta um.",
+  })
+  .superRefine((v, ctx) => {
+    const faltando = camposObrigatoriosFaltando(v.modalidade, v.tipo, v.conteudo);
+    if (faltando.length > 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["conteudo"],
+        message: `Preencha antes de assinar: ${faltando.join(", ")}.`,
+      });
+    }
   });
