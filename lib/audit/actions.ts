@@ -632,6 +632,11 @@ export const AUDIT_ACTIONS = [
   "honorarios.contrato_criado",
   "honorarios.parcela_criada",
   "honorarios.parcela_paga",
+  // Módulo opcional clínica (fork TOQ, migration 9001). O registro clínico em si é a própria
+  // prova (imutável, assinado); a auditoria guarda só o fato, nunca o conteúdo.
+  "clinica.profissional_cadastrado",
+  "clinica.profissional_alterado",
+  "prontuario.registro_assinado",
   "fidelidade.ponto_dado",
   "fidelidade.ponto_resgatado",
   "financeiro.recorrencia_gerada",

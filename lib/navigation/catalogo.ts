@@ -382,6 +382,19 @@ export const NAV_CATALOG = [
     // na navegação" — a porta existia, era outra.
   },
   {
+    // Módulo opcional clínica (fork TOQ, ADR-0002): a porta só existe depois que o
+    // administrador da instalação instala `clinica` em `/admin/modulos`. Quem é
+    // profissional de saúde é configuração do NEGÓCIO, por isso mora em "Sua empresa".
+    href: "/app/settings/tenant/clinica",
+    label: "Profissionais de saúde",
+    description: "Quem atende na clínica, com conselho e registro, e pode assinar o prontuário.",
+    icon: "ClipboardText",
+    group: "organizacao",
+    section: "Sua empresa",
+    minRole: "admin",
+    modulo: "clinica",
+  },
+  {
     href: "/app/settings/tenant/proposals",
     label: "Propostas",
     description: "Configure a validade padrão e condições para propostas comerciais.",
