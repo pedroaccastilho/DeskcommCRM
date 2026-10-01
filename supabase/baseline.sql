@@ -44377,161 +44377,6 @@ notify pgrst, 'reload schema';
 -- Nenhuma ferramenta do agente lê estas tabelas. O motor usa o service_role, que passa por fora
 -- da RLS, então a garantia é não existir ferramenta — vigiada por invariante próprio.
 
--- ---- a régua única das policies do prontuário ----
---
--- PL/pgSQL e não SQL: compila sem a tabela existir (ADR-0002 D7). `security definer` porque
--- precisa ler `clinica_profissionais` e `user_organizations` independentemente da RLS de quem
--- consulta; o único efeito é responder sobre o próprio `auth.uid()`.
-create or replace function public.fn_clinica_e_profissional(p_org uuid)
-returns boolean
-language plpgsql
-stable
-security definer
-set search_path = public, pg_temp
-as $f$
-begin
-  if auth.uid() is null or p_org is null then
-    return false;
-  end if;
-  if coalesce(public.fn_support_context() ->> 'status', '') = 'active' then
-    return false;
-  end if;
-  if to_regclass('public.clinica_profissionais') is null then
-    return false;
-  end if;
-  return exists (
-    select 1
-      from public.clinica_profissionais p
-      join public.user_organizations uo
-        on uo.user_id = p.user_id
-       and uo.organization_id = p.organization_id
-       and uo.revoked_at is null
-     where p.organization_id = p_org
-       and p.user_id = auth.uid()
-       and p.ativo
-  );
-end;
-$f$;
-
-revoke execute on function public.fn_clinica_e_profissional(uuid) from public, anon;
-grant execute on function public.fn_clinica_e_profissional(uuid) to authenticated, service_role;
-
--- ---- carimbo e integridade do registro clínico (gatilho BEFORE INSERT) ----
---
--- `security definer` porque confere contato e compromisso pela organização, sem depender do
--- escopo de visualização de quem escreve (um profissional `agent` pode não enxergar o contato
--- pela RLS de contatos e, mesmo assim, atendê-lo). Sem parâmetro: só roda como gatilho.
-create or replace function public.fn_prontuario_carimbar_registro()
-returns trigger
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $f$
-declare
-  v_prof record;
-  v_orig record;
-begin
-  new.assinado_em := now();
-  new.created_at := now();
-
-  if not exists (
-    select 1 from public.contacts c
-     where c.id = new.contact_id and c.organization_id = new.organization_id
-  ) then
-    raise exception 'prontuario_contato_de_outra_organizacao' using errcode = '22023';
-  end if;
-
-  if new.appointment_id is not null and not exists (
-    select 1 from public.calendar_appointments a
-     where a.id = new.appointment_id
-       and a.organization_id = new.organization_id
-       and a.contact_id = new.contact_id
-  ) then
-    raise exception 'prontuario_compromisso_nao_e_do_paciente' using errcode = '22023';
-  end if;
-
-  if new.adendo_de is not null then
-    select r.organization_id, r.contact_id into v_orig
-      from public.prontuario_registros r
-     where r.id = new.adendo_de;
-    if not found
-       or v_orig.organization_id <> new.organization_id
-       or v_orig.contact_id <> new.contact_id then
-      raise exception 'prontuario_adendo_de_outro_paciente' using errcode = '22023';
-    end if;
-  end if;
-
-  -- Sessão de usuário: a assinatura é a do cadastro de quem está logado, sempre.
-  if auth.uid() is not null then
-    if new.autor_user_id is distinct from auth.uid() then
-      raise exception 'prontuario_autor_nao_e_quem_assina' using errcode = '42501';
-    end if;
-    select p.nome_profissional, p.conselho, p.registro_numero, p.registro_uf, p.modalidades
-      into v_prof
-      from public.clinica_profissionais p
-     where p.organization_id = new.organization_id
-       and p.user_id = auth.uid()
-       and p.ativo;
-    if not found then
-      raise exception 'prontuario_sem_cadastro_de_profissional' using errcode = '42501';
-    end if;
-    if not (new.modalidade = any (v_prof.modalidades)) then
-      raise exception 'prontuario_modalidade_fora_do_cadastro' using errcode = '42501';
-    end if;
-    new.autor_nome := v_prof.nome_profissional;
-    new.autor_registro := v_prof.conselho || '-' || v_prof.registro_uf || ' ' || v_prof.registro_numero;
-  end if;
-
-  return new;
-end;
-$f$;
-
-revoke execute on function public.fn_prontuario_carimbar_registro() from public, anon, authenticated;
-
--- ---- registro assinado é imutável (gatilho BEFORE UPDATE / BEFORE DELETE) ----
---
--- Vale para TODO papel, service_role e dono inclusive: a RLS sozinha não alcança quem passa
--- por fora dela. A única remoção aceita é a cascata da organização excluída — quando o
--- gatilho do filho roda, a linha da organização já não existe.
-create or replace function public.fn_prontuario_registro_imutavel()
-returns trigger
-language plpgsql
-set search_path = public, pg_temp
-as $f$
-begin
-  if tg_op = 'DELETE' then
-    if not exists (select 1 from public.organizations o where o.id = old.organization_id) then
-      return old;
-    end if;
-    raise exception 'prontuario_registro_imutavel' using
-      errcode = '42501',
-      hint = 'Registro assinado não se apaga. Para corrigir, crie um adendo.';
-  end if;
-  raise exception 'prontuario_registro_imutavel' using
-    errcode = '42501',
-    hint = 'Registro assinado não se edita. Para corrigir, crie um adendo.';
-end;
-$f$;
-
-revoke execute on function public.fn_prontuario_registro_imutavel() from public, anon, authenticated;
-
--- ---- carimbo do acesso (gatilho BEFORE INSERT) ----
-create or replace function public.fn_prontuario_carimbar_acesso()
-returns trigger
-language plpgsql
-set search_path = public, pg_temp
-as $f$
-begin
-  new.acessado_em := now();
-  if auth.uid() is not null then
-    new.user_id := auth.uid();
-  end if;
-  return new;
-end;
-$f$;
-
-revoke execute on function public.fn_prontuario_carimbar_acesso() from public, anon, authenticated;
-
 -- ---- a provisionadora (ADR-0002 D2/D4/D5) ----
 create or replace function public.fn_clinica_provisionar()
 returns void
@@ -44723,6 +44568,161 @@ $f$;
 -- D4: as DUAS origens de EXECUTE.
 revoke execute on function public.fn_clinica_provisionar() from public, anon, authenticated;
 grant execute on function public.fn_clinica_provisionar() to service_role;
+
+-- ---- a régua única das policies do prontuário ----
+--
+-- PL/pgSQL e não SQL: compila sem a tabela existir (ADR-0002 D7). `security definer` porque
+-- precisa ler `clinica_profissionais` e `user_organizations` independentemente da RLS de quem
+-- consulta; o único efeito é responder sobre o próprio `auth.uid()`.
+create or replace function public.fn_clinica_e_profissional(p_org uuid)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $f$
+begin
+  if auth.uid() is null or p_org is null then
+    return false;
+  end if;
+  if coalesce(public.fn_support_context() ->> 'status', '') = 'active' then
+    return false;
+  end if;
+  if to_regclass('public.clinica_profissionais') is null then
+    return false;
+  end if;
+  return exists (
+    select 1
+      from public.clinica_profissionais p
+      join public.user_organizations uo
+        on uo.user_id = p.user_id
+       and uo.organization_id = p.organization_id
+       and uo.revoked_at is null
+     where p.organization_id = p_org
+       and p.user_id = auth.uid()
+       and p.ativo
+  );
+end;
+$f$;
+
+revoke execute on function public.fn_clinica_e_profissional(uuid) from public, anon;
+grant execute on function public.fn_clinica_e_profissional(uuid) to authenticated, service_role;
+
+-- ---- carimbo e integridade do registro clínico (gatilho BEFORE INSERT) ----
+--
+-- `security definer` porque confere contato e compromisso pela organização, sem depender do
+-- escopo de visualização de quem escreve (um profissional `agent` pode não enxergar o contato
+-- pela RLS de contatos e, mesmo assim, atendê-lo). Sem parâmetro: só roda como gatilho.
+create or replace function public.fn_prontuario_carimbar_registro()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $f$
+declare
+  v_prof record;
+  v_orig record;
+begin
+  new.assinado_em := now();
+  new.created_at := now();
+
+  if not exists (
+    select 1 from public.contacts c
+     where c.id = new.contact_id and c.organization_id = new.organization_id
+  ) then
+    raise exception 'prontuario_contato_de_outra_organizacao' using errcode = '22023';
+  end if;
+
+  if new.appointment_id is not null and not exists (
+    select 1 from public.calendar_appointments a
+     where a.id = new.appointment_id
+       and a.organization_id = new.organization_id
+       and a.contact_id = new.contact_id
+  ) then
+    raise exception 'prontuario_compromisso_nao_e_do_paciente' using errcode = '22023';
+  end if;
+
+  if new.adendo_de is not null then
+    select r.organization_id, r.contact_id into v_orig
+      from public.prontuario_registros r
+     where r.id = new.adendo_de;
+    if not found
+       or v_orig.organization_id <> new.organization_id
+       or v_orig.contact_id <> new.contact_id then
+      raise exception 'prontuario_adendo_de_outro_paciente' using errcode = '22023';
+    end if;
+  end if;
+
+  -- Sessão de usuário: a assinatura é a do cadastro de quem está logado, sempre.
+  if auth.uid() is not null then
+    if new.autor_user_id is distinct from auth.uid() then
+      raise exception 'prontuario_autor_nao_e_quem_assina' using errcode = '42501';
+    end if;
+    select p.nome_profissional, p.conselho, p.registro_numero, p.registro_uf, p.modalidades
+      into v_prof
+      from public.clinica_profissionais p
+     where p.organization_id = new.organization_id
+       and p.user_id = auth.uid()
+       and p.ativo;
+    if not found then
+      raise exception 'prontuario_sem_cadastro_de_profissional' using errcode = '42501';
+    end if;
+    if not (new.modalidade = any (v_prof.modalidades)) then
+      raise exception 'prontuario_modalidade_fora_do_cadastro' using errcode = '42501';
+    end if;
+    new.autor_nome := v_prof.nome_profissional;
+    new.autor_registro := v_prof.conselho || '-' || v_prof.registro_uf || ' ' || v_prof.registro_numero;
+  end if;
+
+  return new;
+end;
+$f$;
+
+revoke execute on function public.fn_prontuario_carimbar_registro() from public, anon, authenticated;
+
+-- ---- registro assinado é imutável (gatilho BEFORE UPDATE / BEFORE DELETE) ----
+--
+-- Vale para TODO papel, service_role e dono inclusive: a RLS sozinha não alcança quem passa
+-- por fora dela. A única remoção aceita é a cascata da organização excluída — quando o
+-- gatilho do filho roda, a linha da organização já não existe.
+create or replace function public.fn_prontuario_registro_imutavel()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $f$
+begin
+  if tg_op = 'DELETE' then
+    if not exists (select 1 from public.organizations o where o.id = old.organization_id) then
+      return old;
+    end if;
+    raise exception 'prontuario_registro_imutavel' using
+      errcode = '42501',
+      hint = 'Registro assinado não se apaga. Para corrigir, crie um adendo.';
+  end if;
+  raise exception 'prontuario_registro_imutavel' using
+    errcode = '42501',
+    hint = 'Registro assinado não se edita. Para corrigir, crie um adendo.';
+end;
+$f$;
+
+revoke execute on function public.fn_prontuario_registro_imutavel() from public, anon, authenticated;
+
+-- ---- carimbo do acesso (gatilho BEFORE INSERT) ----
+create or replace function public.fn_prontuario_carimbar_acesso()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $f$
+begin
+  new.acessado_em := now();
+  if auth.uid() is not null then
+    new.user_id := auth.uid();
+  end if;
+  return new;
+end;
+$f$;
+
+revoke execute on function public.fn_prontuario_carimbar_acesso() from public, anon, authenticated;
 
 -- ---- VARREDURA anon: função nova nasce exposta em quem ATUALIZA (migration 0116) ----
 --
