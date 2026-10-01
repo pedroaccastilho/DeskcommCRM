@@ -21,6 +21,8 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 const DIAS_DA_JANELA = 30;
+/** Regra da clínica: evolução no mesmo dia; passadas 24h da sessão, a pendência está atrasada. */
+const HORAS_ATE_ATRASAR = 24;
 
 type Sessao = {
   id: string;
@@ -98,6 +100,7 @@ export async function GET(): Promise<Response> {
       titulo: s.title,
       comeca: s.starts_at,
       situacao: s.status,
+      atrasada: agora.getTime() - new Date(s.starts_at).getTime() > HORAS_ATE_ATRASAR * 3_600_000,
       contact_id: s.contact_id,
       contato: s.contacts,
     }));

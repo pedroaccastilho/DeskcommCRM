@@ -20,12 +20,20 @@ import { apiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/types";
 import {
   MODALIDADES,
-  MODELO_DA_MODALIDADE,
   ROTULO_DA_MODALIDADE,
   ROTULO_DO_TIPO,
+  camposObrigatoriosFaltando,
+  camposParaMostrar,
+  modeloDoRegistro,
+  type CampoDoModelo,
   type Modalidade,
   type TipoDeRegistro,
 } from "@/lib/clinica/vocabulario";
+
+/** O valor como aparece na tela: opção vira o rótulo dela; o resto, o texto gravado. */
+function valorParaMostrar(c: CampoDoModelo, v: string | number): string {
+  return c.opcoes?.find((o) => o.valor === v)?.rotulo ?? String(v);
+}
 
 type Registro = {
   id: string;
@@ -51,6 +59,8 @@ export type Pendencia = {
   titulo: string;
   comeca: string;
   situacao: string;
+  /** Passaram mais de 24h da sessão sem evolução. */
+  atrasada: boolean;
   contact_id: string;
   contato: { name: string | null; display_name: string | null; phone_number: string | null } | null;
 };
@@ -185,13 +195,15 @@ export function ProntuarioDoPaciente({
                   </p>
                 ) : null}
                 <dl className="mt-3 grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
-                  {MODELO_DA_MODALIDADE[r.modalidade]
+                  {camposParaMostrar(r.modalidade, r.tipo)
                     .filter((c) => r.conteudo[c.chave] !== undefined && r.conteudo[c.chave] !== "")
                     .map((c) => (
                       <div key={c.chave}>
                         <dt className="text-xs text-text-muted uppercase">{t(c.rotulo)}</dt>
                         <dd className="mt-0.5 whitespace-pre-wrap">
-                          {String(r.conteudo[c.chave])}
+                          {c.opcoes
+                            ? t(valorParaMostrar(c, r.conteudo[c.chave]!))
+                            : String(r.conteudo[c.chave])}
                         </dd>
                       </div>
                     ))}
@@ -245,7 +257,7 @@ function FormularioDeRegistro({
   const sessaoVinculada = pendencias.data?.find((p) => p.appointment_id === sessao);
 
   const modalidade = adendoDe ? adendoDe.modalidade : modalidadeEscolhida;
-  const campos = adendoDe ? [] : MODELO_DA_MODALIDADE[modalidade];
+  const campos = adendoDe ? [] : modeloDoRegistro(modalidade, tipo);
 
   const assinar = useMutation({
     mutationFn: () => {
@@ -279,6 +291,8 @@ function FormularioDeRegistro({
 
   const algoPreenchido =
     texto.trim() !== "" || Object.values(conteudo).some((v) => v.trim() !== "");
+  const faltando = adendoDe ? [] : camposObrigatoriosFaltando(modalidade, tipo, conteudo);
+  const podeAssinar = algoPreenchido && faltando.length === 0;
   const campo = "rounded-md border border-border bg-surface-elevated p-2 text-sm text-text";
 
   return (
@@ -287,7 +301,7 @@ function FormularioDeRegistro({
         className="flex flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
-          if (algoPreenchido && !assinar.isPending) assinar.mutate();
+          if (podeAssinar && !assinar.isPending) assinar.mutate();
         }}
       >
         {adendoDe ? (
@@ -326,7 +340,10 @@ function FormularioDeRegistro({
               <select
                 value={tipo}
                 data-testid="registro-tipo"
-                onChange={(e) => setTipo(e.target.value as TipoDeRegistro)}
+                onChange={(e) => {
+                  setTipo(e.target.value as TipoDeRegistro);
+                  setConteudo({});
+                }}
                 className={campo}
               >
                 {TIPOS_DO_FORMULARIO.map((x) => (
@@ -360,10 +377,28 @@ function FormularioDeRegistro({
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {campos.map((c) => (
               <label key={c.chave} className="flex flex-col gap-1 text-xs text-text-muted">
-                {t(c.rotulo)}
-                {c.tipo === "texto_longo" ? (
+                <span>
+                  {t(c.rotulo)}
+                  {c.obrigatorio ? <span aria-hidden> *</span> : null}
+                </span>
+                {c.tipo === "opcoes" ? (
+                  <select
+                    value={conteudo[c.chave] ?? ""}
+                    required={c.obrigatorio}
+                    onChange={(e) => setConteudo((v) => ({ ...v, [c.chave]: e.target.value }))}
+                    className={campo}
+                  >
+                    <option value="">{t("Escolha")}</option>
+                    {(c.opcoes ?? []).map((o) => (
+                      <option key={o.valor} value={o.valor}>
+                        {t(o.rotulo)}
+                      </option>
+                    ))}
+                  </select>
+                ) : c.tipo === "texto_longo" ? (
                   <textarea
                     rows={3}
+                    required={c.obrigatorio}
                     value={conteudo[c.chave] ?? ""}
                     onChange={(e) => setConteudo((v) => ({ ...v, [c.chave]: e.target.value }))}
                     className={campo}
@@ -398,15 +433,17 @@ function FormularioDeRegistro({
         <div className="flex flex-wrap items-center gap-3">
           <Button
             type="submit"
-            disabled={!algoPreenchido || assinar.isPending}
+            disabled={!podeAssinar || assinar.isPending}
             data-testid="assinar-registro"
           >
             {t("Assinar registro")}
           </Button>
           <span className="text-xs text-text-muted">
-            {t(
-              "Depois de assinado, o registro não pode ser editado; correções entram como adendo.",
-            )}
+            {faltando.length > 0 && algoPreenchido
+              ? `${t("Falta preencher")}: ${faltando.map((f) => t(f)).join(", ")}`
+              : t(
+                  "Depois de assinado, o registro não pode ser editado; correções entram como adendo.",
+                )}
           </span>
         </div>
       </form>
