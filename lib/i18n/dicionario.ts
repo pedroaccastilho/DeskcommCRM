@@ -13709,6 +13709,13 @@ export const DICIONARIO: Traducoes = {
   "Tudo o que se liga e desliga, se está ligado e onde se ajusta.": { es: "Todo lo que se activa y desactiva, si está activado y dónde se ajusta." },
   // clínica: prontuário e profissionais de saúde (fork TOQ)
   "Prontuário": { es: "Historia clínica" },
+  "Nenhuma evolução pendente. Tudo registrado.": { es: "Ninguna evolución pendiente. Todo registrado." },
+  "Registrar evolução": { es: "Registrar evolución" },
+  "Evoluções pendentes": { es: "Evoluciones pendientes" },
+  "Sessões que você atendeu nos últimos 30 dias e que ainda não têm registro no prontuário.": { es: "Sesiones que atendiste en los últimos 30 días y que aún no tienen registro en la historia clínica." },
+  "Sessões que você atendeu e ainda não têm registro no prontuário.": { es: "Sesiones que atendiste y que aún no tienen registro en la historia clínica." },
+  "Sessão da agenda": { es: "Sesión de la agenda" },
+  "Vinculado à sessão da agenda": { es: "Vinculado a la sesión de la agenda" },
   "Clínica (prontuário)": { es: "Clínica (historia clínica)" },
   "Prontuário dos pacientes, assinado pelos profissionais de saúde da clínica.": { es: "Historia clínica de los pacientes, firmada por los profesionales de salud de la clínica." },
   "Não foi possível carregar os profissionais.": { es: "No se pudo cargar a los profesionales." },

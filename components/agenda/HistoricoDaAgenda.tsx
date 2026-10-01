@@ -102,6 +102,7 @@ export function HistoricoDaAgenda({
   onRealizado,
   onFaltou,
   onConfirmar,
+  onRegistrarEvolucao,
   className,
 }: {
   agendamentos: Agendamento[];
@@ -136,6 +137,11 @@ export function HistoricoDaAgenda({
    * menos quem deveria.
    */
   onConfirmar?: (id: string) => void;
+  /**
+   * Módulo clínica (fork TOQ): sessão que já passou leva à evolução no prontuário. Só chega
+   * aqui quando o módulo está instalado e quem vê é profissional de saúde ativo.
+   */
+  onRegistrarEvolucao?: (id: string) => void;
   className?: string;
 }) {
   const localeDaData = useLocaleDeData();
@@ -301,6 +307,20 @@ export function HistoricoDaAgenda({
                         </Button>
                       </>
                     )}
+                    {aba === "passados" &&
+                      onRegistrarEvolucao &&
+                      a.situacao !== "cancelled" &&
+                      a.situacao !== "no_show" &&
+                      Boolean(a.quemSeraAtendido) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          data-testid={`registrar-evolucao-${a.id}`}
+                          onClick={() => onRegistrarEvolucao(a.id)}
+                        >
+                          {t("Registrar evolução")}
+                        </Button>
+                      )}
                     {aba === "passados" &&
                       a.situacao !== "completed" &&
                       a.situacao !== "no_show" && (

@@ -1115,6 +1115,11 @@ jobs:
       # posição na lista NÃO decide a ordem de execução — no job 108983924934
       # ela rodou em 39º de 77, e a parte inteira passou (77 passed). Medido:
       # 16,1 s de caso.
+      #
+      # `clinica-prontuario` entrou em 2026-10-01 (fork TOQ). Instala o módulo
+      # clínica, que também não se desfaz: a Agenda passa a perguntar
+      # `/api/v1/clinica/eu` e a ficha do contato ganha a aba Prontuário.
+      # Semeia paciente e sessão próprios pelo service role.
       SPECS_PARTE_5: >-
         extensoes-da-instalacao.spec.ts
         admin-credencial-google.spec.ts
@@ -1141,6 +1146,7 @@ jobs:
         buffer-ssr-caixa-orfa.spec.ts
         contadores-do-menu.spec.ts
         honorarios-instalar-e-pagar.spec.ts
+        clinica-prontuario.spec.ts
 
       # ─── PARTE 6 — nasceu em 2026-09-28, e o orçamento de 24 min a pediu ───
       #

@@ -185,6 +185,17 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    // Módulo opcional clínica (fork TOQ): o laço de volta da agenda. Sessão atendida sem
+    // registro no prontuário fica listada aqui até alguém assinar a evolução.
+    href: "/app/clinica/pendencias",
+    label: "Evoluções pendentes",
+    description: "Sessões que você atendeu e ainda não têm registro no prontuário.",
+    icon: "ListChecks",
+    group: "atendimento",
+    minRole: "viewer",
+    modulo: "clinica",
+  },
+  {
     // Renomeado de "Templates": estes são scripts do atendente, consumidos pelo
     // Composer do inbox. O nome "Templates" fica livre para os da Meta (HSM),
     // onde é o termo técnico correto.

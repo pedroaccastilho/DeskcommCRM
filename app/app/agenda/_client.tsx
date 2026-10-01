@@ -39,6 +39,7 @@ import {
   useRegistrarDesfecho,
   useRemarcarAgendamento,
 } from "@/hooks/agenda/useRemarcarAgendamento";
+import { useClinicaEu } from "@/components/clinica/ProntuarioDoPaciente";
 import { usePessoasDaAgenda } from "@/hooks/agenda/usePessoasDaAgenda";
 import { CalendarPlus, CaretLeft, CaretRight } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
@@ -201,6 +202,10 @@ export function AgendaClient({
   const [observacao, setObservacao] = React.useState("");
   const marcar = useMarcarAgendamento();
   const remarcar = useRemarcarAgendamento();
+  // Módulo clínica (fork TOQ): profissional de saúde ativo vê "Registrar evolução" nas sessões
+  // que já passaram. Sem o módulo, a pergunta volta `instalado: false` e nada muda na agenda.
+  const clinica = useClinicaEu();
+  const ehProfissional = Boolean(clinica.data?.profissional);
   const cancelar = useCancelarAgendamento();
   const desfecho = useRegistrarDesfecho();
   // ⚠️ ERA `tiposIniciais[0] ?? null` — uma constante, sem seletor em lugar
@@ -1125,6 +1130,9 @@ export function AgendaClient({
             revision: agendamentos.find((a) => a.id === id)?.revision,
             status: "no_show",
           })
+        }
+        onRegistrarEvolucao={
+          ehProfissional ? (id) => router.push(`/app/clinica/sessao/${id}`) : undefined
         }
       />
 

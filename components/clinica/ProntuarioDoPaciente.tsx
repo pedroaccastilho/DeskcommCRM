@@ -31,6 +31,7 @@ type Registro = {
   id: string;
   modalidade: Modalidade;
   tipo: TipoDeRegistro;
+  appointment_id: string | null;
   adendo_de: string | null;
   conteudo: Record<string, string | number>;
   texto: string | null;
@@ -44,6 +45,27 @@ type Eu = {
   profissional: { modalidades: Modalidade[]; nome_profissional: string } | null;
 };
 
+/** Uma sessão da agenda que já aconteceu e ainda não tem registro no prontuário. */
+export type Pendencia = {
+  appointment_id: string;
+  titulo: string;
+  comeca: string;
+  situacao: string;
+  contact_id: string;
+  contato: { name: string | null; display_name: string | null; phone_number: string | null } | null;
+};
+
+/** Evoluções pendentes de quem está logado (vazia para quem não é profissional ativo). */
+export function usePendencias(habilitado = true) {
+  return useQuery({
+    queryKey: ["clinica", "pendencias"],
+    queryFn: async () =>
+      (await apiClient.get<{ data: Pendencia[] }>("/api/v1/clinica/pendencias")).data,
+    enabled: habilitado,
+    retry: false,
+  });
+}
+
 /** Os tipos que se escolhem no formulário; adendo nasce do botão no registro original. */
 const TIPOS_DO_FORMULARIO: TipoDeRegistro[] = ["anamnese", "avaliacao", "evolucao", "alta"];
 
@@ -56,7 +78,14 @@ export function useClinicaEu() {
   });
 }
 
-export function ProntuarioDoPaciente({ contactId }: { contactId: string }) {
+export function ProntuarioDoPaciente({
+  contactId,
+  sessaoInicial,
+}: {
+  contactId: string;
+  /** Sessão da agenda vinda do atalho "Registrar evolução": já entra vinculada ao formulário. */
+  sessaoInicial?: string;
+}) {
   const t = useT();
   const tagDoIdioma = useTagDeIdioma();
   const eu = useClinicaEu();
@@ -100,6 +129,7 @@ export function ProntuarioDoPaciente({ contactId }: { contactId: string }) {
     <div className="flex flex-col gap-4">
       <FormularioDeRegistro
         contactId={contactId}
+        sessaoInicial={sessaoInicial}
         modalidades={profissional.modalidades}
         adendoDe={adendoDe}
         aoCancelarAdendo={() => setAdendoDe(null)}
@@ -141,6 +171,9 @@ export function ProntuarioDoPaciente({ contactId }: { contactId: string }) {
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary">{t(ROTULO_DA_MODALIDADE[r.modalidade])}</Badge>
                     <span className="text-sm font-medium">{t(ROTULO_DO_TIPO[r.tipo])}</span>
+                    {r.appointment_id ? (
+                      <Badge variant="outline">{t("Sessão da agenda")}</Badge>
+                    ) : null}
                   </div>
                   <span className="text-xs text-text-muted">
                     {new Date(r.assinado_em).toLocaleString(tagDoIdioma)}
@@ -185,12 +218,14 @@ export function ProntuarioDoPaciente({ contactId }: { contactId: string }) {
 
 function FormularioDeRegistro({
   contactId,
+  sessaoInicial,
   modalidades,
   adendoDe,
   aoCancelarAdendo,
   aoAssinar,
 }: {
   contactId: string;
+  sessaoInicial?: string;
   modalidades: Modalidade[];
   adendoDe: Registro | null;
   aoCancelarAdendo: () => void;
@@ -204,6 +239,10 @@ function FormularioDeRegistro({
   const [tipo, setTipo] = useState<TipoDeRegistro>("evolucao");
   const [conteudo, setConteudo] = useState<Record<string, string>>({});
   const [texto, setTexto] = useState("");
+  const [sessao, setSessao] = useState<string | null>(sessaoInicial ?? null);
+  const tagDoIdioma = useTagDeIdioma();
+  const pendencias = usePendencias(Boolean(sessao));
+  const sessaoVinculada = pendencias.data?.find((p) => p.appointment_id === sessao);
 
   const modalidade = adendoDe ? adendoDe.modalidade : modalidadeEscolhida;
   const campos = adendoDe ? [] : MODELO_DA_MODALIDADE[modalidade];
@@ -221,6 +260,7 @@ function FormularioDeRegistro({
         contact_id: contactId,
         modalidade,
         tipo: adendoDe ? "adendo" : tipo,
+        appointment_id: adendoDe ? null : sessao,
         adendo_de: adendoDe?.id ?? null,
         conteudo: preenchido,
         texto: texto.trim() || null,
@@ -229,8 +269,10 @@ function FormularioDeRegistro({
     onSuccess: () => {
       setConteudo({});
       setTexto("");
+      setSessao(null);
       aoAssinar();
       void qc.invalidateQueries({ queryKey: ["clinica", "prontuario", contactId] });
+      void qc.invalidateQueries({ queryKey: ["clinica", "pendencias"] });
     },
     onError: showApiError,
   });
@@ -296,6 +338,23 @@ function FormularioDeRegistro({
             </label>
           </div>
         )}
+
+        {sessao && !adendoDe ? (
+          <div
+            className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-surface-elevated px-3 py-2 text-xs"
+            data-testid="registro-sessao"
+          >
+            <span>
+              {t("Vinculado à sessão da agenda")}
+              {sessaoVinculada
+                ? ` · ${new Date(sessaoVinculada.comeca).toLocaleString(tagDoIdioma)}`
+                : ""}
+            </span>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setSessao(null)}>
+              {t("Desvincular")}
+            </Button>
+          </div>
+        ) : null}
 
         {campos.length > 0 ? (
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">

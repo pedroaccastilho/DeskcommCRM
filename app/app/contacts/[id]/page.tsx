@@ -7,8 +7,10 @@ export const dynamic = "force-dynamic";
 
 export default async function ContactDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ aba?: string; sessao?: string }>;
 }) {
   const user = await requireAuth();
   const activeOrg = await resolveActiveOrg(user);
@@ -26,5 +28,13 @@ export default async function ContactDetailPage({
     .eq("id", id)
     .maybeSingle();
   if (!contact) notFound();
-  return <ContactDetailClient contactId={id} />;
+  // Módulo clínica (fork TOQ): a agenda abre a ficha direto na aba Prontuário, com a sessão.
+  const { aba, sessao } = await searchParams;
+  return (
+    <ContactDetailClient
+      contactId={id}
+      abaInicial={aba === "prontuario" ? "prontuario" : undefined}
+      sessaoInicial={aba === "prontuario" ? sessao : undefined}
+    />
+  );
 }
