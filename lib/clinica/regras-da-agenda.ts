@@ -20,6 +20,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Actor, HandlerCtx } from "@/lib/api/handlers/types";
 import { ApiError } from "@/lib/api/types";
 import { audit } from "@/lib/audit";
+import { tagDeIdioma } from "@/lib/i18n/datas";
+import { IDIOMA_PADRAO } from "@/lib/i18n/idiomas";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -82,11 +84,14 @@ function especieDoAutor(actor: Actor): "user" | "ai" | "system" {
   return "system";
 }
 
-const FORMATO_DA_HORA = new Intl.DateTimeFormat("pt-BR", {
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "America/Sao_Paulo",
-});
+/** A hora no fuso da clínica e no idioma de quem chamou (MCP e webhook caem no padrão). */
+function horaParaQuemLe(instante: Date, ctx: HandlerCtx): string {
+  return new Intl.DateTimeFormat(tagDeIdioma(ctx.idioma ?? IDIOMA_PADRAO), {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  }).format(instante);
+}
 
 /**
  * ANTES de registrar o desfecho: "não compareceu" só depois da tolerância de atraso.
@@ -112,7 +117,7 @@ export async function antesDoDesfechoNaClinica(
       { falta_liberada_em: liberada.toISOString() },
       ctx.requestId,
       `O paciente ainda está dentro da tolerância de ${politica.tolerancia_atraso_minutos} minutos. ` +
-        `A falta pode ser registrada a partir das ${FORMATO_DA_HORA.format(liberada)}.`,
+        `A falta pode ser registrada a partir das ${horaParaQuemLe(liberada, ctx)}.`,
     );
   }
 }

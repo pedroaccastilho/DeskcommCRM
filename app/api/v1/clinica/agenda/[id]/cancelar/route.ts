@@ -55,6 +55,7 @@ export async function POST(
         organization_id: org,
         actor: { type: "user", id: authz.user.id, role: authz.org.role },
         requestId,
+        idioma: authz.user.idioma,
       },
       {
         id,
