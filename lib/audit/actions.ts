@@ -637,6 +637,7 @@ export const AUDIT_ACTIONS = [
   "clinica.profissional_cadastrado",
   "clinica.profissional_alterado",
   "prontuario.registro_assinado",
+  "prontuario.exportado",
   "fidelidade.ponto_dado",
   "fidelidade.ponto_resgatado",
   "financeiro.recorrencia_gerada",

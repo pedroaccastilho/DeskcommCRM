@@ -7,7 +7,9 @@
  *   3. uma sessão de ontem, com paciente, aparece em "Evoluções pendentes";
  *   4. "Registrar evolução" abre a ficha do paciente na aba Prontuário, já vinculada à sessão;
  *   5. a evolução assinada aparece na linha do tempo com a assinatura carimbada pelo banco;
- *   6. a sessão sai das pendências.
+ *   6. a sessão sai das pendências;
+ *   7. o prontuário sai em PDF pelo botão "Exportar PDF";
+ *   8. o administrador vê, na mesma ficha, quem abriu o prontuário.
  *
  * A sessão e o paciente são semeados pelo service role (marcar no passado não é caminho da
  * tela), com telefone único por rodada: registro assinado não se apaga, então a spec nunca
@@ -15,6 +17,7 @@
  *
  * ⚠️ Instalar é da INSTALAÇÃO e não se desfaz, como em `honorarios-instalar-e-pagar`.
  */
+import * as fs from "node:fs";
 import * as path from "node:path";
 
 import { createClient } from "@supabase/supabase-js";
@@ -178,5 +181,26 @@ test.describe("Prontuário: da sessão atendida à evolução assinada", () => {
     // E o caminho da agenda resolve o paciente pela sessão.
     await page.goto(`/app/clinica/sessao/${appointmentId}`);
     await expect(page).toHaveURL(new RegExp(`/app/contacts/${contactId}\\?aba=prontuario`));
+
+    // 7. Exportar o prontuário em PDF.
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByTestId("exportar-prontuario").click(),
+    ]);
+    expect(download.suggestedFilename()).toMatch(/^prontuario-\d{4}-\d{2}-\d{2}\.pdf$/);
+    const arquivo = path.join(EVIDENCIA, "4-prontuario.pdf");
+    await download.saveAs(arquivo);
+    const cabeca = fs.readFileSync(arquivo).subarray(0, 4).toString();
+    expect(cabeca, "o download não é um PDF").toBe("%PDF");
+
+    // 8. O administrador vê quem abriu o prontuário (a leitura na tela e o PDF contam).
+    await page.reload();
+    const trilha = page.getByTestId("prontuario-acessos");
+    await expect(trilha).toContainText("Ana Fisio E2E", { timeout: ESPERA });
+    await trilha.scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: path.join(EVIDENCIA, "5-trilha-de-acessos.png"),
+      fullPage: true,
+    });
   });
 });

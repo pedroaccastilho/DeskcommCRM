@@ -209,3 +209,8 @@ export function camposObrigatoriosFaltando(
     })
     .map((c) => c.rotulo);
 }
+
+/** O valor como aparece para quem lê: opção vira o rótulo dela; o resto, o texto gravado. */
+export function valorParaMostrar(c: CampoDoModelo, v: string | number): string {
+  return c.opcoes?.find((o) => o.valor === v)?.rotulo ?? String(v);
+}

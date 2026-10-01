@@ -6,23 +6,38 @@
  * pendente para sempre depois de a evolução estar assinada.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const SESSAO = "0b9c1d2e-3b4a-4c5d-8e6f-0a1b2c3d4e5f";
 const CONTATO = "7f9c1d2e-3b4a-4c5d-8e6f-0a1b2c3d4e5f";
 
+type EuDoTeste = {
+  instalado: boolean;
+  profissional: { modalidades: string[]; nome_profissional: string } | null;
+  ve_acessos?: boolean;
+};
+const PROFISSIONAL = { modalidades: ["fisioterapia"], nome_profissional: "Ana" };
+let eu: EuDoTeste = { instalado: true, profissional: PROFISSIONAL };
+
 const post = vi.fn((..._a: unknown[]) => Promise.resolve({ data: {} }));
 vi.mock("@/lib/api/client", () => ({
   apiClient: {
     get: (url: string) => {
       if (url.startsWith("/api/v1/clinica/eu")) {
+        return Promise.resolve({ data: eu });
+      }
+      if (url.startsWith("/api/v1/clinica/acessos")) {
         return Promise.resolve({
-          data: {
-            instalado: true,
-            profissional: { modalidades: ["fisioterapia"], nome_profissional: "Ana" },
-          },
+          data: [
+            {
+              id: "1",
+              user_id: "u",
+              nome: "Ana Fisio",
+              acessado_em: "2026-10-01T12:00:00Z",
+            },
+          ],
         });
       }
       return Promise.resolve({ data: [] });
@@ -53,7 +68,10 @@ async function assinarComTexto() {
 }
 
 describe("registro vinculado à sessão da agenda", () => {
-  beforeEach(() => post.mockClear());
+  beforeEach(() => {
+    post.mockClear();
+    eu = { instalado: true, profissional: PROFISSIONAL };
+  });
 
   it("com sessão no atalho, o registro sai com appointment_id", async () => {
     montar(SESSAO);
@@ -77,5 +95,32 @@ describe("registro vinculado à sessão da agenda", () => {
     expect(screen.queryByTestId("registro-sessao")).toBeNull();
     const corpo = await assinarComTexto();
     expect(corpo.appointment_id).toBeNull();
+  });
+});
+
+describe("exportar e trilha de acessos", () => {
+  beforeEach(() => {
+    eu = { instalado: true, profissional: PROFISSIONAL };
+  });
+
+  it("profissional exporta o PDF do paciente aberto", async () => {
+    montar();
+    const link = await screen.findByTestId("exportar-prontuario");
+    expect(link.getAttribute("href")).toBe(`/api/v1/clinica/prontuario/pdf?contact_id=${CONTATO}`);
+  });
+
+  it("sem ser administrador, a trilha não aparece", async () => {
+    montar();
+    await screen.findByTestId("registro-texto");
+    expect(screen.queryByTestId("prontuario-acessos")).toBeNull();
+  });
+
+  it("administrador que não é profissional não lê o prontuário, mas vê quem abriu", async () => {
+    eu = { instalado: true, profissional: null, ve_acessos: true };
+    montar();
+    const trilha = await screen.findByTestId("prontuario-acessos");
+    expect(await within(trilha).findByText("Ana Fisio")).toBeTruthy();
+    expect(screen.queryByTestId("registro-texto")).toBeNull();
+    expect(screen.queryByTestId("exportar-prontuario")).toBeNull();
   });
 });
