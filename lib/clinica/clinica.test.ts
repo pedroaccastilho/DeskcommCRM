@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { falhaDoProntuario } from "@/lib/clinica/api";
 import { criarRegistroSchema, editarProfissionalSchema } from "@/lib/clinica/schemas";
-import { MODALIDADES, MODELO_DA_MODALIDADE } from "@/lib/clinica/vocabulario";
+import {
+  MODALIDADES,
+  MODELO_DA_MODALIDADE,
+  camposObrigatoriosFaltando,
+  camposParaMostrar,
+  modeloDoRegistro,
+} from "@/lib/clinica/vocabulario";
 
 const UUID = "7f9c1d2e-3b4a-4c5d-8e6f-0a1b2c3d4e5f";
 
@@ -77,5 +83,66 @@ describe("modelos por modalidade", () => {
       expect(chaves.length).toBeGreaterThan(0);
       expect(new Set(chaves).size).toBe(chaves.length);
     }
+  });
+});
+
+describe("modelos por tipo de registro (COFFITO 414/2012)", () => {
+  const base = { contact_id: UUID, modalidade: "fisioterapia" } as const;
+
+  it("avaliação de fisioterapia sem diagnóstico, prognóstico e objetivos não assina", () => {
+    const r = criarRegistroSchema.safeParse({
+      ...base,
+      tipo: "avaliacao",
+      conteudo: { queixa: "dor lombar" },
+    });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.message).toMatch(/Diagnóstico fisioterapêutico/);
+  });
+
+  it("avaliação de fisioterapia completa assina", () => {
+    const r = criarRegistroSchema.safeParse({
+      ...base,
+      tipo: "avaliacao",
+      conteudo: {
+        diagnostico_fisioterapeutico: "Lombalgia mecânica",
+        prognostico: "Bom",
+        objetivos: "Reduzir dor",
+        numero_de_sessoes: 10,
+        frequencia_semanal: 2,
+      },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("alta exige motivo do vocabulário e resumo", () => {
+    const semMotivo = { ...base, tipo: "alta", conteudo: { resumo: "Tratamento concluído" } };
+    expect(criarRegistroSchema.safeParse(semMotivo).success).toBe(false);
+    const motivoInventado = {
+      ...base,
+      tipo: "alta",
+      conteudo: { motivo: "sumiu", resumo: "x" },
+    };
+    expect(criarRegistroSchema.safeParse(motivoInventado).success).toBe(false);
+    const certa = { ...base, tipo: "alta", conteudo: { motivo: "abandono", resumo: "x" } };
+    expect(criarRegistroSchema.safeParse(certa).success).toBe(true);
+  });
+
+  it("evolução continua curta e sem obrigatórios", () => {
+    expect(modeloDoRegistro("fisioterapia", "evolucao")).toBe(MODELO_DA_MODALIDADE.fisioterapia);
+    expect(camposObrigatoriosFaltando("fisioterapia", "evolucao", {})).toEqual([]);
+  });
+
+  it("avaliação médica tem HDA e CID; enfermagem tem glicemia", () => {
+    const medica = modeloDoRegistro("medicina", "avaliacao").map((c) => c.chave);
+    expect(medica).toEqual(expect.arrayContaining(["hda", "cid"]));
+    expect(MODELO_DA_MODALIDADE.enfermagem.map((c) => c.chave)).toContain("glicemia");
+  });
+
+  it("registro antigo de avaliação, com chaves da evolução, continua aparecendo", () => {
+    const chaves = camposParaMostrar("fisioterapia", "avaliacao").map((c) => c.chave);
+    expect(chaves).toEqual(
+      expect.arrayContaining(["amplitude", "local_da_dor", "diagnostico_fisioterapeutico"]),
+    );
+    expect(new Set(chaves).size).toBe(chaves.length);
   });
 });

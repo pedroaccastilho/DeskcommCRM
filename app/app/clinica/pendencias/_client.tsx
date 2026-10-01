@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useClinicaEu, usePendencias } from "@/components/clinica/ProntuarioDoPaciente";
@@ -46,7 +47,16 @@ export function EvolucoesPendentes() {
         <li key={p.appointment_id}>
           <Card className="flex flex-wrap items-center justify-between gap-3 p-3">
             <div className="min-w-0">
-              <div className="truncate text-sm font-medium">{rotuloDoContato(p.contato, t)}</div>
+              <div className="flex items-center gap-2">
+                <span className="truncate text-sm font-medium">
+                  {rotuloDoContato(p.contato, t)}
+                </span>
+                {p.atrasada ? (
+                  <Badge variant="warning" data-testid={`atrasada-${p.appointment_id}`}>
+                    {t("Atrasada")}
+                  </Badge>
+                ) : null}
+              </div>
               <div className="truncate text-xs text-text-muted">
                 {new Date(p.comeca).toLocaleString(tagDoIdioma)} · {p.titulo}
               </div>
