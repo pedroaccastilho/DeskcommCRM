@@ -39,6 +39,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   if (!contato.success) {
     return fail("validation_failed", "contact_id inválido", 422, { requestId });
   }
+  const contactId = contato.data;
 
   const supabase = await createClient();
   const orgId = authz.org.orgId;
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest): Promise<Response> {
       .from("contacts")
       .select("name, display_name, phone_number")
       .eq("organization_id", orgId)
-      .eq("id", contato.data)
+      .eq("id", contactId)
       .maybeSingle(),
     supabase.from("organizations").select("legal_name, display_name").eq("id", orgId).maybeSingle(),
     supabase
@@ -71,7 +72,7 @@ export async function GET(req: NextRequest): Promise<Response> {
         "id, modalidade, tipo, appointment_id, adendo_de, conteudo, texto, autor_nome, autor_registro, assinado_em",
       )
       .eq("organization_id", orgId)
-      .eq("contact_id", contato.data)
+      .eq("contact_id", contactId)
       .order("assinado_em", { ascending: true })
       .limit(2000),
   ]);
@@ -95,7 +96,7 @@ export async function GET(req: NextRequest): Promise<Response> {
 
   const { error: erroDaTrilha } = await supabase
     .from("prontuario_acessos")
-    .insert({ organization_id: orgId, contact_id: contato.data, user_id: authz.user.id });
+    .insert({ organization_id: orgId, contact_id: contactId, user_id: authz.user.id });
   if (erroDaTrilha) {
     logger.warn("prontuario_acesso_nao_registrado", { requestId, err: erroDaTrilha.message });
   }
@@ -103,7 +104,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   await audit({
     action: "prontuario.exportado",
     resourceType: "contact",
-    resourceId: contato.data,
+    resourceId: contactId,
     requestId,
     metadata: { registros: registros.data?.length ?? 0, sha256 },
   });
