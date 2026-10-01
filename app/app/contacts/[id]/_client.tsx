@@ -44,6 +44,9 @@ import { ProntuarioDoPaciente, useClinicaEu } from "@/components/clinica/Prontua
 
 interface Props {
   contactId: string;
+  /** Módulo clínica: a agenda abre a ficha direto no prontuário. */
+  abaInicial?: "prontuario";
+  sessaoInicial?: string;
 }
 
 /**
@@ -64,7 +67,7 @@ function NivelDaOrigem({ rotulo, valor }: { rotulo: string; valor: string | null
   );
 }
 
-export function ContactDetailClient({ contactId }: Props) {
+export function ContactDetailClient({ contactId, abaInicial, sessaoInicial }: Props) {
   const localeDaData = useLocaleDeData();
   const t = useT();
   const q = useContact(contactId);
@@ -241,7 +244,7 @@ export function ContactDetailClient({ contactId }: Props) {
         />
       )}
 
-      <Tabs defaultValue="overview">
+      <Tabs defaultValue={abaInicial ?? "overview"}>
         <TabsList>
           <TabsTrigger value="overview">{t("Visão geral")}</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
@@ -368,7 +371,7 @@ export function ContactDetailClient({ contactId }: Props) {
 
         {temProntuario && (
           <TabsContent value="prontuario" className="mt-4">
-            <ProntuarioDoPaciente contactId={contactId} />
+            <ProntuarioDoPaciente contactId={contactId} sessaoInicial={sessaoInicial} />
           </TabsContent>
         )}
 
