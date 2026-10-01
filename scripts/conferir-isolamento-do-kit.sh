@@ -62,9 +62,16 @@ BANCO="${2:?uso: $0 <container> <banco>}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 KIT="$ROOT/hostgator-setup-kit"
 
+# Fork (TOQ): o fork não publica release nem copia tag. As releases que o parque
+# instala são as do projeto original, então a pergunta vai para ele quando o
+# próprio repositório não responde.
+UPSTREAM="${CONFERENCIA_KIT_UPSTREAM:-melgarafael/DeskcommCRM}"
 release="${CONFERENCIA_KIT_RELEASE:-}"
 if [ -z "$release" ] && [ -n "${GH_TOKEN:-}" ] && command -v gh >/dev/null 2>&1; then
   release="$(cd "$ROOT" && gh release view --json tagName -q .tagName 2>/dev/null || true)"
+  if [ -z "$release" ]; then
+    release="$(gh release view -R "$UPSTREAM" --json tagName -q .tagName 2>/dev/null || true)"
+  fi
 fi
 if [ -z "$release" ]; then
   release="$(cd "$ROOT" && bash -c 'source "$1/_common.sh" >/dev/null 2>&1; ultima_release_estavel' _ "$KIT" || true)"
@@ -86,7 +93,9 @@ update_sh_da() {  # update_sh_da <tag> — caminho de uma cópia do update.sh da
   if ! git -C "$ROOT" rev-parse -q --verify "refs/tags/$1^{commit}" >/dev/null; then
     local profundidade=""
     [ "$(git -C "$ROOT" rev-parse --is-shallow-repository)" = true ] && profundidade="--depth=1"
-    git -C "$ROOT" fetch -q --no-tags $profundidade origin "+refs/tags/$1:refs/tags/$1"
+    git -C "$ROOT" fetch -q --no-tags $profundidade origin "+refs/tags/$1:refs/tags/$1" 2>/dev/null \
+      || git -C "$ROOT" fetch -q --no-tags $profundidade "https://github.com/$UPSTREAM.git" \
+        "+refs/tags/$1:refs/tags/$1"
   fi
   git -C "$ROOT" show "$1:hostgator-setup-kit/update.sh" > "$TMP/$1"
   printf '%s' "$TMP/$1"
