@@ -75,6 +75,9 @@ unset $(git rev-parse --local-env-vars)
 export GIT_CEILING_DIRECTORIES="$TMP"
 export GIT_AUTHOR_NAME="Teste" GIT_AUTHOR_EMAIL="teste@exemplo.invalid"
 export GIT_COMMITTER_NAME="Teste" GIT_COMMITTER_EMAIL="teste@exemplo.invalid"
+# O CI exporta GITHUB_REF=refs/pull/N/merge, e os cenários daqui usam PRs falsos (#7, #8): herdar
+# o número do PR real faz o script tratar um PR falso como "este PR" e o caso 18 reprova.
+unset GITHUB_REF
 
 # ── gh FALSO, para TODOS os casos: sem rede e sem depender do gh de quem roda ──────────
 # Ele HONRA o contrato da chamada real — se ignorasse os argumentos, trocar `--state open`
