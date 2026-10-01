@@ -385,6 +385,14 @@ function BlocoDeAgendamento({
   const cancelado = agendamento.situacao === "cancelled";
   // Com `corDoBloco` a cor deixa de dizer QUEM atende — então a inicial diz.
   const corPropria = doGoogle ? undefined : agendamento.corDoBloco;
+  const corDaFaixa = corPropria ?? corDaTrilha(trilha);
+  // A SITUAÇÃO NA FORMA, não só no texto: quem passa o olho na semana precisa
+  // separar o que está confirmado do que ainda espera resposta e do que já
+  // virou falta sem abrir bloco por bloco — e sem depender da cor, que já diz
+  // outra coisa (pessoa ou modalidade). Tracejado = aguardando; hachura e
+  // título riscado = não compareceu.
+  const aguardando = !doGoogle && agendamento.situacao === "pending";
+  const faltou = !doGoogle && agendamento.situacao === "no_show";
 
   return (
     <button
@@ -425,6 +433,8 @@ function BlocoDeAgendamento({
       aria-label={`${agendamento.titulo}, ${rotuloHora(comeca, fuso)} ${t("às")} ${rotuloHora(termina, fuso)}${
         agendamento.quemSeraAtendido ? `, ${t("com")} ${agendamento.quemSeraAtendido}` : ""
       }${pessoa ? `, ${t("atendido por")} ${pessoa.nome}` : ""}${
+        aguardando ? `, ${t("Aguardando confirmação")}` : faltou ? `, ${t("Não compareceu")}` : ""
+      }${
         doGoogle ? `, ${t("ocupado na agenda do Google")}` : ""
       }`}
       className={cn(
@@ -451,6 +461,7 @@ function BlocoDeAgendamento({
         // clique, que já existe na aba "Cancelados" do histórico logo acima. A
         // ação viva naquele espaço é marcar; o cancelado é registro.
         cancelado && "pointer-events-none opacity-55",
+        aguardando && "border-[1.5px] border-dashed",
         // Enquanto a proposta está aberta o card original esmaece e o fantasma
         // mostra onde ele cairia. Sumir com o original faria perder a
         // referência de onde ele estava — que é o que se desfaz ao cancelar.
@@ -468,9 +479,14 @@ function BlocoDeAgendamento({
             // é neutra de propósito — a agenda de fora não pertence a ninguém da
             // equipe, então não recebe trilha.
             "repeating-linear-gradient(135deg, var(--color-surface-elevated) 0 6px, var(--color-surface) 6px 12px)"
-          : corPropria
-            ? fundoDaCor(corPropria)
-            : fundoDaTrilha(trilha),
+          : faltou
+            ? "repeating-linear-gradient(135deg, var(--color-surface-elevated) 0 6px, var(--color-surface) 6px 12px)"
+            : aguardando
+              ? fundoDaCor(corDaFaixa, 5)
+              : corPropria
+                ? fundoDaCor(corPropria)
+                : fundoDaTrilha(trilha),
+        borderColor: aguardando ? corDaFaixa : undefined,
         opacity: doGoogle ? 0.75 : undefined,
       }}
     >
@@ -479,15 +495,14 @@ function BlocoDeAgendamento({
         data-testid={`faixa-${agendamento.id}`}
         className="absolute inset-y-0 left-0 w-[3px] rounded-l-sm"
         style={{
-          backgroundColor: doGoogle
-            ? "var(--color-border-strong)"
-            : (corPropria ?? corDaTrilha(trilha)),
+          backgroundColor: doGoogle || faltou ? "var(--color-border-strong)" : corDaFaixa,
         }}
       />
       <span
         className={cn(
           "ml-1 truncate text-[11px] font-semibold leading-4 text-text",
           corPropria && pessoa && "self-stretch pr-5",
+          faltou && "text-text-muted line-through",
         )}
       >
         {agendamento.titulo}
@@ -822,7 +837,11 @@ function VisaoDeMes({
                       // AFIRMA, e um seletor que repete a asserção não prova
                       // nada.
                       data-origem={c.origem}
-                      className="flex items-center gap-1 rounded-sm px-1 py-0.5"
+                      data-situacao={c.situacao}
+                      className={cn(
+                        "flex items-center gap-1 rounded-sm px-1 py-0.5",
+                        c.situacao === "pending" && "border border-dashed border-border-strong",
+                      )}
                       style={{
                         background: c.corDoBloco
                           ? fundoDaCor(c.corDoBloco, 14)
@@ -834,7 +853,12 @@ function VisaoDeMes({
                         className="h-1.5 w-1.5 shrink-0 rounded-full"
                         style={{ backgroundColor: c.corDoBloco ?? corDaTrilha(trilha) }}
                       />
-                      <span className="truncate text-[10px] leading-4 text-text">
+                      <span
+                        className={cn(
+                          "truncate text-[10px] leading-4 text-text",
+                          c.situacao === "no_show" && "text-text-muted line-through",
+                        )}
+                      >
                         {rotuloHora(new Date(c.comeca), fuso)} {c.titulo}
                       </span>
                     </div>
