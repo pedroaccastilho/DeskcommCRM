@@ -10,11 +10,17 @@
  * um compromisso marcado antes do cadastro do tipo. A grade chega à semana dela por
  * `irParaASemanaDoCompromisso`, que lê o dia no fuso do navegador.
  *
+ * A visão Equipe (o dia com uma coluna por profissional) usa a mesma sessão: a grade
+ * chega à semana dela pelo mesmo helper e, de lá, anda de dia em dia até a coluna
+ * desenhar a chave que o helper devolveu — a chave sai da tela, nunca do relógio do Node.
+ *
  * ⚠️ Instalar é da INSTALAÇÃO e não se desfaz, como em `clinica-prontuario`.
  */
 import * as path from "node:path";
 
 import { createClient } from "@supabase/supabase-js";
+
+import type { BrowserContext, Page } from "@playwright/test";
 
 import { expect, test } from "./helpers/test";
 
@@ -26,6 +32,8 @@ import { afirmarDonoDoServidor } from "./utils/precondicao";
 const ESPERA = 30_000;
 const EVIDENCIA =
   process.env.E2E_EVIDENCIA ?? path.join(process.cwd(), "evidence/visual-cor-por-modalidade");
+const EVIDENCIA_DA_EQUIPE =
+  process.env.E2E_EVIDENCIA ?? path.join(process.cwd(), "evidence/visual-dia-da-equipe");
 
 const env = carregarEnvLocal();
 const URL_SUPABASE = env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -62,6 +70,58 @@ function daquiADoisDias(): Date {
   return d;
 }
 
+/**
+ * Instala o módulo como dono, entra como admin e semeia uma "Aula de pilates" do
+ * admin para daqui a dois dias. Devolve o id da sessão, o instante e o admin.
+ */
+async function prepararSessao(
+  page: Page,
+  context: BrowserContext,
+): Promise<{ id: string; comeca: Date; userId: string }> {
+  const creds = lerCreds();
+  if (!destinoEhLocal(URL_SUPABASE)) {
+    throw new Error(`RECUSADO: ${URL_SUPABASE} não é loopback.`);
+  }
+
+  await loginComoDono(page, creds);
+  await page.goto("/admin/modulos");
+  const cartao = page.getByTestId("modulo-clinica");
+  await expect(cartao).toBeVisible({ timeout: ESPERA });
+  const instalar = page.getByTestId("instalar-clinica");
+  if (await instalar.isVisible()) await instalar.click();
+  await expect(cartao.getByText(/instalado/i)).toBeVisible({ timeout: ESPERA });
+
+  await context.clearCookies();
+  await loginComoAdmin(page, creds);
+  const userId = await idDoUsuario(creds.users.admin!.email);
+  const orgId = await orgDoUsuario(userId);
+
+  const comeca = daquiADoisDias();
+  const { data: sessao, error } = await admin
+    .from("calendar_appointments")
+    .insert({
+      organization_id: orgId,
+      title: "Aula de pilates",
+      starts_at: comeca.toISOString(),
+      ends_at: new Date(comeca.getTime() + 55 * 60 * 1000).toISOString(),
+      status: "confirmed",
+      owner_user_id: userId,
+      created_by_kind: "system",
+      source: "ui",
+    } as never)
+    .select("id")
+    .single();
+  if (error || !sessao) throw new Error(`calendar_appointments insert: ${error?.message}`);
+  return { id: (sessao as { id: string }).id, comeca, userId };
+}
+
+/** O dia que a visão Dia desenha agora, lido da própria coluna. */
+async function diaDesenhado(page: Page): Promise<string> {
+  const chave = await page.locator("[data-corpo-do-dia]").first().getAttribute("data-corpo-do-dia");
+  if (!chave) throw new Error("a visão Dia não desenhou coluna nenhuma");
+  return chave;
+}
+
 test.describe("Agenda: cores por modalidade com o módulo clínica", () => {
   test.beforeAll(async () => {
     await afirmarDonoDoServidor(lerCreds().users.dono!.email);
@@ -72,41 +132,7 @@ test.describe("Agenda: cores por modalidade com o módulo clínica", () => {
     context,
   }) => {
     test.setTimeout(180_000);
-    const creds = lerCreds();
-    if (!destinoEhLocal(URL_SUPABASE)) {
-      throw new Error(`RECUSADO: ${URL_SUPABASE} não é loopback.`);
-    }
-
-    await loginComoDono(page, creds);
-    await page.goto("/admin/modulos");
-    const cartao = page.getByTestId("modulo-clinica");
-    await expect(cartao).toBeVisible({ timeout: ESPERA });
-    const instalar = page.getByTestId("instalar-clinica");
-    if (await instalar.isVisible()) await instalar.click();
-    await expect(cartao.getByText(/instalado/i)).toBeVisible({ timeout: ESPERA });
-
-    await context.clearCookies();
-    await loginComoAdmin(page, creds);
-    const userId = await idDoUsuario(creds.users.admin!.email);
-    const orgId = await orgDoUsuario(userId);
-
-    const comeca = daquiADoisDias();
-    const { data: sessao, error } = await admin
-      .from("calendar_appointments")
-      .insert({
-        organization_id: orgId,
-        title: "Aula de pilates",
-        starts_at: comeca.toISOString(),
-        ends_at: new Date(comeca.getTime() + 55 * 60 * 1000).toISOString(),
-        status: "confirmed",
-        owner_user_id: userId,
-        created_by_kind: "system",
-        source: "ui",
-      } as never)
-      .select("id")
-      .single();
-    if (error || !sessao) throw new Error(`calendar_appointments insert: ${error?.message}`);
-    const id = (sessao as { id: string }).id;
+    const { id, comeca } = await prepararSessao(page, context);
 
     try {
       await page.goto("/app/agenda");
@@ -135,6 +161,59 @@ test.describe("Agenda: cores por modalidade com o módulo clínica", () => {
       await expect(page.getByTestId("cores-profissional")).toHaveAttribute("aria-pressed", "true", {
         timeout: ESPERA,
       });
+    } finally {
+      await admin.from("calendar_appointments").delete().eq("id", id);
+    }
+  });
+});
+
+test.describe("Agenda: o dia da equipe com o módulo clínica", () => {
+  test.beforeAll(async () => {
+    await afirmarDonoDoServidor(lerCreds().users.dono!.email);
+  });
+
+  test("abre uma coluna por profissional, com os números do dia acima", async ({
+    page,
+    context,
+  }) => {
+    test.setTimeout(180_000);
+    const { id, comeca, userId } = await prepararSessao(page, context);
+
+    try {
+      await page.goto("/app/agenda");
+      const dia = await irParaASemanaDoCompromisso(page, comeca.toISOString());
+      await expect(page.getByTestId(`agendamento-${id}`)).toBeVisible({ timeout: ESPERA });
+      await page.getByTestId("cores-modalidade").click();
+      await page.getByTestId("visao-equipe").click();
+      await expect(page.getByTestId("dia-por-pessoa")).toBeVisible({ timeout: ESPERA });
+
+      // A âncora ficou no dia da semana de hoje; anda de dia em dia até o da sessão.
+      for (let passo = 0; passo < 7 && (await diaDesenhado(page)) !== dia; passo++) {
+        const voltar = (await diaDesenhado(page)) > dia;
+        await page
+          .getByRole("button", { name: voltar ? "Período anterior" : "Próximo período" })
+          .click();
+      }
+      expect(await diaDesenhado(page)).toBe(dia);
+
+      const coluna = page.getByTestId(`coluna-pessoa-${userId}`);
+      await expect(coluna.getByTestId(`agendamento-${id}`)).toBeVisible({ timeout: ESPERA });
+      await expect(page.getByTestId(`faixa-${id}`)).toHaveAttribute(
+        "style",
+        /--agenda-modalidade-pilates/,
+      );
+      // A coluna já diz quem atende: o bloco não repete a inicial.
+      await expect(page.getByTestId(`inicial-${id}`)).toHaveCount(0);
+      await expect(page.getByTestId("resumo-do-dia")).toBeVisible();
+      await expect(page.getByTestId("resumo-modalidade-pilates")).toBeVisible();
+      await expect(page.getByTestId("legenda-das-modalidades")).toHaveCount(0);
+      await page.screenshot({ path: path.join(EVIDENCIA_DA_EQUIPE, "e2e-equipe.png") });
+
+      // "Dia" volta à coluna única de sempre, no mesmo dia.
+      await page.getByTestId("visao-dia").click();
+      await expect(page.getByTestId("dia-por-pessoa")).toHaveCount(0);
+      await expect(page.getByTestId(`coluna-dia-${dia}`)).toBeVisible();
+      await expect(page.getByTestId(`agendamento-${id}`)).toBeVisible();
     } finally {
       await admin.from("calendar_appointments").delete().eq("id", id);
     }
