@@ -9,6 +9,7 @@
  * Funções puras, de propósito: quem chama (`regras-da-agenda.ts`) lê o banco e grava; a decisão
  * mora aqui, onde se testa sem banco.
  */
+import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 
 export const MODALIDADES = ["fisioterapia", "pilates", "medicina", "enfermagem"] as const;
 export type Modalidade = (typeof MODALIDADES)[number];
@@ -162,7 +163,7 @@ export function sessaoDaGrade(
     paciente: linha.contact_id
       ? {
           id: linha.contact_id,
-          nome: contato?.display_name || contato?.name || "Paciente",
+          nome: rotuloDoContato(contato),
           telefone: contato?.phone_number ?? null,
         }
       : null,
