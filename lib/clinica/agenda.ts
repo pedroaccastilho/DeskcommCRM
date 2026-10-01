@@ -11,8 +11,9 @@
  */
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 
-export const MODALIDADES = ["fisioterapia", "pilates", "medicina", "enfermagem"] as const;
-export type Modalidade = (typeof MODALIDADES)[number];
+import type { Modalidade } from "./vocabulario";
+
+export { MODALIDADES, type Modalidade } from "./vocabulario";
 
 export interface PoliticaDaAgenda {
   antecedencia_cancelamento_horas: number;

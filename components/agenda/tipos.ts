@@ -65,6 +65,13 @@ export type Agendamento = {
   comeca: string;
   termina: string;
   tipo?: string;
+  /**
+   * Cor do bloco quando a grade NÃO pinta por pessoa — hoje, a modalidade do
+   * módulo clínica (`lib/clinica/cores-da-agenda.ts`). Uma cor CSS (`var(...)`),
+   * nunca hex. Ausente = a trilha de quem atende, como sempre. Com ela presente,
+   * quem atende passa a aparecer pela inicial no próprio bloco.
+   */
+  corDoBloco?: string;
   local?: string;
   origem: OrigemDoAgendamento;
   situacao: SituacaoDoAgendamento;

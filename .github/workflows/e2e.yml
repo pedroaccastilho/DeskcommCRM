@@ -1120,6 +1120,9 @@ jobs:
       # clínica, que também não se desfaz: a Agenda passa a perguntar
       # `/api/v1/clinica/eu` e a ficha do contato ganha a aba Prontuário.
       # Semeia paciente e sessão próprios pelo service role.
+      #
+      # `clinica-agenda-cores` entrou em 2026-10-01 (fork TOQ): com o módulo
+      # instalado, a grade pinta pela modalidade e alterna para profissional.
       SPECS_PARTE_5: >-
         extensoes-da-instalacao.spec.ts
         admin-credencial-google.spec.ts
@@ -1147,6 +1150,7 @@ jobs:
         contadores-do-menu.spec.ts
         honorarios-instalar-e-pagar.spec.ts
         clinica-prontuario.spec.ts
+        clinica-agenda-cores.spec.ts
 
       # ─── PARTE 6 — nasceu em 2026-09-28, e o orçamento de 24 min a pediu ───
       #

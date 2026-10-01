@@ -33,7 +33,7 @@ import { diaLocalISO, instanteDe, partesNoFuso } from "@/lib/agenda/fuso";
 import { cn } from "@/lib/utils";
 import { useT } from "@/hooks/i18n/useT";
 
-import { corDaTrilha, fundoDaTrilha } from "./paleta";
+import { corDaTrilha, fundoDaCor, fundoDaTrilha, iniciaisDe } from "./paleta";
 import type { Agendamento, Pessoa, VisaoDaAgenda } from "./tipos";
 
 /**
@@ -383,6 +383,8 @@ function BlocoDeAgendamento({
   const trilha = pessoa?.trilha ?? 1;
   const doGoogle = agendamento.origem === "google_sync";
   const cancelado = agendamento.situacao === "cancelled";
+  // Com `corDoBloco` a cor deixa de dizer QUEM atende — então a inicial diz.
+  const corPropria = doGoogle ? undefined : agendamento.corDoBloco;
 
   return (
     <button
@@ -466,7 +468,9 @@ function BlocoDeAgendamento({
             // é neutra de propósito — a agenda de fora não pertence a ninguém da
             // equipe, então não recebe trilha.
             "repeating-linear-gradient(135deg, var(--color-surface-elevated) 0 6px, var(--color-surface) 6px 12px)"
-          : fundoDaTrilha(trilha),
+          : corPropria
+            ? fundoDaCor(corPropria)
+            : fundoDaTrilha(trilha),
         opacity: doGoogle ? 0.75 : undefined,
       }}
     >
@@ -474,11 +478,33 @@ function BlocoDeAgendamento({
         aria-hidden
         data-testid={`faixa-${agendamento.id}`}
         className="absolute inset-y-0 left-0 w-[3px] rounded-l-sm"
-        style={{ backgroundColor: doGoogle ? "var(--color-border-strong)" : corDaTrilha(trilha) }}
+        style={{
+          backgroundColor: doGoogle
+            ? "var(--color-border-strong)"
+            : (corPropria ?? corDaTrilha(trilha)),
+        }}
       />
-      <span className="ml-1 truncate text-[11px] font-semibold leading-4 text-text">
+      <span
+        className={cn(
+          "ml-1 truncate text-[11px] font-semibold leading-4 text-text",
+          corPropria && pessoa && "self-stretch pr-5",
+        )}
+      >
         {agendamento.titulo}
       </span>
+      {corPropria && pessoa && (
+        <span
+          aria-hidden
+          data-testid={`inicial-${agendamento.id}`}
+          title={pessoa.nome}
+          className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-[8px] font-bold leading-none"
+          // A trilha é escura no tema claro e clara no escuro; a letra segue a
+          // superfície para manter o contraste nos dois.
+          style={{ backgroundColor: corDaTrilha(trilha), color: "var(--color-surface)" }}
+        >
+          {iniciaisDe(pessoa.nome)}
+        </span>
+      )}
       {duracao >= 45 && (
         <span className="ml-1 truncate text-[10px] leading-3 tabular-nums text-text-muted">
           {rotuloHora(comeca, fuso)}
@@ -797,12 +823,16 @@ function VisaoDeMes({
                       // nada.
                       data-origem={c.origem}
                       className="flex items-center gap-1 rounded-sm px-1 py-0.5"
-                      style={{ background: fundoDaTrilha(trilha, 14) }}
+                      style={{
+                        background: c.corDoBloco
+                          ? fundoDaCor(c.corDoBloco, 14)
+                          : fundoDaTrilha(trilha, 14),
+                      }}
                     >
                       <span
                         aria-hidden
                         className="h-1.5 w-1.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: corDaTrilha(trilha) }}
+                        style={{ backgroundColor: c.corDoBloco ?? corDaTrilha(trilha) }}
                       />
                       <span className="truncate text-[10px] leading-4 text-text">
                         {rotuloHora(new Date(c.comeca), fuso)} {c.titulo}

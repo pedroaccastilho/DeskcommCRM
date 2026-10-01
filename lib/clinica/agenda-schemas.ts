@@ -1,7 +1,7 @@
 /** Validação (Zod) do que entra pelas rotas da agenda da clínica (migration 9002). */
 import { z } from "zod";
 
-import { MODALIDADES } from "@/lib/clinica/agenda";
+import { MODALIDADES } from "@/lib/clinica/vocabulario";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 /** A grade cobre no máximo um mês por pedido. */
