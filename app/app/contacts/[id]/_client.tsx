@@ -40,6 +40,7 @@ import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { origemDoContato } from "@/lib/leads/origem-do-contato";
 import { phoneForDisplay } from "@/lib/channels/phone-variants";
 import { DialButton } from "@/components/voice/DialButton";
+import { ProntuarioDoPaciente, useClinicaEu } from "@/components/clinica/ProntuarioDoPaciente";
 
 interface Props {
   contactId: string;
@@ -78,6 +79,10 @@ export function ContactDetailClient({ contactId }: Props) {
   // O hook fica ANTES dos early returns: chamá-lo depois mudaria a ordem dos
   // hooks entre renderizações e o React reprova.
   const desbloquear = useUnblockContact(contactId);
+  // Módulo clínica (fork TOQ): a aba existe quando o módulo está instalado. Dentro dela, quem
+  // não é profissional de saúde lê por que não vê nada — a RLS é quem esconde os registros.
+  const clinica = useClinicaEu();
+  const temProntuario = clinica.data?.instalado === true;
 
   /*
     Pede o nome da campanha SÓ quando há um anúncio e ainda não há nome.
@@ -240,6 +245,7 @@ export function ContactDetailClient({ contactId }: Props) {
         <TabsList>
           <TabsTrigger value="overview">{t("Visão geral")}</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          {temProntuario && <TabsTrigger value="prontuario">{t("Prontuário")}</TabsTrigger>}
           {isAdmin && <TabsTrigger value="lgpd">LGPD</TabsTrigger>}
         </TabsList>
 
@@ -359,6 +365,12 @@ export function ContactDetailClient({ contactId }: Props) {
         <TabsContent value="timeline" className="mt-4">
           <TimelineView contactId={contactId} />
         </TabsContent>
+
+        {temProntuario && (
+          <TabsContent value="prontuario" className="mt-4">
+            <ProntuarioDoPaciente contactId={contactId} />
+          </TabsContent>
+        )}
 
         {isAdmin && (
           <TabsContent value="lgpd" className="mt-4">

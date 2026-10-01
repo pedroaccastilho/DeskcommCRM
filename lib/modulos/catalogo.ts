@@ -21,6 +21,13 @@ export const CATALOGO_DE_MODULOS: readonly ModuloCatalogo[] = [
       "Contrato de honorários (fixo, êxito ou misto) e o calendário de parcelas, ligado ao caixa " +
       "do núcleo. Para escritórios de advocacia que cobram por caso.",
   },
+  {
+    slug: "clinica",
+    nome: "Clínica (prontuário)",
+    descricao:
+      "Prontuário dos pacientes com registros assinados por profissional de saúde (fisioterapia, " +
+      "pilates, medicina e enfermagem) e a trilha de quem abriu cada prontuário.",
+  },
 ];
 
 export function moduloDoCatalogo(slug: string): ModuloCatalogo | undefined {

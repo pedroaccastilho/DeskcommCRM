@@ -117,6 +117,10 @@ const TEXTO_DO_MODULO: Record<ModuloOpcional, { nome: string; oQueFaz: string }>
     nome: "Honorários",
     oQueFaz: "Contratos de honorários com parcelas e o controle do que já foi pago.",
   },
+  clinica: {
+    nome: "Clínica (prontuário)",
+    oQueFaz: "Prontuário dos pacientes, assinado pelos profissionais de saúde da clínica.",
+  },
 };
 
 /**
