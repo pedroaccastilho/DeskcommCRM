@@ -1123,6 +1123,11 @@ jobs:
       #
       # `clinica-agenda-cores` entrou em 2026-10-01 (fork TOQ): com o módulo
       # instalado, a grade pinta pela modalidade e alterna para profissional.
+      #
+      # `clinica-regras` entrou em 2026-10-02 (fork TOQ): o administrador muda
+      # multa, modalidade e preço em Configurações › Regras da clínica; o gerente
+      # não vê a porta e o "Somente leitura" não lê multa. Fica nesta parte porque
+      # instala o módulo clínica, como as outras duas.
       SPECS_PARTE_5: >-
         extensoes-da-instalacao.spec.ts
         admin-credencial-google.spec.ts
@@ -1149,6 +1154,7 @@ jobs:
         buffer-ssr-caixa-orfa.spec.ts
         contadores-do-menu.spec.ts
         honorarios-instalar-e-pagar.spec.ts
+        clinica-regras.spec.ts
         clinica-prontuario.spec.ts
         clinica-agenda-cores.spec.ts
 

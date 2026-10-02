@@ -3,7 +3,8 @@
  *
  * GET [?status=pendente|isenta|paga][&contact_id=uuid] → as multas da clínica, mais novas primeiro,
  * com a sessão e o paciente. Quem cria é o servidor, quando a sessão é cancelada
- * (`lib/clinica/regras-da-agenda.ts`); quem isenta é a recepção, com motivo.
+ * (`lib/clinica/regras-da-agenda.ts`); quem isenta é a recepção, com motivo. Leitura de
+ * `agent`+ (9003): o perfil "Somente leitura" não vê valor financeiro.
  */
 import { randomUUID } from "node:crypto";
 
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("viewer", { requestId, resource: "clinica_multas" });
+  const authz = await requireRole("agent", { requestId, resource: "clinica_multas" });
   if (!authz.ok) return authz.response;
 
   const lido = multasQuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams));

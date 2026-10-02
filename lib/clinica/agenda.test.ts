@@ -7,10 +7,17 @@ import {
   multaDoCancelamento,
   POLITICA_PADRAO,
   politicaDaLinha,
+  REGRAS_PADRAO,
+  regrasDaLinha,
   sessaoDaGrade,
   type LinhaDoCompromisso,
 } from "./agenda";
-import { gradeQuerySchema, politicaSchema, tipoAtendimentoSchema } from "./agenda-schemas";
+import {
+  gradeQuerySchema,
+  politicaSchema,
+  precoSchema,
+  tipoAtendimentoSchema,
+} from "./agenda-schemas";
 
 const INICIO = new Date("2026-10-05T13:00:00Z"); // 10h em Brasília
 const horasAntes = (h: number) => new Date(INICIO.getTime() - h * 60 * 60 * 1000);
@@ -85,6 +92,15 @@ describe("tolerância de atraso e prazo sem multa", () => {
     expect(cancelamentoSemMultaAte(INICIO, POLITICA_PADRAO).toISOString()).toBe(
       "2026-10-04T13:00:00.000Z",
     );
+  });
+
+  it("regras sem linha gravada = os padrões da TOQ, e a linha só troca o que tem", () => {
+    expect(regrasDaLinha(null)).toEqual(REGRAS_PADRAO);
+    expect(REGRAS_PADRAO.pacote_sessoes_padrao).toBe(10);
+    expect(REGRAS_PADRAO.pacote_validade_dias).toBe(60);
+    const r = regrasDaLinha({ pacote_validade_dias: 90 });
+    expect(r.pacote_validade_dias).toBe(90);
+    expect(r.multa_cancelamento_pct).toBe(30);
   });
 
   it("política sem linha gravada = a padrão", () => {
@@ -163,6 +179,23 @@ describe("validação das rotas", () => {
     expect(politicaSchema.safeParse({ multa_cancelamento_pct: 30 }).success).toBe(true);
     expect(politicaSchema.safeParse({ multa_cancelamento_pct: 101 }).success).toBe(false);
     expect(politicaSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("regras: parâmetros novos nas faixas do banco, e campo desconhecido é recusado", () => {
+    expect(politicaSchema.safeParse({ pacote_validade_dias: 60 }).success).toBe(true);
+    expect(politicaSchema.safeParse({ pacote_validade_dias: 0 }).success).toBe(false);
+    expect(politicaSchema.safeParse({ faltas_no_mes_abandono: 3 }).success).toBe(true);
+    expect(politicaSchema.safeParse({ organization_id: "x", multa_cancelamento_pct: 30 }).success).toBe(
+      false,
+    );
+  });
+
+  it("preço: centavos inteiros, e nulo apaga", () => {
+    const id = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+    expect(precoSchema.safeParse({ event_type_id: id, valor_cents: 15000 }).success).toBe(true);
+    expect(precoSchema.safeParse({ event_type_id: id, valor_cents: null }).success).toBe(true);
+    expect(precoSchema.safeParse({ event_type_id: id, valor_cents: 150.5 }).success).toBe(false);
+    expect(precoSchema.safeParse({ event_type_id: id, valor_cents: -1 }).success).toBe(false);
   });
 
   it("tipo de atendimento: modalidade nula tira a etiqueta", () => {

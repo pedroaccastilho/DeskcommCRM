@@ -37,12 +37,25 @@ export const aConfirmarQuerySchema = z.object({
   horas: z.coerce.number().int().min(1).max(168).default(48),
 });
 
+/** Faixas iguais aos CHECK de `clinica_politicas` (migrations 9002 e 9003). */
+const inteiroEntre = (min: number, max: number) => z.number().int().min(min).max(max);
+
 export const politicaSchema = z
   .object({
-    antecedencia_cancelamento_horas: z.number().int().min(0).max(168),
-    multa_cancelamento_pct: z.number().int().min(0).max(100),
-    tolerancia_atraso_minutos: z.number().int().min(0).max(120),
+    antecedencia_cancelamento_horas: inteiroEntre(0, 168),
+    multa_cancelamento_pct: inteiroEntre(0, 100),
+    tolerancia_atraso_minutos: inteiroEntre(0, 120),
+    pacote_sessoes_padrao: inteiroEntre(1, 100),
+    pacote_validade_dias: inteiroEntre(1, 730),
+    reposicoes_por_mes: inteiroEntre(0, 31),
+    congelamento_max_dias: inteiroEntre(0, 180),
+    sessoes_restantes_aviso_renovacao: inteiroEntre(0, 20),
+    faltas_seguidas_alerta: inteiroEntre(1, 10),
+    faltas_no_mes_abandono: inteiroEntre(1, 31),
+    dias_sem_sessao_inativo: inteiroEntre(1, 365),
+    horas_evolucao_atrasada: inteiroEntre(1, 168),
   })
+  .strict()
   .partial()
   .refine((v) => Object.values(v).some((x) => x !== undefined), { message: "nada para alterar" });
 
@@ -50,7 +63,12 @@ export const tipoAtendimentoSchema = z.object({
   event_type_id: z.string().uuid(),
   /** `null` tira a etiqueta: o tipo deixa de ser sessão da clínica. */
   modalidade: z.enum(MODALIDADES).nullable(),
-  valor_cents: z.number().int().min(0).max(100_000_000).nullable().optional(),
+});
+
+export const precoSchema = z.object({
+  event_type_id: z.string().uuid(),
+  /** Valor da sessão avulsa em centavos. `null` apaga o preço (a multa nasce sem valor). */
+  valor_cents: z.number().int().min(0).max(100_000_000).nullable(),
 });
 
 export const multasQuerySchema = z.object({
