@@ -1,5 +1,6 @@
 import { followupGatilhoPresencaHandler } from "@/lib/followup/gatilho-presenca.handler";
 import { followupGatilhoRetornoHandler } from "@/lib/followup/gatilho-retorno.handler";
+import { chatbotDeMenuHandler } from "@/lib/clinica/chatbot/handler";
 /**
  * Centralised handler registration for the event_log dispatcher.
  *
@@ -45,6 +46,10 @@ export function ensureHandlersRegistered(): void {
   // precisa rodar antes do LLM. Depois da reatividade, para o match_reply dos
   // fluxos já vivos ler a mensagem primeiro.
   registerHandler(followupGatilhoRetornoHandler);
+  // Chatbot de menu (módulo clínica, fork TOQ): responde no lugar da IA na conexão em que foi
+  // ligado. Depois do gatilho de retorno (o follow-up vivo fala primeiro, e o chatbot cede a
+  // ele) e antes de quem só observa a mensagem. Sem chatbot ligado, sai na primeira consulta.
+  registerHandler(chatbotDeMenuHandler);
   registerHandler(aiResponseHandler);
   registerHandler(aiSentimentHandler);
   registerHandler(aiHandoffFromSentimentHandler);
