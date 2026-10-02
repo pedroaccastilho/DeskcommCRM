@@ -63,7 +63,7 @@ export async function GET(req: NextRequest): Promise<Response> {
       .select("antecedencia_cancelamento_horas, multa_cancelamento_pct, tolerancia_atraso_minutos")
       .eq("organization_id", org)
       .maybeSingle(),
-    supabase.from("calendar_event_types").select("id, name, color").eq("organization_id", org),
+    supabase.from("calendar_event_types").select("id, name").eq("organization_id", org),
   ]);
   for (const r of [profs, etiquetas, politicaLida]) {
     if (r.error && moduloClinicaNaoInstalado(r.error)) {
@@ -82,7 +82,6 @@ export async function GET(req: NextRequest): Promise<Response> {
       t.id as string,
       {
         nome: t.name as string,
-        cor: (t.color as string | null) ?? null,
         modalidade: modalidadeDoTipo.get(t.id as string) ?? null,
       },
     ]),

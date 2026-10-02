@@ -7,10 +7,16 @@ import {
   multaDoCancelamento,
   POLITICA_PADRAO,
   politicaDaLinha,
+  REGRAS_PADRAO,
+  regrasDaLinha,
   sessaoDaGrade,
   type LinhaDoCompromisso,
 } from "./agenda";
-import { gradeQuerySchema, politicaSchema, tipoAtendimentoSchema } from "./agenda-schemas";
+import {
+  gradeQuerySchema,
+  politicaSchema,
+  tipoAtendimentoSchema,
+} from "./agenda-schemas";
 
 const INICIO = new Date("2026-10-05T13:00:00Z"); // 10h em Brasília
 const horasAntes = (h: number) => new Date(INICIO.getTime() - h * 60 * 60 * 1000);
@@ -87,6 +93,15 @@ describe("tolerância de atraso e prazo sem multa", () => {
     );
   });
 
+  it("regras sem linha gravada = os padrões da TOQ, e a linha só troca o que tem", () => {
+    expect(regrasDaLinha(null)).toEqual(REGRAS_PADRAO);
+    expect(REGRAS_PADRAO.pacote_sessoes_padrao).toBe(10);
+    expect(REGRAS_PADRAO.pacote_validade_dias).toBe(60);
+    const r = regrasDaLinha({ pacote_validade_dias: 90 });
+    expect(r.pacote_validade_dias).toBe(90);
+    expect(r.multa_cancelamento_pct).toBe(30);
+  });
+
   it("política sem linha gravada = a padrão", () => {
     expect(politicaDaLinha(null)).toEqual(POLITICA_PADRAO);
     expect(politicaDaLinha({ tolerancia_atraso_minutos: 10 }).tolerancia_atraso_minutos).toBe(10);
@@ -118,17 +133,17 @@ describe("sessão da grade", () => {
   };
 
   it("sessão da clínica traz modalidade, tipo e prazos", () => {
-    const tipos = new Map([["t1", { nome: "Fisio", cor: "#00aa88", modalidade: "fisioterapia" as const }]]);
+    const tipos = new Map([["t1", { nome: "Fisio", modalidade: "fisioterapia" as const }]]);
     const s = sessaoDaGrade(linha, tipos, POLITICA_PADRAO);
     expect(s.modalidade).toBe("fisioterapia");
-    expect(s.tipo).toEqual({ id: "t1", nome: "Fisio", cor: "#00aa88" });
+    expect(s.tipo).toEqual({ id: "t1", nome: "Fisio" });
     expect(s.paciente).toEqual({ id: "c1", nome: "Maria", telefone: "5511999990000" });
     expect(s.falta_liberada_em).toBe("2026-10-05T13:15:00.000Z");
     expect(s.cancelamento_sem_multa_ate).toBe("2026-10-04T13:00:00.000Z");
   });
 
   it("tipo sem modalidade: sem prazos de clínica", () => {
-    const tipos = new Map([["t1", { nome: "Reunião", cor: null, modalidade: null }]]);
+    const tipos = new Map([["t1", { nome: "Reunião", modalidade: null }]]);
     const s = sessaoDaGrade(linha, tipos, POLITICA_PADRAO);
     expect(s.modalidade).toBeNull();
     expect(s.falta_liberada_em).toBeNull();
@@ -163,6 +178,15 @@ describe("validação das rotas", () => {
     expect(politicaSchema.safeParse({ multa_cancelamento_pct: 30 }).success).toBe(true);
     expect(politicaSchema.safeParse({ multa_cancelamento_pct: 101 }).success).toBe(false);
     expect(politicaSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("regras: parâmetros novos nas faixas do banco, e campo desconhecido é recusado", () => {
+    expect(politicaSchema.safeParse({ pacote_validade_dias: 60 }).success).toBe(true);
+    expect(politicaSchema.safeParse({ pacote_validade_dias: 0 }).success).toBe(false);
+    expect(politicaSchema.safeParse({ faltas_no_mes_abandono: 3 }).success).toBe(true);
+    expect(politicaSchema.safeParse({ organization_id: "x", multa_cancelamento_pct: 30 }).success).toBe(
+      false,
+    );
   });
 
   it("tipo de atendimento: modalidade nula tira a etiqueta", () => {

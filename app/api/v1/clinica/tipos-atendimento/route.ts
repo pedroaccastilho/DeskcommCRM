@@ -1,13 +1,13 @@
 /**
- * MODALIDADE E VALOR DE CADA TIPO DE AGENDAMENTO (módulo clínica, migration 9002).
+ * MODALIDADE DE CADA TIPO DE AGENDAMENTO (módulo clínica, migrations 9002 e 9003).
  *
  * É a etiqueta que faz um tipo de agendamento do núcleo virar "sessão da clínica": dá a cor da
- * modalidade na grade, liga a tolerância de atraso e a multa de cancelamento, e o valor da sessão
- * é a base da multa.
+ * modalidade na grade e liga a tolerância de atraso e a multa de cancelamento.
  *
- * GET: todos os tipos ATIVOS da organização, com `modalidade` e `valor_cents` (ou `null`).
- * PUT { event_type_id, modalidade | null, valor_cents? }: `manager`+. `modalidade: null` tira a
- * etiqueta.
+ * GET: qualquer membro; todos os tipos ATIVOS da organização, com `modalidade` (ou `null`) e
+ * `preco_cents`, o "Preço padrão" do tipo no núcleo (`default_price_cents`), que é a base da
+ * multa. O preço se altera pela rota do núcleo (`PATCH /api/v1/agenda/tipos`).
+ * PUT { event_type_id, modalidade | null }: só `admin` (9003). `modalidade: null` tira a etiqueta.
  */
 import { randomUUID } from "node:crypto";
 
@@ -32,13 +32,13 @@ export async function GET(): Promise<Response> {
   const [tipos, etiquetas] = await Promise.all([
     supabase
       .from("calendar_event_types")
-      .select("id, name, color, duration_minutes")
+      .select("id, name, duration_minutes, default_price_cents")
       .eq("organization_id", org)
       .eq("is_active", true)
       .order("position"),
     supabase
       .from("clinica_tipos_atendimento")
-      .select("event_type_id, modalidade, valor_cents, currency")
+      .select("event_type_id, modalidade")
       .eq("organization_id", org),
   ]);
   if (etiquetas.error && moduloClinicaNaoInstalado(etiquetas.error)) {
@@ -54,11 +54,9 @@ export async function GET(): Promise<Response> {
       return {
         event_type_id: t.id,
         nome: t.name,
-        cor: t.color ?? null,
         duracao_minutos: t.duration_minutes,
+        preco_cents: t.default_price_cents === null ? null : Number(t.default_price_cents),
         modalidade: e?.modalidade ?? null,
-        valor_cents: e?.valor_cents ?? null,
-        currency: e?.currency ?? "BRL",
       };
     }),
     { requestId },
@@ -70,7 +68,7 @@ export async function PUT(req: NextRequest): Promise<Response> {
   const supportDenied = await requireSupportWrite();
   if (supportDenied) return supportDenied;
 
-  const authz = await requireRole("manager", {
+  const authz = await requireRole("admin", {
     requestId,
     resource: "clinica_tipos_atendimento",
   });
@@ -85,7 +83,7 @@ export async function PUT(req: NextRequest): Promise<Response> {
 
   const supabase = await createClient();
   const org = authz.org.orgId;
-  const { event_type_id, modalidade, valor_cents } = lido.data;
+  const { event_type_id, modalidade } = lido.data;
 
   const resultado =
     modalidade === null
@@ -95,12 +93,7 @@ export async function PUT(req: NextRequest): Promise<Response> {
           .eq("organization_id", org)
           .eq("event_type_id", event_type_id)
       : await supabase.from("clinica_tipos_atendimento").upsert(
-          {
-            organization_id: org,
-            event_type_id,
-            modalidade,
-            ...(valor_cents !== undefined ? { valor_cents } : {}),
-          },
+          { organization_id: org, event_type_id, modalidade },
           { onConflict: "organization_id,event_type_id" },
         );
 
@@ -123,8 +116,8 @@ export async function PUT(req: NextRequest): Promise<Response> {
     resourceType: "calendar_event_type",
     resourceId: event_type_id,
     requestId,
-    metadata: { modalidade, valor_cents: valor_cents ?? null },
+    metadata: { modalidade },
   });
 
-  return ok({ event_type_id, modalidade, valor_cents: valor_cents ?? null }, { requestId });
+  return ok({ event_type_id, modalidade }, { requestId });
 }

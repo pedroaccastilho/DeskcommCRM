@@ -20,6 +20,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Actor, HandlerCtx } from "@/lib/api/handlers/types";
 import { ApiError } from "@/lib/api/types";
 import { audit } from "@/lib/audit";
+import { moedaDaOrganizacao } from "@/lib/catalogo/moeda-da-org";
 import { tagDeIdioma } from "@/lib/i18n/datas";
 import { IDIOMA_PADRAO } from "@/lib/i18n/idiomas";
 import { logger } from "@/lib/logger";
@@ -40,8 +41,6 @@ type SB = SupabaseClient;
 
 export interface TipoDaClinica {
   modalidade: Modalidade;
-  valor_cents: number | null;
-  currency: string;
 }
 
 /** A etiqueta de modalidade do tipo, ou `null` (tipo sem modalidade, ou módulo não instalado). */
@@ -53,7 +52,7 @@ export async function tipoDaClinica(
   if (!eventTypeId) return null;
   const { data, error } = await db
     .from("clinica_tipos_atendimento")
-    .select("modalidade, valor_cents, currency")
+    .select("modalidade")
     .eq("organization_id", organizationId)
     .eq("event_type_id", eventTypeId)
     .maybeSingle();
@@ -62,6 +61,30 @@ export async function tipoDaClinica(
     throw error;
   }
   return (data as TipoDaClinica | null) ?? null;
+}
+
+/**
+ * O preço da sessão avulsa do tipo, base da multa, ou `null` (tipo sem preço).
+ *
+ * É o "Preço padrão" do tipo de agendamento do NÚCLEO (`calendar_event_types.default_price_cents`,
+ * o mesmo que a comanda sugere): a clínica não guarda segundo preço (migration 9003). A moeda é a
+ * que a organização declarou.
+ */
+export async function precoDoTipo(
+  db: SB,
+  organizationId: string,
+  eventTypeId: string,
+): Promise<{ valor_cents: number; currency: string } | null> {
+  const { data, error } = await db
+    .from("calendar_event_types")
+    .select("default_price_cents")
+    .eq("organization_id", organizationId)
+    .eq("id", eventTypeId)
+    .maybeSingle();
+  if (error) throw error;
+  const bruto = (data as { default_price_cents: number | string | null } | null)?.default_price_cents;
+  if (bruto === null || bruto === undefined) return null;
+  return { valor_cents: Number(bruto), currency: await moedaDaOrganizacao(db, organizationId) };
 }
 
 /** A política gravada, ou a padrão. */
@@ -151,8 +174,9 @@ export async function depoisDaMudancaNaClinica(
   const acao = acaoDoHistorico(mudanca.transicao);
   if (!acao) return;
   try {
-    const tipo = await tipoDaClinica(db, ctx.organization_id, mudanca.eventTypeId);
-    if (!tipo) return;
+    const eventTypeId = mudanca.eventTypeId;
+    const tipo = await tipoDaClinica(db, ctx.organization_id, eventTypeId);
+    if (!tipo || !eventTypeId) return;
 
     const admin = createAdminClient();
     const porUserId = ctx.actor.type === "user" ? ctx.actor.id : null;
@@ -171,11 +195,12 @@ export async function depoisDaMudancaNaClinica(
     if (acao !== "cancelado" || !mudanca.contactId) return;
 
     const politica = await politicaDaOrganizacao(db, ctx.organization_id);
+    const preco = await precoDoTipo(db, ctx.organization_id, eventTypeId);
     const multa = multaDoCancelamento({
       inicio: mudanca.deInicio,
       canceladoEm: agora,
       politica,
-      valorDaSessaoCents: tipo.valor_cents,
+      valorDaSessaoCents: preco?.valor_cents ?? null,
       quemCancelou: mudanca.quemCancelou ?? "paciente",
     });
     if (!multa) return;
@@ -189,7 +214,7 @@ export async function depoisDaMudancaNaClinica(
         percentual: multa.percentual,
         antecedencia_horas: multa.antecedencia_horas,
         valor_cents: multa.valor_cents,
-        currency: tipo.currency,
+        currency: preco?.currency ?? "BRL",
       })
       .select("id")
       .single();

@@ -1,9 +1,12 @@
 /**
- * POLÍTICA DE FALTAS E CANCELAMENTO DA CLÍNICA (módulo clínica, migration 9002).
+ * AS REGRAS DA CLÍNICA (módulo clínica, migrations 9002 e 9003): faltas e cancelamento, pacote e
+ * acompanhamento. É o que a tela Configurações › Regras da clínica lê e grava.
  *
- * GET: qualquer membro (a recepção precisa saber a regra que explica no balcão). Sem linha
- * gravada devolve a padrão (24h, 30%, 15 min) com `personalizada: false`.
- * PUT: `manager`+, parcial. A RLS cobra o mesmo degrau; a rota repete pela mensagem.
+ * GET e PUT: só `admin` (pedido do Pedro, 02/10/2026: configuração é do administrador, e os
+ * outros perfis não a veem). A agenda de todos continua recebendo os PRAZOS que saem destas
+ * regras (`falta_liberada_em`, `cancelamento_sem_multa_ate`) pela grade, sem abrir a tela.
+ * Sem linha gravada devolve os padrões com `personalizada: false`. PUT é parcial; a RLS cobra o
+ * mesmo degrau, e a rota repete pela mensagem.
  */
 import { randomUUID } from "node:crypto";
 
@@ -11,7 +14,7 @@ import type { NextRequest } from "next/server";
 import { ok, fail } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
-import { politicaDaLinha, type PoliticaDaAgenda } from "@/lib/clinica/agenda";
+import { COLUNAS_DAS_REGRAS, regrasDaLinha, type RegrasDaClinica } from "@/lib/clinica/agenda";
 import { politicaSchema } from "@/lib/clinica/agenda-schemas";
 import { MODULO_CLINICA_NAO_INSTALADO, moduloClinicaNaoInstalado } from "@/lib/clinica/api";
 import { requireSupportWrite } from "@/lib/impersonate/support";
@@ -19,11 +22,11 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-const COLUNAS = "antecedencia_cancelamento_horas, multa_cancelamento_pct, tolerancia_atraso_minutos";
+const COLUNAS = COLUNAS_DAS_REGRAS.join(", ");
 
 export async function GET(): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("viewer", { requestId, resource: "clinica_politicas" });
+  const authz = await requireRole("admin", { requestId, resource: "clinica_politicas" });
   if (!authz.ok) return authz.response;
 
   const supabase = await createClient();
@@ -39,7 +42,7 @@ export async function GET(): Promise<Response> {
     return fail("internal_error", error.message, 500, { requestId });
   }
   return ok(
-    { ...politicaDaLinha(data as Partial<PoliticaDaAgenda> | null), personalizada: data !== null },
+    { ...regrasDaLinha(data as Partial<RegrasDaClinica> | null), personalizada: data !== null },
     { requestId },
   );
 }
@@ -49,7 +52,7 @@ export async function PUT(req: NextRequest): Promise<Response> {
   const supportDenied = await requireSupportWrite();
   if (supportDenied) return supportDenied;
 
-  const authz = await requireRole("manager", { requestId, resource: "clinica_politicas" });
+  const authz = await requireRole("admin", { requestId, resource: "clinica_politicas" });
   if (!authz.ok) return authz.response;
 
   const lido = politicaSchema.safeParse(await req.json().catch(() => ({})));
@@ -90,5 +93,5 @@ export async function PUT(req: NextRequest): Promise<Response> {
     metadata: lido.data,
   });
 
-  return ok({ ...politicaDaLinha(data as Partial<PoliticaDaAgenda>), personalizada: true }, { requestId });
+  return ok({ ...regrasDaLinha(data as Partial<RegrasDaClinica>), personalizada: true }, { requestId });
 }
