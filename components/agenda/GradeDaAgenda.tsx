@@ -33,6 +33,7 @@ import { diaLocalISO, instanteDe, partesNoFuso } from "@/lib/agenda/fuso";
 import { cn } from "@/lib/utils";
 import { useT } from "@/hooks/i18n/useT";
 
+import { AvatarDaPessoa } from "./AvatarDaPessoa";
 import { corDaTrilha, fundoDaCor, fundoDaTrilha, iniciaisDe } from "./paleta";
 import type { Agendamento, Pessoa, VisaoDaAgenda } from "./tipos";
 
@@ -85,6 +86,19 @@ export interface InteracaoDaGrade {
    * em vez de remarcar em silêncio ou aproximar para o horário mais perto.
    */
   onArrastarPara?: (entrada: { id: string; instante: string | null; razao: string }) => void;
+}
+
+/** Uma coluna do dia por profissional — ver `colunasPorPessoa` em `GradeDaAgenda`. */
+export interface ColunaDePessoa {
+  pessoa: Pessoa;
+  /** Uma linha curta sob o nome (a modalidade, no módulo clínica). */
+  detalhe?: React.ReactNode;
+  /**
+   * Os horários livres da `interacao` são de UMA agenda — a do dono do tipo
+   * escolhido. Só a coluna dela os desenha; nas outras, um bloco livre
+   * marcaria na agenda errada.
+   */
+  marcaAqui: boolean;
 }
 
 /** Onde um card arrastado está sendo proposto — o mesmo estado para ponteiro e teclado. */
@@ -351,9 +365,12 @@ function BlocoDeAgendamento({
   coluna,
   colunas,
   arraste,
+  semInicial = false,
 }: {
   agendamento: Agendamento;
   pessoa: Pessoa | undefined;
+  /** A coluna já é da pessoa: a inicial no bloco só repetiria o cabeçalho. */
+  semInicial?: boolean;
   onAbrir?: (id: string) => void;
   fuso: string;
   coluna: number;
@@ -385,6 +402,14 @@ function BlocoDeAgendamento({
   const cancelado = agendamento.situacao === "cancelled";
   // Com `corDoBloco` a cor deixa de dizer QUEM atende — então a inicial diz.
   const corPropria = doGoogle ? undefined : agendamento.corDoBloco;
+  const corDaFaixa = corPropria ?? corDaTrilha(trilha);
+  // A SITUAÇÃO NA FORMA, não só no texto: quem passa o olho na semana precisa
+  // separar o que está confirmado do que ainda espera resposta e do que já
+  // virou falta sem abrir bloco por bloco — e sem depender da cor, que já diz
+  // outra coisa (pessoa ou modalidade). Tracejado = aguardando; hachura e
+  // título riscado = não compareceu.
+  const aguardando = !doGoogle && agendamento.situacao === "pending";
+  const faltou = !doGoogle && agendamento.situacao === "no_show";
 
   return (
     <button
@@ -425,6 +450,8 @@ function BlocoDeAgendamento({
       aria-label={`${agendamento.titulo}, ${rotuloHora(comeca, fuso)} ${t("às")} ${rotuloHora(termina, fuso)}${
         agendamento.quemSeraAtendido ? `, ${t("com")} ${agendamento.quemSeraAtendido}` : ""
       }${pessoa ? `, ${t("atendido por")} ${pessoa.nome}` : ""}${
+        aguardando ? `, ${t("Aguardando confirmação")}` : faltou ? `, ${t("Não compareceu")}` : ""
+      }${
         doGoogle ? `, ${t("ocupado na agenda do Google")}` : ""
       }`}
       className={cn(
@@ -451,6 +478,7 @@ function BlocoDeAgendamento({
         // clique, que já existe na aba "Cancelados" do histórico logo acima. A
         // ação viva naquele espaço é marcar; o cancelado é registro.
         cancelado && "pointer-events-none opacity-55",
+        aguardando && "border-[1.5px] border-dashed",
         // Enquanto a proposta está aberta o card original esmaece e o fantasma
         // mostra onde ele cairia. Sumir com o original faria perder a
         // referência de onde ele estava — que é o que se desfaz ao cancelar.
@@ -468,9 +496,14 @@ function BlocoDeAgendamento({
             // é neutra de propósito — a agenda de fora não pertence a ninguém da
             // equipe, então não recebe trilha.
             "repeating-linear-gradient(135deg, var(--color-surface-elevated) 0 6px, var(--color-surface) 6px 12px)"
-          : corPropria
-            ? fundoDaCor(corPropria)
-            : fundoDaTrilha(trilha),
+          : faltou
+            ? "repeating-linear-gradient(135deg, var(--color-surface-elevated) 0 6px, var(--color-surface) 6px 12px)"
+            : aguardando
+              ? fundoDaCor(corDaFaixa, 5)
+              : corPropria
+                ? fundoDaCor(corPropria)
+                : fundoDaTrilha(trilha),
+        borderColor: aguardando ? corDaFaixa : undefined,
         opacity: doGoogle ? 0.75 : undefined,
       }}
     >
@@ -479,20 +512,19 @@ function BlocoDeAgendamento({
         data-testid={`faixa-${agendamento.id}`}
         className="absolute inset-y-0 left-0 w-[3px] rounded-l-sm"
         style={{
-          backgroundColor: doGoogle
-            ? "var(--color-border-strong)"
-            : (corPropria ?? corDaTrilha(trilha)),
+          backgroundColor: doGoogle || faltou ? "var(--color-border-strong)" : corDaFaixa,
         }}
       />
       <span
         className={cn(
           "ml-1 truncate text-[11px] font-semibold leading-4 text-text",
-          corPropria && pessoa && "self-stretch pr-5",
+          corPropria && pessoa && !semInicial && "self-stretch pr-5",
+          faltou && "text-text-muted line-through",
         )}
       >
         {agendamento.titulo}
       </span>
-      {corPropria && pessoa && (
+      {corPropria && pessoa && !semInicial && (
         <span
           aria-hidden
           data-testid={`inicial-${agendamento.id}`}
@@ -536,10 +568,18 @@ function ReguaDoAgora({ agora, fuso }: { agora: Date; fuso: string }) {
   );
 }
 
-function ColunaDeHoras() {
+function ColunaDeHoras({ porPessoa = false }: { porPessoa?: boolean }) {
   return (
-    <div className="w-12 shrink-0 select-none border-r border-border" aria-hidden>
-      <div className="h-8 border-b border-border" />
+    <div
+      className={cn(
+        "w-12 shrink-0 select-none border-r border-border",
+        // Com uma coluna por profissional a grade rola para o lado, e a hora
+        // não pode ir embora junto.
+        porPessoa && "sticky left-0 z-30 bg-surface",
+      )}
+      aria-hidden
+    >
+      <div className={cn("border-b border-border", porPessoa ? "h-11" : "h-8")} />
       {HORAS.map((h) => (
         <div
           key={h}
@@ -615,6 +655,7 @@ function ColunaDeDia({
   interacao,
   proposta,
   arrasteDoCard,
+  daPessoa,
 }: {
   dia: Date;
   agora: Date;
@@ -623,6 +664,12 @@ function ColunaDeDia({
   pessoas: Pessoa[];
   onAbrir?: (id: string) => void;
   destacado: boolean;
+  /**
+   * A coluna é de UMA pessoa, não do dia inteiro — o dia por profissional.
+   * Ela mostra só o que essa pessoa atende, e o cabeçalho troca o dia da
+   * semana pelo nome. Ausente = a coluna de sempre.
+   */
+  daPessoa?: ColunaDePessoa;
   /**
    * Some abaixo de `md`. Na semana, o celular mostra UM dia por vez: sete
    * colunas em 360px dão ~44px cada, e a célula de meia hora vira um alvo de
@@ -640,21 +687,52 @@ function ColunaDeDia({
 }) {
   const localeDaData = useLocaleDeData();
   const doDia = agendamentos.filter(
-    (c) => chaveDoDiaDoInstante(new Date(c.comeca), fuso) === chaveDoDia(dia),
+    (c) =>
+      chaveDoDiaDoInstante(new Date(c.comeca), fuso) === chaveDoDia(dia) &&
+      (!daPessoa || c.responsavelId === daPessoa.pessoa.id),
   );
+  // O fantasma do arraste fica na coluna de quem atende: arrastar para o lado
+  // muda o horário, nunca o profissional, e o desenho não pode sugerir o contrário.
+  const fantasmaAqui =
+    !daPessoa || agendamentos.some((a) => a.id === proposta?.id && a.responsavelId === daPessoa.pessoa.id);
   // "Hoje" é o dia da ORGANIZAÇÃO, não o do navegador: a mesma data marca
   // colunas diferentes em cada lado do mundo.
   const ehHoje = chaveDoDia(dia) === chaveDoDiaDoInstante(agora, fuso);
 
   return (
     <div
-      data-testid={`coluna-dia-${format(dia, "yyyy-MM-dd")}`}
+      data-testid={daPessoa ? `coluna-pessoa-${daPessoa.pessoa.id}` : `coluna-dia-${format(dia, "yyyy-MM-dd")}`}
       className={cn(
         "relative min-w-0 flex-1 border-r border-border last:border-r-0",
+        // Seis profissionais num celular não cabem lado a lado: cada coluna
+        // guarda uma largura legível e a grade rola na horizontal.
+        daPessoa && "min-w-[9.5rem]",
         soNoDesktop && "max-md:hidden",
         destacado && "bg-surface-elevated/40",
       )}
     >
+      {daPessoa ? (
+        <div
+          data-testid={`cabecalho-pessoa-${daPessoa.pessoa.id}`}
+          className="sticky top-0 z-20 flex h-11 items-center gap-2 border-b border-border bg-surface px-2"
+        >
+          <AvatarDaPessoa pessoa={daPessoa.pessoa} tamanho="sm" />
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-xs font-semibold leading-4 text-text">
+              {daPessoa.pessoa.nome}
+            </span>
+            {daPessoa.detalhe && (
+              <span className="truncate text-[11px] leading-4 text-text-muted">{daPessoa.detalhe}</span>
+            )}
+          </span>
+          <span
+            data-testid={`quantos-pessoa-${daPessoa.pessoa.id}`}
+            className="ml-auto shrink-0 text-[11px] tabular-nums text-text-muted"
+          >
+            {doDia.filter((a) => a.origem !== "google_sync").length}
+          </span>
+        </div>
+      ) : (
       <div
         className={cn(
           "sticky top-0 z-20 flex h-8 items-center justify-center gap-1.5 border-b border-border bg-surface px-2",
@@ -672,6 +750,7 @@ function ColunaDeDia({
           {format(dia, "d")}
         </span>
       </div>
+      )}
 
       <div
         className="relative"
@@ -692,7 +771,7 @@ function ColunaDeDia({
             style={{ height: ALTURA_DA_HORA }}
           />
         ))}
-        {interacao && (
+        {interacao && (!daPessoa || daPessoa.marcaAqui) && (
           <CamadaDeMarcacao
             dia={dia}
             agora={agora}
@@ -710,6 +789,7 @@ function ColunaDeDia({
             fuso={fuso}
             coluna={coluna}
             colunas={colunas}
+            semInicial={daPessoa !== undefined}
             arraste={
               arrasteDoCard
                 ? { ...arrasteDoCard, ativo: proposta?.id === agendamento.id }
@@ -717,7 +797,7 @@ function ColunaDeDia({
             }
           />
         ))}
-        {proposta && proposta.dia === chaveDoDia(dia) && (
+        {proposta && proposta.dia === chaveDoDia(dia) && fantasmaAqui && (
           <FantasmaDoArraste
             proposta={proposta}
             duracaoMin={interacao?.duracaoMin ?? 30}
@@ -822,7 +902,11 @@ function VisaoDeMes({
                       // AFIRMA, e um seletor que repete a asserção não prova
                       // nada.
                       data-origem={c.origem}
-                      className="flex items-center gap-1 rounded-sm px-1 py-0.5"
+                      data-situacao={c.situacao}
+                      className={cn(
+                        "flex items-center gap-1 rounded-sm px-1 py-0.5",
+                        c.situacao === "pending" && "border border-dashed border-border-strong",
+                      )}
                       style={{
                         background: c.corDoBloco
                           ? fundoDaCor(c.corDoBloco, 14)
@@ -834,7 +918,12 @@ function VisaoDeMes({
                         className="h-1.5 w-1.5 shrink-0 rounded-full"
                         style={{ backgroundColor: c.corDoBloco ?? corDaTrilha(trilha) }}
                       />
-                      <span className="truncate text-[10px] leading-4 text-text">
+                      <span
+                        className={cn(
+                          "truncate text-[10px] leading-4 text-text",
+                          c.situacao === "no_show" && "text-text-muted line-through",
+                        )}
+                      >
                         {rotuloHora(new Date(c.comeca), fuso)} {c.titulo}
                       </span>
                     </div>
@@ -858,6 +947,7 @@ export function GradeDaAgenda({
   agendamentos,
   onAbrirAgendamento,
   interacao,
+  colunasPorPessoa,
   className,
 }: {
   visao: VisaoDaAgenda;
@@ -885,9 +975,16 @@ export function GradeDaAgenda({
   onAbrirAgendamento?: (id: string) => void;
   /** Ausente = grade só de leitura, como a vitrine a monta. Ver `InteracaoDaGrade`. */
   interacao?: InteracaoDaGrade;
+  /**
+   * Na visão Dia, uma coluna por pessoa em vez de uma só. Quem escolhe as
+   * colunas é quem monta a grade (hoje, o módulo clínica); ausente ou fora da
+   * visão Dia, a grade é a de sempre.
+   */
+  colunasPorPessoa?: ColunaDePessoa[];
   className?: string;
 }) {
   const dias = visao === "dia" ? [ancora] : diasDaSemanaDe(ancora);
+  const porPessoa = visao === "dia" && colunasPorPessoa && colunasPorPessoa.length > 0 ? colunasPorPessoa : null;
 
   const gradeRef = React.useRef<HTMLDivElement>(null);
   const [proposta, setProposta] = React.useState<PropostaDeRemarcacao | null>(null);
@@ -1108,9 +1205,24 @@ export function GradeDaAgenda({
         // `overflow-x: hidden` no globals.css, então uma grade que estourasse a
         // largura simplesmente sumiria pela direita, sem barra para trazê-la de volta.
         <div ref={gradeRef} className="flex min-h-0 flex-1 overflow-auto">
-          <ColunaDeHoras />
-          <div className="flex min-w-0 flex-1">
-            {dias.map((d) => (
+          <ColunaDeHoras porPessoa={porPessoa !== null} />
+          <div data-testid={porPessoa ? "dia-por-pessoa" : undefined} className={cn("flex flex-1", !porPessoa && "min-w-0")}>
+            {porPessoa ? porPessoa.map((coluna) => (
+              <ColunaDeDia
+                key={coluna.pessoa.id}
+                dia={ancora}
+                agora={agora}
+                fuso={fuso}
+                agendamentos={agendamentos}
+                pessoas={pessoas}
+                onAbrir={onAbrirAgendamento}
+                destacado={false}
+                interacao={interacao}
+                proposta={proposta}
+                arrasteDoCard={arrasteDoCard}
+                daPessoa={coluna}
+              />
+            )) : dias.map((d) => (
               <ColunaDeDia
                 key={d.toISOString()}
                 dia={d}

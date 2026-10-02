@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { sql } from "./gov-helpers";
 
@@ -114,6 +114,26 @@ function conjuntosUnicos(tabela: string): string[][] {
     .filter((l) => l.length > 0)
     .map((l) => l.split(",").map((c) => c.trim()).sort());
 }
+
+/**
+ * As tabelas de MÓDULO (ADR-0002) só existem depois que a provisionadora roda, e o banco do teste
+ * nasce sem módulo instalado. Sem provisionar, o `upsert` de uma rota de módulo seria reportado
+ * como "tabela sem índice único" — ou, pior, um alvo errado num módulo nunca seria conferido.
+ * Provisionar todos os módulos que existem no catálogo mede o banco de quem os instalou.
+ */
+beforeAll(() => {
+  sql(`
+    do $m$
+    declare r record;
+    begin
+      for r in select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                where n.nspname = 'public' and p.proname ~ '^fn_.+_provisionar$' and p.pronargs = 0
+      loop
+        execute format('select public.%I()', r.proname);
+      end loop;
+    end $m$;
+  `);
+});
 
 describe("onConflict × constraints reais", () => {
   const arquivos = arquivosDoRepo();

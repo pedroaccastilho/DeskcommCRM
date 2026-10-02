@@ -8,6 +8,34 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.70.0] — 2026-10-01
+
+### Adicionado
+
+- **Agenda colorida pela modalidade no módulo clínica** Com o módulo "clínica" instalado, a Agenda passa a colorir cada atendimento pela modalidade: fisioterapia em azul, pilates em laranja, medicina em violeta e enfermagem em framboesa. Atendimentos de outros tipos, como reunião, ficam em cinza. A modalidade é identificada pelo nome do tipo de atendimento. Quem atende aparece pelas iniciais no próprio bloco, e uma legenda explica as cores. O botão "Modalidade / Profissional", ao lado do filtro de pessoas, volta às cores por profissional, e cada pessoa da equipe faz a própria escolha. Sem o módulo, a Agenda continua como antes.
+
+- **Evoluções pendentes e atalho da agenda para o prontuário** Com o módulo "clínica" instalado, o profissional de saúde ganha a tela Evoluções pendentes, com as sessões que atendeu nos últimos 30 dias e que ainda não têm registro no prontuário. O botão "Registrar evolução", nessa tela e nas sessões passadas da Agenda, abre a ficha do paciente na aba Prontuário com a sessão já vinculada. Depois de assinada, a evolução mostra que veio da agenda e a sessão sai das pendências.
+
+- **Base do prontuário clínico (módulo "clínica", ainda sem telas)** O banco passa a conhecer o módulo opcional "clínica", que guarda o prontuário dos pacientes: cadastro dos profissionais de saúde, registros clínicos assinados (anamnese, avaliação, evolução, alta e adendo) e a trilha de quem abriu cada prontuário. Nada aparece na tela ainda e nenhuma tabela é criada numa instalação até o módulo ser instalado. Só profissional de saúde cadastrado lê o prontuário, registro assinado não pode ser editado nem apagado, a sessão de suporte da plataforma não tem acesso e a IA do WhatsApp não lê essas tabelas. Não é preciso fazer nada na instalação.
+
+- **Prontuário com campos por tipo de registro** No módulo "clínica", cada tipo de registro passa a ter os próprios campos. A avaliação de fisioterapia traz o conteúdo mínimo do COFFITO: história clínica, exame físico e funcional, exames complementares, diagnóstico fisioterapêutico, prognóstico, objetivos, condutas previstas, número de sessões e frequência semanal. A avaliação médica ganha história da doença atual e CID opcional, e a enfermagem ganha glicemia. A alta exige motivo (objetivo atingido, encaminhado, abandono ou a pedido do paciente) e resumo do tratamento. A evolução de sessão continua curta. Em Evoluções pendentes, a sessão sem registro há mais de 24 horas aparece como atrasada. Registros assinados antes continuam aparecendo inteiros.
+
+- **Prontuário em PDF e trilha de acessos** No módulo "clínica", o profissional de saúde exporta o prontuário do paciente em PDF pelo botão "Exportar PDF" da aba Prontuário. O documento traz todos os registros em ordem cronológica, cada um com a assinatura carimbada no momento do atendimento, e os adendos apontam o registro que corrigem. O administrador da clínica passa a ver, na mesma aba, quem abriu o prontuário e quando, mesmo que ele próprio não seja profissional de saúde. Cada leitura na tela e cada PDF exportado entram nessa lista.
+
+- **Prontuário clínico na ficha do paciente** Com o módulo "clínica" instalado, a ficha do contato ganha a aba Prontuário. Nela o profissional de saúde vê a linha do tempo do paciente, filtra por modalidade (fisioterapia, pilates, medicina e enfermagem) e assina registros com um modelo de campos próprio de cada modalidade. Registro assinado não se edita: correção entra como adendo. Em Configurações › Profissionais de saúde, o administrador da empresa cadastra quem atende, com conselho, registro e modalidades. Quem não está cadastrado vê só o aviso de que o prontuário é restrito.
+
+### Corrigido
+
+- **O calendário de "Novo agendamento" não abre mais num mês sem horário livre** No último dia útil do mês, depois do último horário, "Novo agendamento" abria no mês que estava acabando, com todos os dias apagados e "Nenhum horário livre", e o próximo horário livre, no dia seguinte, ficava escondido atrás da seta de mês. Agora o calendário abre direto no mês seguinte quando o mês de hoje não tem mais nenhum horário livre. Quem quiser marcar um encaixe hoje ainda pode voltar para o mês atual pela seta. Ao trocar de mês, o dia 1º também deixou de aparecer como disponível por um instante antes de os horários do novo mês carregarem. Não é preciso fazer nada na instalação.
+
+- **O instalador baixa a versão da TOQ** O instalador, o script de começar e o diagnóstico passam a clonar o repositório da TOQ e a baixar as imagens publicadas por ele, que trazem o módulo "clínica". Antes, uma instalação nova a partir deste repositório baixava a versão original do DeskcommCRM, sem o prontuário.
+
+- **Suspender uma empresa passa a calar a IA e os envios dela; quem tem acesso só de leitura ao painel deixa de poder alterar dados** Até aqui, suspender uma empresa em Admin › Empresas só tirava as pessoas da tela. A IA continuava respondendo aos clientes, o follow-up e as automações seguiam disparando, e o token de API e o MCP da empresa continuavam funcionando. Agora a suspensão suspende: nada que custe dinheiro ou saia para fora roda enquanto ela durar, e o que estava na fila para sair é descartado na hora em vez de sair depois.
+
+  As mensagens que chegam continuam gravadas, as páginas de anúncio e o link de rastreio seguem no ar, e pelo MCP a consulta aos pedidos de LGPD continua respondendo — as demais ferramentas do MCP recusam, e a API responde com um erro claro (403 `org_suspended`), pelo token ou pela tela. Quem entra numa empresa suspensa, ou já estava com o CRM aberto na hora, cai numa tela que diz o que fazer. Quem administra vê os pedidos de LGPD dos clientes, que não param durante a suspensão (o link do e-mail de prazo abre o pedido ali mesmo), e o contato do suporte quando o e-mail de suporte da instalação estiver configurado (`SUPPORT_EMAIL`); sem ele, a tela orienta a falar com quem administra o sistema. As demais pessoas leem que devem avisar o administrador, e quem participa de outra empresa ativa volta para ela com um clique.
+
+  Ao reativar, nada sai em rajada: a Central mostra um aviso com quantas conversas receberam mensagem durante a suspensão e leva ao Inbox, porque a IA não vai respondê-las sozinha. Os follow-ups em andamento ficam parados enquanto a suspensão durar e, ao reativar, retomam de onde pararam; o passo cujo envio foi descartado na suspensão ganha um envio novo, no ritmo normal da fila. Quem tem acesso só de leitura ao painel da instalação deixa de conseguir suspender, reativar ou alterar o estado de uma empresa, pela tela ou pela API, e também deixa de mudar configurações ou apagar dados de uma empresa em que é só participante. Nenhuma ação é necessária.
+
 ## [1.69.0] — 2026-09-30
 
 ### Adicionado
@@ -9734,7 +9762,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.69.0...HEAD
+[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.70.0...HEAD
+[1.70.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.69.0...v1.70.0
 [1.69.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.68.0...v1.69.0
 [1.68.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.67.0...v1.68.0
 [1.67.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.66.1...v1.67.0

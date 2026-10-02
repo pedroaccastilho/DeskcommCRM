@@ -1,14 +1,32 @@
 /**
- * Clínica (prontuário) — módulo oficial via ADR-0002 (migration 9001, fork TOQ).
+ * Clínica (prontuário e agenda) — módulo oficial via ADR-0002 (migrations 9001 e 9002, fork TOQ).
  *
- * `protecaoPropria` nas três tabelas: a RLS do prontuário é por PROFISSIONAL (não por papel
- * nem por membro), ligada dentro da própria provisionadora, então a policy ampla automática
- * não pode nascer nelas.
+ * `protecaoPropria` em todas: a RLS do prontuário é por PROFISSIONAL (não por papel
+ * nem por membro), e a da agenda separa leitura (membro) de escrita (`manager`+ ou só o
+ * servidor). As duas são ligadas dentro da provisionadora, então a policy ampla automática não
+ * pode nascer nelas.
  */
 import { moldeDeProvisionadora } from "./molde-de-provisionadora";
 
 moldeDeProvisionadora({
   modulo: "clinica",
-  tabelas: ["clinica_profissionais", "prontuario_registros", "prontuario_acessos"],
-  protecaoPropria: ["clinica_profissionais", "prontuario_registros", "prontuario_acessos"],
+  tabelas: [
+    "clinica_profissionais",
+    "prontuario_registros",
+    "prontuario_acessos",
+    // A agenda da clínica (migration 9002), pela provisionadora auxiliar.
+    "clinica_politicas",
+    "clinica_tipos_atendimento",
+    "clinica_agenda_historico",
+    "clinica_multas",
+  ],
+  protecaoPropria: [
+    "clinica_profissionais",
+    "prontuario_registros",
+    "prontuario_acessos",
+    "clinica_politicas",
+    "clinica_tipos_atendimento",
+    "clinica_agenda_historico",
+    "clinica_multas",
+  ],
 });

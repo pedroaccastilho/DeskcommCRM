@@ -25,15 +25,10 @@ import {
   camposObrigatoriosFaltando,
   camposParaMostrar,
   modeloDoRegistro,
-  type CampoDoModelo,
+  valorParaMostrar,
   type Modalidade,
   type TipoDeRegistro,
 } from "@/lib/clinica/vocabulario";
-
-/** O valor como aparece na tela: opção vira o rótulo dela; o resto, o texto gravado. */
-function valorParaMostrar(c: CampoDoModelo, v: string | number): string {
-  return c.opcoes?.find((o) => o.valor === v)?.rotulo ?? String(v);
-}
 
 type Registro = {
   id: string;
@@ -51,7 +46,11 @@ type Registro = {
 type Eu = {
   instalado: boolean;
   profissional: { modalidades: Modalidade[]; nome_profissional: string } | null;
+  /** Administrador da clínica: vê quem abriu o prontuário, mesmo sem ser profissional. */
+  ve_acessos?: boolean;
 };
+
+type Acesso = { id: string; user_id: string | null; nome: string | null; acessado_em: string };
 
 /** Uma sessão da agenda que já aconteceu e ainda não tem registro no prontuário. */
 export type Pendencia = {
@@ -100,6 +99,7 @@ export function ProntuarioDoPaciente({
   const tagDoIdioma = useTagDeIdioma();
   const eu = useClinicaEu();
   const profissional = eu.data?.profissional ?? null;
+  const veAcessos = Boolean(eu.data?.ve_acessos);
   const [filtro, setFiltro] = useState<Modalidade | "todas">("todas");
   const [adendoDe, setAdendoDe] = useState<Registro | null>(null);
 
@@ -124,11 +124,14 @@ export function ProntuarioDoPaciente({
   if (eu.isLoading) return null;
   if (!profissional) {
     return (
-      <Card className="p-4 text-sm text-text-muted" role="status">
-        {t(
-          "O prontuário só é visível para profissionais de saúde cadastrados e ativos na clínica. O cadastro fica em Configurações › Profissionais de saúde.",
-        )}
-      </Card>
+      <div className="flex flex-col gap-4">
+        <Card className="p-4 text-sm text-text-muted" role="status">
+          {t(
+            "O prontuário só é visível para profissionais de saúde cadastrados e ativos na clínica. O cadastro fica em Configurações › Profissionais de saúde.",
+          )}
+        </Card>
+        {veAcessos ? <TrilhaDeAcessos contactId={contactId} /> : null}
+      </div>
     );
   }
   if (registros.error instanceof ApiError) {
@@ -168,6 +171,15 @@ export function ProntuarioDoPaciente({
             {t(ROTULO_DA_MODALIDADE[m])}
           </Button>
         ))}
+        <Button size="sm" variant="outline" className="ml-auto" asChild>
+          <a
+            href={`/api/v1/clinica/prontuario/pdf?contact_id=${encodeURIComponent(contactId)}`}
+            download
+            data-testid="exportar-prontuario"
+          >
+            {t("Exportar PDF")}
+          </a>
+        </Button>
       </div>
 
       {registros.isLoading ? null : visiveis.length === 0 ? (
@@ -224,7 +236,66 @@ export function ProntuarioDoPaciente({
           ))}
         </ol>
       )}
+
+      {veAcessos ? <TrilhaDeAcessos contactId={contactId} /> : null}
     </div>
+  );
+}
+
+const ACESSOS_VISIVEIS = 10;
+
+/**
+ * Quem abriu o prontuário deste paciente, e quando: ler na tela ou exportar o PDF grava uma linha.
+ * Só o administrador da clínica vê (RLS de `prontuario_acessos`).
+ */
+function TrilhaDeAcessos({ contactId }: { contactId: string }) {
+  const t = useT();
+  const tagDoIdioma = useTagDeIdioma();
+  const [todos, setTodos] = useState(false);
+  const acessos = useQuery({
+    queryKey: ["clinica", "acessos", contactId],
+    queryFn: async () =>
+      (
+        await apiClient.get<{ data: Acesso[] }>(
+          `/api/v1/clinica/acessos?contact_id=${encodeURIComponent(contactId)}`,
+        )
+      ).data,
+    retry: false,
+  });
+
+  const lista = acessos.data ?? [];
+  const visiveis = todos ? lista : lista.slice(0, ACESSOS_VISIVEIS);
+
+  return (
+    <Card className="p-4" data-testid="prontuario-acessos">
+      <h3 className="text-sm font-medium">{t("Quem abriu este prontuário")}</h3>
+      <p className="mt-0.5 text-xs text-text-muted">
+        {t("Cada leitura na tela e cada PDF exportado ficam registrados. Só o administrador vê.")}
+      </p>
+      {acessos.error instanceof ApiError ? (
+        <p className="text-danger mt-3 text-sm">{acessos.error.message}</p>
+      ) : acessos.isLoading ? null : lista.length === 0 ? (
+        <p className="mt-3 text-sm text-text-muted">{t("Ninguém abriu este prontuário ainda.")}</p>
+      ) : (
+        <>
+          <ul className="mt-3 flex flex-col divide-y divide-border/60 text-sm">
+            {visiveis.map((a) => (
+              <li key={a.id} className="flex flex-wrap justify-between gap-2 py-1.5">
+                <span>{a.nome ?? t("Profissional removido")}</span>
+                <span className="text-xs text-text-muted">
+                  {new Date(a.acessado_em).toLocaleString(tagDoIdioma)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {lista.length > ACESSOS_VISIVEIS ? (
+            <Button size="sm" variant="ghost" className="mt-2" onClick={() => setTodos(!todos)}>
+              {todos ? t("Mostrar menos") : t("Ver todos")}
+            </Button>
+          ) : null}
+        </>
+      )}
+    </Card>
   );
 }
 

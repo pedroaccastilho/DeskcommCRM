@@ -88,6 +88,9 @@ const FORA_DE_INTERFACE: Record<string, string> = {
   // da interface faria um documento de conformidade mudar de forma conforme
   // quem apertou o botão.
   "lib/lgpd/pdf-renderer.tsx": "documento legal brasileiro: a data acompanha a lei, não a interface",
+  // Fork TOQ: o prontuário em PDF é documento clínico brasileiro (CFM/COFFITO), com a mesma
+  // razão do PDF de LGPD — a cópia não pode mudar de forma conforme quem apertou o botão.
+  "lib/clinica/pdf-do-prontuario.tsx": "prontuário: documento clínico brasileiro, data em pt-BR fixo",
 };
 
 function arquivos(dir: string, acc: string[] = []): string[] {
