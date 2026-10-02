@@ -103,7 +103,6 @@ test.describe("Agenda: sessão da clínica no painel do compromisso", () => {
       organization_id: orgId,
       event_type_id: tipoId,
       modalidade: "fisioterapia",
-      valor_cents: 15000,
     } as never);
     if (erroEtiqueta) throw new Error(`clinica_tipos_atendimento insert: ${erroEtiqueta.message}`);
 
@@ -157,6 +156,7 @@ test.describe("Agenda: sessão da clínica no painel do compromisso", () => {
       await expect(aviso).toBeVisible();
 
       await page.getByLabel("Motivo do cancelamento").fill("Paciente avisou que está doente");
+      await aviso.scrollIntoViewIfNeeded();
       await page.screenshot({ path: path.join(EVIDENCIA, "e2e-aviso.png") });
       await page.getByRole("button", { name: "Cancelar agendamento" }).click();
 
@@ -164,6 +164,7 @@ test.describe("Agenda: sessão da clínica no painel do compromisso", () => {
       await expect(multa).toBeVisible({ timeout: ESPERA });
       await expect(multa).toContainText("Multa pendente");
       await expect(page.getByTestId("valor-da-multa")).toContainText("45,00");
+      await multa.scrollIntoViewIfNeeded();
       await page.screenshot({ path: path.join(EVIDENCIA, "e2e-multa.png") });
 
       await page.getByTestId("isentar-multa").click();
@@ -176,6 +177,7 @@ test.describe("Agenda: sessão da clínica no painel do compromisso", () => {
       await expect(page.getByTestId("aviso-de-tolerancia")).toBeVisible({ timeout: ESPERA });
       await expect(page.getByRole("button", { name: "Faltou" })).toBeDisabled();
       await expect(page.getByRole("button", { name: "Compareceu" })).toBeEnabled();
+      await page.getByTestId("aviso-de-tolerancia").scrollIntoViewIfNeeded();
       await page.screenshot({ path: path.join(EVIDENCIA, "e2e-tolerancia.png") });
     } finally {
       await admin.from("clinica_multas").delete().eq("contact_id", pacienteId);
