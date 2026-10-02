@@ -32,6 +32,7 @@ import {
   type InterfaceSettings,
 } from "@/lib/navigation/interface";
 import { GRUPO_NO_RODAPE, sidebarGroups } from "@/lib/navigation/registry";
+import type { ModuloOpcional } from "@/lib/instalacao/modulos";
 
 const completa = { preset: "completa" } as const;
 const simplificada = { preset: "simplificada" } as const;
@@ -42,9 +43,17 @@ const hrefs = (settings: unknown, role: "agent" | "admin" = "admin") =>
 /**
  * Os itens do MENU LATERAL — o mesmo recorte que o instrumento de tela mede:
  * só os grupos que aparecem na dobra, sem o grupo do rodapé.
+ *
+ * Mede o NÚCLEO, sem módulo opcional ligado (`modulos: []`). Módulo instalado
+ * acrescenta as próprias portas, e quem enxuga o menu de cada cargo é a escolha
+ * de interface do vínculo (fork TOQ: o Balcão da clínica é a 16ª porta).
  */
-const itensNoMenuLateral = (settings: unknown, role: "agent" | "admin" = "admin") =>
-  sidebarGroups(false, role, settings as InterfaceSettings | undefined)
+const itensNoMenuLateral = (
+  settings: unknown,
+  role: "agent" | "admin" = "admin",
+  modulos: readonly ModuloOpcional[] = [],
+) =>
+  sidebarGroups(false, role, settings as InterfaceSettings | undefined, modulos)
     .filter((grupo) => grupo.group.id !== GRUPO_NO_RODAPE)
     .reduce((total, grupo) => total + grupo.items.length, 0);
 
@@ -197,6 +206,10 @@ describe("medição da folga (pergunta de aceite da issue #1341)", () => {
    */
   it("configuração COMPLETA (ninguém escolheu): 15 itens, folga 0 — igual a hoje", () => {
     expect(itensNoMenuLateral(combinarInterfaces(completa, completa))).toBe(15);
+  });
+
+  it("fork TOQ: o módulo clínica acrescenta só o Balcão ao menu lateral", () => {
+    expect(itensNoMenuLateral(INTERFACE_COMPLETA, "admin", ["clinica"])).toBe(16);
   });
 
   it("configuração SIMPLIFICADA (empresa escolhe o preset): 6 itens, folga 9", () => {

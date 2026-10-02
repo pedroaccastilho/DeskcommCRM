@@ -425,7 +425,7 @@ export function JanelaWhatsApp({
 
   const enviar = useMutation({
     mutationFn: async () => {
-      if (!paciente?.telefone) throw new Error("sem_telefone");
+      if (!paciente?.telefone) throw new Error(t("O contato não tem telefone cadastrado."));
       const conversa = await apiClient.post<{ data: { conversation_id: string } }>(
         "/api/v1/conversations/open-with-contact",
         { contact_id: paciente.id, phone_number: paciente.telefone },
