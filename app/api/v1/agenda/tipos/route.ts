@@ -39,7 +39,7 @@ import { z } from "zod";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
-import { ROLE_RANK, type Role } from "@/lib/auth/types";
+import { roleAtLeast, type Role } from "@/lib/auth/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listaTiposDeAtendimento } from "@/lib/agenda/consulta";
 import { TETO_DE_LEMBRETES_EXTRAS } from "@/lib/agenda/lembretes";
@@ -57,7 +57,7 @@ async function precoSoDoAdministrador(
   papel: Role,
   requestId: string | undefined,
 ): Promise<Response | null> {
-  if (ROLE_RANK[papel] >= ROLE_RANK.admin) return null;
+  if (roleAtLeast(papel, "admin")) return null;
   const soAdmin = await requireRole("admin", { requestId, resource: "calendar_event_types" });
   return soAdmin.ok ? null : soAdmin.response;
 }
