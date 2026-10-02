@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
@@ -22,8 +25,8 @@ import {
  * tolerância) é do servidor e tem teste unitário em `lib/clinica/agenda.test.ts`.
  *
  * Elenco (seedGov): GOV_AGENT_A é recepção (`agent`), GOV_MANAGER gestão, GOV_ADMIN admin,
- * GOV_VIEWER "Somente leitura". Desde a 9003 só o admin altera regras, modalidade e preço, só ele
- * vê o preço, e a multa (com valor) é de `agent`+.
+ * GOV_VIEWER "Somente leitura". Desde a 9003 só o admin altera regras e modalidade, e a multa
+ * (com valor) é de `agent`+. O preço da sessão é o do núcleo (`default_price_cents`).
  */
 const ORG_B = "cccccccc-9002-4000-8000-0000000000b0";
 const CONTATO_B = "cccccccc-9002-4000-8000-0000000000b1";
@@ -66,9 +69,6 @@ beforeAll(() => {
 
     insert into public.clinica_tipos_atendimento (organization_id, event_type_id, modalidade)
     values ('${ORG_B}', '${TIPO_B}', 'pilates')
-      on conflict (organization_id, event_type_id) do nothing;
-    insert into public.clinica_precos (organization_id, event_type_id, valor_cents)
-    values ('${ORG_B}', '${TIPO_B}', 9000)
       on conflict (organization_id, event_type_id) do nothing;
 
     -- Linhas que só o servidor escreve, semeadas pelo dono (como o service_role faria).
@@ -187,58 +187,54 @@ describe("modalidade dos tipos de atendimento", () => {
   });
 });
 
-describe("preço da sessão: só o administrador vê e altera", () => {
-  it("o administrador grava o preço; gerente e recepção não", () => {
-    expect(
-      writeCountAs(
-        GOV_MANAGER,
-        `insert into public.clinica_precos (organization_id, event_type_id, valor_cents) values ('${GOV_ORG}', '${TIPO_A}', 15000)`,
-      ),
-    ).toBe(0);
-    expect(
-      writeCountAs(
-        GOV_ADMIN,
-        `insert into public.clinica_precos (organization_id, event_type_id, valor_cents) values ('${GOV_ORG}', '${TIPO_A}', 15000)`,
-      ),
-    ).toBe(1);
-  });
-
-  it("só o administrador lê o preço, e só o da própria clínica", () => {
-    expect(countAs(GOV_ADMIN, `select count(*) from public.clinica_precos;`)).toBe(1);
-    expect(countAs(GOV_MANAGER, `select count(*) from public.clinica_precos;`)).toBe(0);
-    expect(countAs(GOV_AGENT_A, `select count(*) from public.clinica_precos;`)).toBe(0);
-    expect(countAs(GOV_VIEWER, `select count(*) from public.clinica_precos;`)).toBe(0);
-  });
-
-  it("preço para tipo de outra organização é recusado, até por fora da RLS", () => {
-    expect(
-      erroComoDono(
-        `insert into public.clinica_precos (organization_id, event_type_id, valor_cents) values ('${GOV_ORG}', '${TIPO_B}', 100)`,
-      ),
-    ).toMatch(/clinica_tipo_de_outra_organizacao/);
-  });
-
-  it("quem tinha o preço na tabela de modalidade (9002) o leva para a de preços", () => {
-    // Recria o formato da 9002 numa clínica, roda a provisionadora de novo e confere.
-    sql(`
-      delete from public.clinica_precos where organization_id = '${ORG_B}';
-      alter table public.clinica_tipos_atendimento
-        add column if not exists valor_cents int,
-        add column if not exists currency text not null default 'BRL';
-      update public.clinica_tipos_atendimento set valor_cents = 8800 where organization_id = '${ORG_B}';
-      select public.fn_clinica_provisionar_agenda();
-    `);
-    expect(
-      sql(
-        `select valor_cents from public.clinica_precos where organization_id = '${ORG_B}' and event_type_id = '${TIPO_B}';`,
-      ).trim(),
-    ).toBe("8800");
+describe("preço da sessão: um só, o do núcleo (9003)", () => {
+  it("a tabela de modalidade não guarda preço", () => {
     expect(
       sql(
         `select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'clinica_tipos_atendimento' and column_name in ('valor_cents', 'currency');`,
       ).trim(),
     ).toBe("0");
-    // Reaplicar de novo não duplica nem quebra.
+  });
+
+  it("o preço que a 9002 gravou vai para o preço padrão do tipo, sem sobrescrever um que exista", () => {
+    // O bloco `do` da 9003 é o que roda no update de quem tinha a 9002; ele é lido do próprio
+    // arquivo da migration para o teste medir o SQL que vai para o cliente.
+    const migracao = readFileSync(
+      join(process.cwd(), "supabase/migrations/20261002020000_9003_clinica_regras_admin.sql"),
+      "utf8",
+    );
+    const inicio = migracao.indexOf("do $m$");
+    const blocoDeCopia = migracao.slice(inicio, migracao.indexOf("$m$;", inicio) + 4);
+    expect(blocoDeCopia).toContain("default_price_cents");
+
+    sql(`
+      update public.calendar_event_types set default_price_cents = null where id = '${TIPO_B}';
+      update public.calendar_event_types set default_price_cents = 12000 where id = '${TIPO_A}';
+      alter table public.clinica_tipos_atendimento
+        add column if not exists valor_cents int,
+        add column if not exists currency text not null default 'BRL';
+      insert into public.clinica_tipos_atendimento (organization_id, event_type_id, modalidade)
+      values ('${GOV_ORG}', '${TIPO_A}', 'fisioterapia')
+        on conflict (organization_id, event_type_id) do nothing;
+      update public.clinica_tipos_atendimento set valor_cents = 8800 where event_type_id = '${TIPO_B}';
+      update public.clinica_tipos_atendimento set valor_cents = 1 where event_type_id = '${TIPO_A}';
+    `);
+    sql(blocoDeCopia);
+    sql(`select public.fn_clinica_provisionar_agenda();`);
+
+    expect(
+      sql(`select default_price_cents from public.calendar_event_types where id = '${TIPO_B}';`).trim(),
+    ).toBe("8800");
+    expect(
+      sql(`select default_price_cents from public.calendar_event_types where id = '${TIPO_A}';`).trim(),
+    ).toBe("12000");
+    expect(
+      sql(
+        `select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'clinica_tipos_atendimento' and column_name = 'valor_cents';`,
+      ).trim(),
+    ).toBe("0");
+    // Reaplicar de novo, com a coluna já fora, não quebra.
+    expect(erroComoDono(blocoDeCopia.replace(/;$/, ""))).toBe("");
     expect(erroComoDono(`select public.fn_clinica_provisionar_agenda()`)).toBe("");
   });
 });

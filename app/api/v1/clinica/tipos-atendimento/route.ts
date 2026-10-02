@@ -2,10 +2,11 @@
  * MODALIDADE DE CADA TIPO DE AGENDAMENTO (módulo clínica, migrations 9002 e 9003).
  *
  * É a etiqueta que faz um tipo de agendamento do núcleo virar "sessão da clínica": dá a cor da
- * modalidade na grade e liga a tolerância de atraso e a multa de cancelamento. O PREÇO não mora
- * aqui: é `/api/v1/clinica/precos`, que só o administrador vê.
+ * modalidade na grade e liga a tolerância de atraso e a multa de cancelamento.
  *
- * GET: qualquer membro; todos os tipos ATIVOS da organização, com `modalidade` (ou `null`).
+ * GET: qualquer membro; todos os tipos ATIVOS da organização, com `modalidade` (ou `null`) e
+ * `preco_cents`, o "Preço padrão" do tipo no núcleo (`default_price_cents`), que é a base da
+ * multa. O preço se altera pela rota do núcleo (`PATCH /api/v1/agenda/tipos`).
  * PUT { event_type_id, modalidade | null }: só `admin` (9003). `modalidade: null` tira a etiqueta.
  */
 import { randomUUID } from "node:crypto";
@@ -31,7 +32,7 @@ export async function GET(): Promise<Response> {
   const [tipos, etiquetas] = await Promise.all([
     supabase
       .from("calendar_event_types")
-      .select("id, name, color, duration_minutes")
+      .select("id, name, duration_minutes, default_price_cents")
       .eq("organization_id", org)
       .eq("is_active", true)
       .order("position"),
@@ -53,8 +54,8 @@ export async function GET(): Promise<Response> {
       return {
         event_type_id: t.id,
         nome: t.name,
-        cor: t.color ?? null,
         duracao_minutos: t.duration_minutes,
+        preco_cents: t.default_price_cents === null ? null : Number(t.default_price_cents),
         modalidade: e?.modalidade ?? null,
       };
     }),

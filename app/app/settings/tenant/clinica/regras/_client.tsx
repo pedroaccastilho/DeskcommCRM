@@ -114,7 +114,6 @@ const BLOCOS: Bloco[] = [
 
 const CHAVE_REGRAS = ["clinica", "regras"];
 const CHAVE_TIPOS = ["clinica", "tipos-atendimento"];
-const CHAVE_PRECOS = ["clinica", "precos"];
 
 const campo = "rounded-md border border-border bg-surface-elevated p-2 text-sm text-text";
 
@@ -271,24 +270,23 @@ function paraTexto(regras: Regras): Record<string, string> {
   );
 }
 
-type TipoComModalidade = { event_type_id: string; nome: string; modalidade: Modalidade | null };
-type TipoComPreco = { event_type_id: string; valor_cents: number | null; currency: string };
+type TipoDaClinica = {
+  event_type_id: string;
+  nome: string;
+  modalidade: Modalidade | null;
+  /** O "Preço padrão" do tipo no núcleo, base da multa. */
+  preco_cents: number | null;
+};
 
 function TiposDeAtendimento() {
   const t = useT();
   const tipos = useQuery({
     queryKey: CHAVE_TIPOS,
     queryFn: async () =>
-      (await apiClient.get<{ data: TipoComModalidade[] }>("/api/v1/clinica/tipos-atendimento")).data,
-  });
-  const precos = useQuery({
-    queryKey: CHAVE_PRECOS,
-    queryFn: async () =>
-      (await apiClient.get<{ data: TipoComPreco[] }>("/api/v1/clinica/precos")).data,
+      (await apiClient.get<{ data: TipoDaClinica[] }>("/api/v1/clinica/tipos-atendimento")).data,
   });
 
   const lista = tipos.data ?? [];
-  const precoPorTipo = new Map((precos.data ?? []).map((p) => [p.event_type_id, p]));
 
   return (
     <section
@@ -301,12 +299,12 @@ function TiposDeAtendimento() {
       </div>
       <p className="text-xs text-text-muted">
         {t(
-          "A modalidade pinta a agenda e liga a tolerância e a multa. O preço da sessão avulsa é a base da multa e só administradores o veem.",
+          "A modalidade pinta a agenda e liga a tolerância e a multa. O preço é o mesmo de Tipos de agendamento e é a base da multa.",
         )}
       </p>
-      {tipos.isError || precos.isError ? (
+      {tipos.isError ? (
         <p className="text-danger text-sm">{t("Não foi possível carregar os tipos de atendimento.")}</p>
-      ) : tipos.isLoading || precos.isLoading ? null : lista.length === 0 ? (
+      ) : tipos.isLoading ? null : lista.length === 0 ? (
         <p className="text-sm text-text-muted">
           {t("Nenhum tipo de agendamento ativo. Crie os tipos em Configurações › Tipos de agendamento.")}
         </p>
@@ -314,9 +312,8 @@ function TiposDeAtendimento() {
         <ul className="divide-y divide-border/60">
           {lista.map((tipo) => (
             <LinhaDoTipo
-              key={`${tipo.event_type_id}:${tipo.modalidade}:${precoPorTipo.get(tipo.event_type_id)?.valor_cents}`}
+              key={`${tipo.event_type_id}:${tipo.modalidade}:${tipo.preco_cents}`}
               tipo={tipo}
-              preco={precoPorTipo.get(tipo.event_type_id)?.valor_cents ?? null}
             />
           ))}
         </ul>
@@ -330,7 +327,8 @@ function centavosParaTexto(cents: number | null): string {
   return (cents / 100).toFixed(2).replace(".", ",");
 }
 
-function LinhaDoTipo({ tipo, preco }: { tipo: TipoComModalidade; preco: number | null }) {
+function LinhaDoTipo({ tipo }: { tipo: TipoDaClinica }) {
+  const preco = tipo.preco_cents;
   const t = useT();
   const qc = useQueryClient();
   const [modalidade, setModalidade] = useState<string>(tipo.modalidade ?? "");
@@ -350,16 +348,14 @@ function LinhaDoTipo({ tipo, preco }: { tipo: TipoComModalidade; preco: number |
         });
       }
       if (mudouPreco) {
-        await apiClient.put("/api/v1/clinica/precos", {
-          event_type_id: tipo.event_type_id,
-          valor_cents: novoPreco,
+        // O preço é do NÚCLEO (o mesmo de Tipos de agendamento e da comanda): uma coluna só.
+        await apiClient.patch("/api/v1/agenda/tipos", {
+          id: tipo.event_type_id,
+          default_price_cents: novoPreco,
         });
       }
     },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: CHAVE_TIPOS });
-      void qc.invalidateQueries({ queryKey: CHAVE_PRECOS });
-    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: CHAVE_TIPOS }),
     onError: showApiError,
   });
 

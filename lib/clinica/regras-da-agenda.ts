@@ -20,6 +20,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Actor, HandlerCtx } from "@/lib/api/handlers/types";
 import { ApiError } from "@/lib/api/types";
 import { audit } from "@/lib/audit";
+import { moedaDaOrganizacao } from "@/lib/catalogo/moeda-da-org";
 import { tagDeIdioma } from "@/lib/i18n/datas";
 import { IDIOMA_PADRAO } from "@/lib/i18n/idiomas";
 import { logger } from "@/lib/logger";
@@ -63,27 +64,27 @@ export async function tipoDaClinica(
 }
 
 /**
- * O preço da sessão avulsa do tipo, ou `null` (sem preço cadastrado).
+ * O preço da sessão avulsa do tipo, base da multa, ou `null` (tipo sem preço).
  *
- * Lê com o client de SERVIÇO: `clinica_precos` só o administrador lê pela sessão (9003), e a
- * multa precisa sair com valor também quando quem cancela é a recepção. A organização vem do
- * contexto autenticado, nunca do corpo.
+ * É o "Preço padrão" do tipo de agendamento do NÚCLEO (`calendar_event_types.default_price_cents`,
+ * o mesmo que a comanda sugere): a clínica não guarda segundo preço (migration 9003). A moeda é a
+ * que a organização declarou.
  */
 export async function precoDoTipo(
+  db: SB,
   organizationId: string,
   eventTypeId: string,
 ): Promise<{ valor_cents: number; currency: string } | null> {
-  const { data, error } = await createAdminClient()
-    .from("clinica_precos")
-    .select("valor_cents, currency")
+  const { data, error } = await db
+    .from("calendar_event_types")
+    .select("default_price_cents")
     .eq("organization_id", organizationId)
-    .eq("event_type_id", eventTypeId)
+    .eq("id", eventTypeId)
     .maybeSingle();
-  if (error) {
-    if (moduloClinicaNaoInstalado(error)) return null;
-    throw error;
-  }
-  return (data as { valor_cents: number; currency: string } | null) ?? null;
+  if (error) throw error;
+  const bruto = (data as { default_price_cents: number | string | null } | null)?.default_price_cents;
+  if (bruto === null || bruto === undefined) return null;
+  return { valor_cents: Number(bruto), currency: await moedaDaOrganizacao(db, organizationId) };
 }
 
 /** A política gravada, ou a padrão. */
@@ -194,7 +195,7 @@ export async function depoisDaMudancaNaClinica(
     if (acao !== "cancelado" || !mudanca.contactId) return;
 
     const politica = await politicaDaOrganizacao(db, ctx.organization_id);
-    const preco = await precoDoTipo(ctx.organization_id, eventTypeId);
+    const preco = await precoDoTipo(db, ctx.organization_id, eventTypeId);
     const multa = multaDoCancelamento({
       inicio: mudanca.deInicio,
       canceladoEm: agora,

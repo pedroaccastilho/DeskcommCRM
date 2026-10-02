@@ -163,7 +163,7 @@ export interface SessaoDaGrade {
   status: string;
   profissional_user_id: string | null;
   modalidade: Modalidade | null;
-  tipo: { id: string; nome: string; cor: string | null } | null;
+  tipo: { id: string; nome: string } | null;
   paciente: { id: string; nome: string; telefone: string | null } | null;
   /** A partir de quando a recepção pode marcar "não compareceu" (só sessão da clínica). */
   falta_liberada_em: string | null;
@@ -186,7 +186,7 @@ export interface LinhaDoCompromisso {
 /** Linha do banco → sessão da grade. Pura, para a rota e o teste falarem a mesma língua. */
 export function sessaoDaGrade(
   linha: LinhaDoCompromisso,
-  tipos: ReadonlyMap<string, { nome: string; cor: string | null; modalidade: Modalidade | null }>,
+  tipos: ReadonlyMap<string, { nome: string; modalidade: Modalidade | null }>,
   politica: PoliticaDaAgenda,
 ): SessaoDaGrade {
   const tipo = linha.event_type_id ? tipos.get(linha.event_type_id) : undefined;
@@ -203,7 +203,7 @@ export function sessaoDaGrade(
     modalidade,
     tipo:
       linha.event_type_id && tipo
-        ? { id: linha.event_type_id, nome: tipo.nome, cor: tipo.cor }
+        ? { id: linha.event_type_id, nome: tipo.nome }
         : null,
     paciente: linha.contact_id
       ? {

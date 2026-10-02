@@ -15,8 +15,9 @@ export const dynamic = "force-dynamic";
  * tolerância de atraso, modalidade e preço de cada tipo de atendimento, pacote e alertas.
  *
  * Só `admin` (pedido do Pedro, 02/10/2026): os outros perfis nem abrem a tela, para não lerem
- * configuração e preço fora de contexto. A RLS da 9003 e as rotas cobram o mesmo degrau; esta
- * página só decide o que mostrar. A agenda de todos continua recebendo os prazos que saem daqui.
+ * configuração fora de contexto. A RLS da 9003 e as rotas cobram o mesmo degrau; esta página só
+ * decide o que mostrar. A agenda de todos continua recebendo os prazos que saem daqui. O preço
+ * é o do núcleo (`calendar_event_types.default_price_cents`), editado pela rota do núcleo.
  */
 export default async function Page() {
   const user = await requireAuth();

@@ -42,7 +42,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   const [etiquetas, politicaLida] = await Promise.all([
     supabase
       .from("clinica_tipos_atendimento")
-      .select("event_type_id, modalidade, calendar_event_types(name, color)")
+      .select("event_type_id, modalidade, calendar_event_types(name)")
       .eq("organization_id", org),
     supabase
       .from("clinica_politicas")
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   type Etiqueta = {
     event_type_id: string;
     modalidade: Modalidade;
-    calendar_event_types: { name: string; color: string | null } | null;
+    calendar_event_types: { name: string } | null;
   };
   const lista = (etiquetas.data ?? []) as unknown as Etiqueta[];
   if (lista.length === 0) return ok([], { requestId });
@@ -70,7 +70,6 @@ export async function GET(req: NextRequest): Promise<Response> {
       e.event_type_id,
       {
         nome: e.calendar_event_types?.name ?? "Atendimento",
-        cor: e.calendar_event_types?.color ?? null,
         modalidade: e.modalidade,
       },
     ]),

@@ -1,4 +1,4 @@
--- 9003 — Clínica: as regras da clínica só o administrador altera, e o preço só ele vê.
+-- 9003 — Clínica: as regras da clínica só o administrador altera.
 --
 -- Faixa 9xxx do fork TOQ. Lei: docs/adr/0002-tabelas-de-modulo-num-banco-so.md.
 -- Pedido do Pedro (02/10/2026): os valores do negócio ficam numa tela de configurações que só o
@@ -10,16 +10,13 @@
 --    validade do pacote padrão, reposições por mês, congelamento, aviso de renovação, alertas de
 --    falta, inatividade e evolução atrasada. Os de pacote e alerta ficam guardados agora e
 --    passam a valer quando essas partes forem construídas; a tela diz isso.
--- 2. O PREÇO sai de `clinica_tipos_atendimento` para `clinica_precos`, que só o `admin` lê. A
---    modalidade continua legível por todos, porque a agenda pinta e aplica as regras por ela.
---    Quem já tinha preço gravado (9002) o leva para a tabela nova; a coluna velha sai.
--- 3. Escrever política, modalidade e preço passa de `manager`+ para `admin`.
+-- 2. O PREÇO sai de `clinica_tipos_atendimento`. O núcleo já tem o preço do tipo de agendamento
+--    (`calendar_event_types.default_price_cents`, o "Preço padrão" que a comanda usa), e duas
+--    colunas de preço divergiriam (DIRC: integrar, não duplicar). A multa passa a ler o do núcleo.
+--    O valor que a 9002 gravou é levado para lá quando o tipo ainda não tem preço padrão.
+-- 3. Escrever política e modalidade passa de `manager`+ para `admin`.
 -- 4. A lista de multas (com valor) passa a ser de `agent`+: a recepção cobra e isenta; o perfil
---    "Somente leitura" não vê valor financeiro.
---
--- O servidor lê preço e política com o client de serviço, filtrando a organização do contexto
--- autenticado (`lib/clinica/regras-da-agenda.ts`), para a multa sair com valor mesmo quando
--- quem cancela é a recepção.
+--    "Somente leitura" não vê valor de multa.
 --
 -- ── Por que recriar a auxiliar da agenda, e não a provisionadora do módulo ──────────────────
 -- `fn_clinica_provisionar()` continua chamando `fn_clinica_provisionar_agenda()`; só o corpo
@@ -27,9 +24,35 @@
 -- 9002 com as mudanças acima, e é idempotente: reaplicar não duplica nada.
 --
 -- ── Destino (DoD 18): extensão ──────────────────────────────────────────────────────────────
--- Só tabelas do módulo. Sem o módulo instalado, nada disto existe.
+-- Só tabelas do módulo, mais a cópia única de dado descrita no item 2. Sem o módulo instalado,
+-- nada disto existe.
 
--- ---- a provisionadora auxiliar da agenda, com as regras e o preço (9003) ----
+-- ---- o preço que a 9002 guardou vai para o preço padrão do tipo, no núcleo ----
+-- Fora da provisionadora (ela não escreve no núcleo) e ANTES dela: a reaplicação dos módulos,
+-- no fim do baseline, é que tira a coluna velha. Sem a coluna (instalação nova, ou depois da
+-- primeira vez), não faz nada. Nunca sobrescreve um preço padrão que já exista.
+do $m$
+begin
+  if exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public'
+       and table_name = 'clinica_tipos_atendimento'
+       and column_name = 'valor_cents'
+  ) then
+    execute $q$
+      update public.calendar_event_types t
+         set default_price_cents = c.valor_cents
+        from public.clinica_tipos_atendimento c
+       where c.event_type_id = t.id
+         and c.organization_id = t.organization_id
+         and c.valor_cents is not null
+         and t.default_price_cents is null
+    $q$;
+  end if;
+end
+$m$;
+
+-- ---- a provisionadora auxiliar da agenda, com as regras da clínica (9003) ----
 create or replace function public.fn_clinica_provisionar_agenda()
 returns void
 language plpgsql
@@ -129,49 +152,13 @@ begin
     before insert or update on public.clinica_tipos_atendimento
     for each row execute function public.fn_clinica_tipo_da_mesma_org();
 
-  -- ── o preço de cada tipo de agendamento: só o administrador vê (9003) ─────
-  -- Separado da modalidade porque a modalidade é de todos (a agenda pinta por ela) e o preço é
-  -- valor financeiro. A RLS não esconde coluna; esconde linha, e por isso é outra tabela.
-  create table if not exists public.clinica_precos (
-    id uuid primary key default gen_random_uuid(),
-    organization_id uuid not null references public.organizations(id) on delete cascade,
-    event_type_id uuid not null references public.calendar_event_types(id) on delete cascade,
-    -- Valor de UMA sessão avulsa, base da multa.
-    valor_cents int not null check (valor_cents >= 0),
-    currency text not null default 'BRL' check (currency ~ '^[A-Z]{3}$'),
-    updated_by_user_id uuid references auth.users(id) on delete set null,
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now(),
-    constraint clinica_precos_um_por_tipo unique (organization_id, event_type_id)
-  );
-
-  create index if not exists clinica_precos_tipo_idx
-    on public.clinica_precos (event_type_id);
-
-  drop trigger if exists trg_clinica_preco_da_mesma_org on public.clinica_precos;
-  create trigger trg_clinica_preco_da_mesma_org
-    before insert or update on public.clinica_precos
-    for each row execute function public.fn_clinica_tipo_da_mesma_org();
-
-  -- Quem tinha o preço na tabela de modalidade (9002) o leva para cá, e a coluna sai. Dinâmico
-  -- porque, depois da primeira vez, a coluna não existe mais e o SQL estático não compilaria.
-  if exists (
-    select 1 from information_schema.columns
-     where table_schema = 'public'
-       and table_name = 'clinica_tipos_atendimento'
-       and column_name = 'valor_cents'
-  ) then
-    execute $m$
-      insert into public.clinica_precos (organization_id, event_type_id, valor_cents, currency)
-      select organization_id, event_type_id, valor_cents, currency
-        from public.clinica_tipos_atendimento
-       where valor_cents is not null
-      on conflict (organization_id, event_type_id) do nothing
-    $m$;
-    alter table public.clinica_tipos_atendimento
-      drop column if exists valor_cents,
-      drop column if exists currency;
-  end if;
+  -- O preço da sessão saiu daqui (9003): ele já existe no núcleo, em
+  -- `calendar_event_types.default_price_cents` (o "Preço padrão" de Tipos de agendamento, que a
+  -- comanda também usa). Duas colunas de preço divergiriam. O valor que a 9002 gravou aqui é
+  -- levado para lá pela migration, FORA desta função (a provisionadora não escreve no núcleo).
+  alter table public.clinica_tipos_atendimento
+    drop column if exists valor_cents,
+    drop column if exists currency;
 
   -- ── o que aconteceu com cada sessão, e quem fez ───────────────────────────
   create table if not exists public.clinica_agenda_historico (
@@ -270,31 +257,6 @@ begin
                       and public.fn_role_at_least(organization_id, 'admin'));
   revoke all on public.clinica_tipos_atendimento from anon;
 
-  alter table public.clinica_precos enable row level security;
-  drop policy if exists clinica_precos_select on public.clinica_precos;
-  create policy clinica_precos_select
-    on public.clinica_precos
-    for select using (organization_id in (select public.fn_user_org_ids())
-                      and public.fn_role_at_least(organization_id, 'admin'));
-  drop policy if exists clinica_precos_insert on public.clinica_precos;
-  create policy clinica_precos_insert
-    on public.clinica_precos
-    for insert with check (organization_id in (select public.fn_user_org_ids())
-                           and public.fn_role_at_least(organization_id, 'admin'));
-  drop policy if exists clinica_precos_update on public.clinica_precos;
-  create policy clinica_precos_update
-    on public.clinica_precos
-    for update using (organization_id in (select public.fn_user_org_ids())
-                      and public.fn_role_at_least(organization_id, 'admin'))
-    with check (organization_id in (select public.fn_user_org_ids())
-                and public.fn_role_at_least(organization_id, 'admin'));
-  drop policy if exists clinica_precos_delete on public.clinica_precos;
-  create policy clinica_precos_delete
-    on public.clinica_precos
-    for delete using (organization_id in (select public.fn_user_org_ids())
-                      and public.fn_role_at_least(organization_id, 'admin'));
-  revoke all on public.clinica_precos from anon;
-
   alter table public.clinica_agenda_historico enable row level security;
   drop policy if exists clinica_agenda_historico_select on public.clinica_agenda_historico;
   create policy clinica_agenda_historico_select
@@ -314,9 +276,7 @@ begin
   comment on table public.clinica_politicas is
     'Regras da clínica (uma linha por organização): faltas e cancelamento, pacotes e alertas. Sem linha valem os padrões das colunas. Só o administrador altera.';
   comment on table public.clinica_tipos_atendimento is
-    'Modalidade de cada tipo de agendamento do núcleo. Referência, não coluna no núcleo (ADR-0002 D4). O preço mora em clinica_precos.';
-  comment on table public.clinica_precos is
-    'Preço da sessão avulsa de cada tipo de agendamento, base da multa. Só o administrador lê e altera.';
+    'Modalidade de cada tipo de agendamento do núcleo. Referência, não coluna no núcleo (ADR-0002 D4). O preço da sessão é o default_price_cents do tipo.';
   comment on table public.clinica_agenda_historico is
     'O que aconteceu com cada sessão (remarcação de/para, cancelamento, falta, realização, confirmação) e quem fez. Só o servidor escreve.';
   comment on table public.clinica_multas is

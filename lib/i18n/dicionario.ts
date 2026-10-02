@@ -13800,7 +13800,7 @@ export const DICIONARIO: Traducoes = {
   "Procedimento realizado": { es: "Procedimiento realizado" },
   // clínica: regras da clínica, só do administrador (fork TOQ, migration 9003)
   "Regras da clínica": { es: "Reglas de la clínica" },
-  "Multa, tolerância, preços, pacotes e alertas da clínica. Só administradores.": { es: "Multa, tolerancia, precios, paquetes y alertas de la clínica. Solo administradores." },
+  "Multa, tolerância, modalidades, preços, pacotes e alertas da clínica. Só administradores.": { es: "Multa, tolerancia, modalidades, precios, paquetes y alertas de la clínica. Solo administradores." },
   "Os valores do negócio da clínica. Só administradores veem e alteram esta tela.": { es: "Los valores del negocio de la clínica. Solo los administradores ven y modifican esta pantalla." },
   "Não foi possível carregar as regras da clínica.": { es: "No se pudieron cargar las reglas de la clínica." },
   "Faltas e cancelamento": { es: "Ausencias y cancelación" },
@@ -13832,7 +13832,7 @@ export const DICIONARIO: Traducoes = {
   "Guardado para depois": { es: "Guardado para después" },
   "Use um número inteiro de {min} a {max}.": { es: "Use un número entero de {min} a {max}." },
   "Modalidade e preço de cada atendimento": { es: "Modalidad y precio de cada atención" },
-  "A modalidade pinta a agenda e liga a tolerância e a multa. O preço da sessão avulsa é a base da multa e só administradores o veem.": { es: "La modalidad colorea la agenda y activa la tolerancia y la multa. El precio de la sesión suelta es la base de la multa y solo los administradores lo ven." },
+  "A modalidade pinta a agenda e liga a tolerância e a multa. O preço é o mesmo de Tipos de agendamento e é a base da multa.": { es: "La modalidad colorea la agenda y activa la tolerancia y la multa. El precio es el mismo de Tipos de cita y es la base de la multa." },
   "Não foi possível carregar os tipos de atendimento.": { es: "No se pudieron cargar los tipos de atención." },
   "Nenhum tipo de agendamento ativo. Crie os tipos em Configurações › Tipos de agendamento.": { es: "Ningún tipo de cita activo. Cree los tipos en Configuración › Tipos de cita." },
   "Não é atendimento da clínica": { es: "No es atención de la clínica" },

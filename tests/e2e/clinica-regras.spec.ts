@@ -2,9 +2,9 @@
  * REGRAS DA CLÍNICA, SÓ DO ADMINISTRADOR (fork TOQ, módulo clínica, migration 9003).
  *
  * O administrador acha a tela em Configurações, muda a multa do cancelamento, etiqueta um tipo
- * de agendamento com a modalidade e dá preço a ele; tudo sobrevive ao recarregar. O gerente não
- * vê a porta, cai fora se digitar o endereço e recebe 403 ao pedir os preços; o perfil "Somente
- * leitura" não lê as multas.
+ * de agendamento com a modalidade e dá preço a ele; tudo sobrevive ao recarregar, e o preço é o
+ * "Preço padrão" do tipo no núcleo (um só). O gerente não vê a porta, cai fora se digitar o
+ * endereço e recebe 403 ao ler ou mudar as regras; o perfil "Somente leitura" não lê as multas.
  *
  * ⚠️ Instalar é da INSTALAÇÃO e não se desfaz, como em `clinica-prontuario`. O que a spec grava
  * na organização (regras, etiqueta, preço, o tipo de agendamento) é desfeito no `finally`.
@@ -130,7 +130,15 @@ test.describe("Regras da clínica: só o administrador", () => {
       await expect(linha).toBeVisible({ timeout: ESPERA });
       await linha.getByTestId("tipo-modalidade").selectOption("fisioterapia");
       await linha.getByTestId("tipo-preco").fill("150,00");
+      const gravouModalidade = page.waitForResponse(
+        (r) => r.url().includes("/api/v1/clinica/tipos-atendimento") && r.request().method() === "PUT",
+      );
+      const gravouPreco = page.waitForResponse(
+        (r) => r.url().includes("/api/v1/agenda/tipos") && r.request().method() === "PATCH",
+      );
       await linha.getByTestId("salvar-tipo").click();
+      expect((await gravouModalidade).status()).toBe(200);
+      expect((await gravouPreco).status()).toBe(200);
       await expect(linha.getByTestId("salvar-tipo")).toBeDisabled({ timeout: ESPERA });
 
       await page.reload();
@@ -141,17 +149,16 @@ test.describe("Regras da clínica: só o administrador", () => {
       await expect(linhaDepois.getByTestId("tipo-modalidade")).toHaveValue("fisioterapia");
       await expect(linhaDepois.getByTestId("tipo-preco")).toHaveValue("150,00");
       await linhaDepois.scrollIntoViewIfNeeded();
-      await page.screenshot({ path: path.join(EVIDENCIA, "regras-salvas.png"), fullPage: true });
+      await page.screenshot({ path: path.join(EVIDENCIA, "regras-salvas.png") });
 
       const { data: preco } = await admin
-        .from("clinica_precos")
-        .select("valor_cents")
-        .eq("organization_id", orgId)
-        .eq("event_type_id", tipoId)
+        .from("calendar_event_types")
+        .select("default_price_cents")
+        .eq("id", tipoId)
         .single();
-      expect((preco as { valor_cents: number }).valor_cents).toBe(15000);
+      expect(Number((preco as { default_price_cents: number }).default_price_cents)).toBe(15000);
 
-      // O gerente não vê a porta, não abre a tela e não lê preço.
+      // O gerente não vê a porta, não abre a tela e não lê nem muda as regras.
       await context.clearCookies();
       await entrar(page, creds.users.manager!.email, creds.password);
       await page.goto("/app/settings");
@@ -161,8 +168,14 @@ test.describe("Regras da clínica: só o administrador", () => {
       await expect(page.getByRole("link", { name: /Regras da clínica/ })).toHaveCount(0);
       await page.goto("/app/settings/tenant/clinica/regras");
       await page.waitForURL(/\/app\/settings$/, { timeout: ESPERA });
-      expect((await page.request.get("/api/v1/clinica/precos")).status()).toBe(403);
       expect((await page.request.get("/api/v1/clinica/politicas")).status()).toBe(403);
+      expect(
+        (
+          await page.request.put("/api/v1/clinica/tipos-atendimento", {
+            data: { event_type_id: tipoId, modalidade: null },
+          })
+        ).status(),
+      ).toBe(403);
       // A modalidade continua de todos: a agenda pinta por ela.
       expect((await page.request.get("/api/v1/clinica/tipos-atendimento")).status()).toBe(200);
       await page.screenshot({ path: path.join(EVIDENCIA, "gerente-sem-a-porta.png") });

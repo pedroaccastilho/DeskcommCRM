@@ -65,12 +65,6 @@ export const tipoAtendimentoSchema = z.object({
   modalidade: z.enum(MODALIDADES).nullable(),
 });
 
-export const precoSchema = z.object({
-  event_type_id: z.string().uuid(),
-  /** Valor da sessão avulsa em centavos. `null` apaga o preço (a multa nasce sem valor). */
-  valor_cents: z.number().int().min(0).max(100_000_000).nullable(),
-});
-
 export const multasQuerySchema = z.object({
   status: z.enum(["pendente", "isenta", "paga"]).optional(),
   contact_id: z.string().uuid().optional(),

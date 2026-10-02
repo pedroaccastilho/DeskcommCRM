@@ -407,11 +407,11 @@ export const NAV_CATALOG = [
   },
   {
     // Módulo clínica (fork TOQ, migration 9003): os valores do negócio da clínica. Só `admin`,
-    // por pedido do Pedro (02/10/2026): os outros perfis não veem configuração nem preço. A rota,
-    // a RLS e a página cobram o mesmo degrau; aqui é só a porta.
+    // por pedido do Pedro (02/10/2026): os outros perfis não abrem a configuração. A rota, a RLS
+    // e a página cobram o mesmo degrau; aqui é só a porta.
     href: "/app/settings/tenant/clinica/regras",
     label: "Regras da clínica",
-    description: "Multa, tolerância, preços, pacotes e alertas da clínica. Só administradores.",
+    description: "Multa, tolerância, modalidades, preços, pacotes e alertas da clínica. Só administradores.",
     icon: "ScalesSimple",
     group: "organizacao",
     section: "Sua empresa",
