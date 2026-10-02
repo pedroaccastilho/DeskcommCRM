@@ -52,6 +52,7 @@ import { resolveActiveLeadForContact, type LeadCandidate } from "@/lib/leads/act
 import { emitLeadActivity } from "@/lib/leads/activity-emitter";
 import { registraFalhaDeAtividade } from "@/lib/leads/activity-write-failure";
 import { moverLeadParaEtapaDeAgendamento } from "@/lib/leads/appointment-stage-move";
+import { antesDoDesfecho, depoisDaMudanca } from "@/lib/agenda/regras-de-modulo";
 import { logger } from "@/lib/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -114,6 +115,11 @@ export interface CancelarInput {
   id: string;
   revision?: number;
   reason: string;
+  /**
+   * Quem pediu o cancelamento, para as regras de módulo (`lib/agenda/regras-de-modulo.ts`): a
+   * clínica não cobra multa quando foi ela que desmarcou. Ausente = o cliente.
+   */
+  cancelado_por?: "paciente" | "clinica";
 }
 
 /**
@@ -587,6 +593,11 @@ export async function alterarAgendamentoHandler(
           "Se ela avisou que não vem, desmarque em vez de registrar falta.",
       );
     }
+    await antesDoDesfecho(supabase, ctx, {
+      eventTypeId: (atual.event_type_id as string | null) ?? null,
+      inicio: new Date(atual.starts_at as string),
+      status: input.status,
+    });
     mudanca.status = input.status;
     // Remarcar vence: se vieram os dois, a notícia da timeline é a remarcação.
     transicao = transicao ?? input.status;
@@ -613,6 +624,18 @@ export async function alterarAgendamentoHandler(
       resourceType:"calendar_appointment",resourceId:input.id,requestId:ctx.requestId,
       metadata:{status:salvo.status,revision:salvo.revision,outcome_source_kind:salvo.outcome_source_kind,outcome_message_id:salvo.outcome_message_id}});
 
+    // Remarcar e mudar de situação ao mesmo tempo grava as duas coisas no módulo.
+    const transicoes = transicao === "rescheduled" && mudanca.status ? [transicao, String(mudanca.status)] : [transicao];
+    for (const t of transicoes) {
+      await depoisDaMudanca(supabase, ctx, {
+        appointmentId: atual.id as string,
+        eventTypeId: (atual.event_type_id as string | null) ?? null,
+        contactId: (atual.contact_id as string | null) ?? null,
+        transicao: t,
+        deInicio: new Date(atual.starts_at as string),
+        paraInicio: new Date(String(salvo.starts_at ?? atual.starts_at)),
+      });
+    }
   }
 
   if (!transicao) void audit({action:"agenda.appointment_updated",actorUserId:ctx.actor.type==="user"?ctx.actor.id:null,
@@ -645,6 +668,7 @@ export async function cancelarAgendamentoHandler(
     "owner_user_id",
     "contact_id",
     "event_type_id",
+    "starts_at",
     "status",
     "time_zone",
   ]);
@@ -680,6 +704,17 @@ export async function cancelarAgendamentoHandler(
     resourceId: atual.id as string,
     requestId: ctx.requestId,
     metadata: { reason: input.reason },
+  });
+
+  await depoisDaMudanca(supabase, ctx, {
+    appointmentId: atual.id as string,
+    eventTypeId: (atual.event_type_id as string | null) ?? null,
+    contactId: (atual.contact_id as string | null) ?? null,
+    transicao: "cancelled",
+    deInicio: new Date(atual.starts_at as string),
+    paraInicio: new Date(atual.starts_at as string),
+    motivo: input.reason,
+    quemCancelou: input.cancelado_por,
   });
 
   return salvo as Record<string, unknown>;

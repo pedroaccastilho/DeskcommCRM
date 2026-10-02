@@ -1005,6 +1005,13 @@ export const AUDIT_ACTIONS = [
   "company_people.updated",
   "contacts.person_linked",
   "imports.companies_people",
+
+  // Agenda da clínica (fork TOQ, migration 9002). A multa é dinheiro que o paciente contesta no
+  // balcão: quem gerou, quem isentou e por quê precisa ficar registrado.
+  "clinica.politica_atualizada",
+  "clinica.tipo_atendimento_atualizado",
+  "clinica.multa_registrada",
+  "clinica.multa_isenta",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */
