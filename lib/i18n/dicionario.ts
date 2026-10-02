@@ -13723,8 +13723,6 @@ export const DICIONARIO: Traducoes = {
   "Nenhuma sessão": { es: "Ninguna sesión" },
   "{n} sessão": { es: "{n} sesión" },
   "{n} sessões": { es: "{n} sesiones" },
-  "{n} falta": { es: "{n} ausencia" },
-  "{n} faltas": { es: "{n} ausencias" },
   "Nenhuma falta": { es: "Ninguna ausencia" },
   "EEEE, d 'de' MMMM, HH:mm": { es: "EEEE, d 'de' MMMM, HH:mm" },
   "Atrasada": { es: "Atrasada" },
