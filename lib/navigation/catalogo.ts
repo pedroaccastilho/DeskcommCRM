@@ -185,6 +185,18 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    // Módulo opcional clínica (fork TOQ): a tela da recepção. A fila do dia ao lado do paciente,
+    // com confirmar, remarcar, cancelar com multa, falta e WhatsApp em janelas rápidas.
+    href: "/app/clinica/balcao",
+    label: "Balcão",
+    description: "A fila do dia e o paciente lado a lado, com as ações da recepção.",
+    icon: "Storefront",
+    group: "atendimento",
+    minRole: "agent",
+    sidebar: true,
+    modulo: "clinica",
+  },
+  {
     // Módulo opcional clínica (fork TOQ): o laço de volta da agenda. Sessão atendida sem
     // registro no prontuário fica listada aqui até alguém assinar a evolução.
     href: "/app/clinica/pendencias",
