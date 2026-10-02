@@ -126,9 +126,20 @@ export function interfaceTemDestino(
 ): boolean {
   return destinosDaInterface(settings, platform, role).some((d) => !essencial(d, role, platform));
 }
+/**
+ * Fork TOQ: quem tem o Balcão da clínica ESCOLHIDO no menu (o cargo de
+ * recepção) começa o dia nele. Só com escolha explícita: o menu completo segue
+ * abrindo na Inbox.
+ */
+const BALCAO_DA_CLINICA: NavDestinationId = "/app/clinica/balcao";
+
 export function homeDaInterface(raw: unknown, platform: boolean, role: Role | null): string {
   const visible = destinosDaInterface(raw, platform, role);
+  const escolhidos = lerInterface(raw).settings.destinos;
   return (
+    (escolhidos?.includes(BALCAO_DA_CLINICA)
+      ? visible.find((d) => d.href === BALCAO_DA_CLINICA)?.href
+      : undefined) ??
     visible.find((d) => d.href === "/app/inbox")?.href ??
     visible.find((d) => !essencial(d, role, platform))?.href ??
     "/app/settings/profile"
