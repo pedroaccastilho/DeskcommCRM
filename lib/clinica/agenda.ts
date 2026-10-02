@@ -31,6 +31,50 @@ export const POLITICA_PADRAO: Readonly<PoliticaDaAgenda> = Object.freeze({
   tolerancia_atraso_minutos: 15,
 });
 
+/**
+ * As REGRAS DA CLÍNICA inteiras (migration 9003): a política da agenda e os parâmetros de pacote
+ * e de acompanhamento. Os de pacote e acompanhamento ficam guardados para quando essas partes
+ * existirem; hoje só a política da agenda é aplicada.
+ */
+export interface RegrasDaClinica extends PoliticaDaAgenda {
+  pacote_sessoes_padrao: number;
+  pacote_validade_dias: number;
+  reposicoes_por_mes: number;
+  congelamento_max_dias: number;
+  sessoes_restantes_aviso_renovacao: number;
+  faltas_seguidas_alerta: number;
+  faltas_no_mes_abandono: number;
+  dias_sem_sessao_inativo: number;
+  horas_evolucao_atrasada: number;
+}
+
+/** Os padrões das regras, iguais aos DEFAULT das colunas de `clinica_politicas` (9002 e 9003). */
+export const REGRAS_PADRAO: Readonly<RegrasDaClinica> = Object.freeze({
+  ...POLITICA_PADRAO,
+  pacote_sessoes_padrao: 10,
+  pacote_validade_dias: 60,
+  reposicoes_por_mes: 2,
+  congelamento_max_dias: 30,
+  sessoes_restantes_aviso_renovacao: 2,
+  faltas_seguidas_alerta: 2,
+  faltas_no_mes_abandono: 3,
+  dias_sem_sessao_inativo: 30,
+  horas_evolucao_atrasada: 24,
+});
+
+/** As colunas de `clinica_politicas` que formam as regras, na ordem de `REGRAS_PADRAO`. */
+export const COLUNAS_DAS_REGRAS = Object.keys(REGRAS_PADRAO) as ReadonlyArray<keyof RegrasDaClinica>;
+
+/** Lê uma linha de `clinica_politicas` (ou nada) como regras completas. */
+export function regrasDaLinha(linha: Partial<RegrasDaClinica> | null | undefined): RegrasDaClinica {
+  const regras = { ...REGRAS_PADRAO };
+  for (const coluna of COLUNAS_DAS_REGRAS) {
+    const valor = linha?.[coluna];
+    if (typeof valor === "number") regras[coluna] = valor;
+  }
+  return regras;
+}
+
 export type QuemCancelou = "paciente" | "clinica";
 
 export interface MultaCalculada {
@@ -119,7 +163,7 @@ export interface SessaoDaGrade {
   status: string;
   profissional_user_id: string | null;
   modalidade: Modalidade | null;
-  tipo: { id: string; nome: string; cor: string | null } | null;
+  tipo: { id: string; nome: string } | null;
   paciente: { id: string; nome: string; telefone: string | null } | null;
   /** A partir de quando a recepção pode marcar "não compareceu" (só sessão da clínica). */
   falta_liberada_em: string | null;
@@ -142,7 +186,7 @@ export interface LinhaDoCompromisso {
 /** Linha do banco → sessão da grade. Pura, para a rota e o teste falarem a mesma língua. */
 export function sessaoDaGrade(
   linha: LinhaDoCompromisso,
-  tipos: ReadonlyMap<string, { nome: string; cor: string | null; modalidade: Modalidade | null }>,
+  tipos: ReadonlyMap<string, { nome: string; modalidade: Modalidade | null }>,
   politica: PoliticaDaAgenda,
 ): SessaoDaGrade {
   const tipo = linha.event_type_id ? tipos.get(linha.event_type_id) : undefined;
@@ -159,7 +203,7 @@ export function sessaoDaGrade(
     modalidade,
     tipo:
       linha.event_type_id && tipo
-        ? { id: linha.event_type_id, nome: tipo.nome, cor: tipo.cor }
+        ? { id: linha.event_type_id, nome: tipo.nome }
         : null,
     paciente: linha.contact_id
       ? {
