@@ -1156,6 +1156,7 @@ jobs:
         honorarios-instalar-e-pagar.spec.ts
         clinica-regras.spec.ts
         clinica-prontuario.spec.ts
+        clinica-cancelar-com-multa.spec.ts
         clinica-agenda-cores.spec.ts
         clinica-ficha-resumo.spec.ts
 
