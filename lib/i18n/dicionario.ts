@@ -13783,6 +13783,24 @@ export const DICIONARIO: Traducoes = {
   "{n} aguardando confirmação": { es: "{n} por confirmar" },
   "{n} falta": { es: "{n} ausencia" },
   "{n} faltas": { es: "{n} ausencias" },
+  // clínica: a sessão no painel do compromisso (multa, tolerância de atraso)
+  "Sem multa se cancelar até {data}.": { es: "Sin multa si cancela hasta {data}." },
+  "Cancelar agora gera multa de {pct}% do valor da sessão.": {
+    es: "Cancelar ahora genera una multa del {pct}% del valor de la sesión.",
+  },
+  "Foi a clínica que desmarcou, sem multa": { es: "La clínica canceló, sin multa" },
+  "A falta pode ser registrada a partir das {hora}, depois dos {min} minutos de tolerância.": {
+    es: "La ausencia se puede registrar a partir de las {hora}, tras los {min} minutos de tolerancia.",
+  },
+  "{pct}% do valor da sessão": { es: "{pct}% del valor de la sesión" },
+  "{valor}, {pct}% do valor da sessão": { es: "{valor}, {pct}% del valor de la sesión" },
+  "Multa pendente por cancelamento em cima da hora": {
+    es: "Multa pendiente por cancelación de último momento",
+  },
+  "Multa isenta": { es: "Multa exenta" },
+  "Multa paga": { es: "Multa pagada" },
+  "Motivo da isenção": { es: "Motivo de la exención" },
+  "Isentar multa": { es: "Eximir multa" },
   "Anamnese": { es: "Anamnesis" },
   "Avaliação": { es: "Evaluación" },
   "Evolução": { es: "Evolución" },
