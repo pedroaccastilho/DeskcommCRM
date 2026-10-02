@@ -27,14 +27,32 @@ describe("espalharPorDia", () => {
 
 describe("estadoDoMetadata", () => {
   it("lê o estado que o motor gravou", () => {
-    const estado = { etapa: "menu", erros: 1, atualizado_em: "2026-10-05T12:00:00.000Z" };
-    expect(estadoDoMetadata({ outro: 1, chatbot_menu: estado })).toEqual(estado);
+    const menu = {
+      tipo: "menu",
+      noId: "menu",
+      erros: 1,
+      atualizado_em: "2026-10-05T12:00:00.000Z",
+    };
+    expect(estadoDoMetadata({ outro: 1, chatbot_fluxo: menu })).toEqual(menu);
+    const pergunta = { tipo: "pergunta", noId: "q", atualizado_em: "2026-10-05T12:00:00.000Z" };
+    expect(estadoDoMetadata({ chatbot_fluxo: pergunta })).toEqual(pergunta);
   });
 
-  it("forma estranha recomeça do menu (null)", () => {
+  it("forma estranha recomeça do Início (null)", () => {
     expect(estadoDoMetadata(null)).toBeNull();
     expect(estadoDoMetadata({})).toBeNull();
-    expect(estadoDoMetadata({ chatbot_menu: "menu" })).toBeNull();
-    expect(estadoDoMetadata({ chatbot_menu: { etapa: "menu" } })).toBeNull();
+    expect(estadoDoMetadata({ chatbot_fluxo: "menu" })).toBeNull();
+    expect(estadoDoMetadata({ chatbot_fluxo: { tipo: "menu", noId: "menu" } })).toBeNull();
+    expect(
+      estadoDoMetadata({
+        chatbot_fluxo: { tipo: "agenda", noId: "m", erros: 0, atualizado_em: "x" },
+      }),
+    ).toBeNull();
+    // O estado do menu fixo antigo (sem `tipo`) não é lido.
+    expect(
+      estadoDoMetadata({
+        chatbot_fluxo: { etapa: "menu", erros: 0, atualizado_em: "2026-10-05T12:00:00.000Z" },
+      }),
+    ).toBeNull();
   });
 });

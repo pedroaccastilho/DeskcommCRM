@@ -11,9 +11,9 @@ export const dynamic = "force-dynamic";
 /**
  * CHATBOT DO WHATSAPP — módulo opcional clínica (fork TOQ).
  *
- * Pedido do Pedro (02/10/2026): responder o WhatsApp com um chatbot de regras (menu numerado,
- * fluxo fixo) em vez da IA. Montado num formulário, sem código: saudação, opções e dois textos de
- * apoio, por conexão. Ligado numa conexão, ele responde no lugar da IA nela.
+ * Pedido do Pedro (02/10/2026): responder o WhatsApp com um chatbot sem IA, montado num
+ * construtor visual de caixas e setas (como o editor de fluxos dos Follow-ups), uma conversa por
+ * conexão. Ligado numa conexão, ele responde no lugar da IA nela.
  *
  * `manager`+, o mesmo degrau de Agentes e Follow-ups. A rota cobra o mesmo; aqui é só a tela.
  */
@@ -30,7 +30,7 @@ export default async function Page() {
         <h1 className="text-xl font-semibold">{t("Chatbot do WhatsApp")}</h1>
         <p className="text-sm text-text-muted">
           {t(
-            "Um menu de opções que responde o WhatsApp sem IA: marca, mostra, remarca e cancela horários e chama a recepção.",
+            "Monte em caixas e setas a conversa que responde o WhatsApp sem IA: menus, perguntas, marcação, remarcação e cancelamento de horários e a passagem para a recepção.",
           )}
         </p>
       </div>

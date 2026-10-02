@@ -1,5 +1,5 @@
 /**
- * "Esta conexão é atendida pelo chatbot de menu?" — a pergunta que o drain do agente de IA faz
+ * "Esta conexão é atendida pelo chatbot?" — a pergunta que o drain do agente de IA faz
  * antes de enfileirar um turno (`lib/agent-engine/edge/crm/drain.ts`).
  *
  * Com o chatbot ligado, a IA não responde nessa conexão: é o "no lugar da IA" do pedido do Pedro
@@ -11,9 +11,9 @@
  */
 import type pg from "pg";
 
-import { chatbotLigado } from "./config";
+import { chatbotLigado } from "./fluxo";
 
-export async function chatbotDeMenuLigadoNaSessao(
+export async function chatbotLigadoNaSessao(
   pool: Pick<pg.Pool, "query">,
   organizationId: string,
   channelSessionId: string,

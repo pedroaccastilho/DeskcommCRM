@@ -556,12 +556,12 @@ export const NAV_CATALOG = [
     modulo: "fluxos_atendimento",
   },
   {
-    // Módulo clínica (fork TOQ): o chatbot de menu, sem IA, por conexão de WhatsApp. Pedido do
-    // Pedro (02/10/2026). Mora no hub de IA porque é a alternativa ao agente: ligado numa conexão,
-    // responde no lugar dele. `manager`+, como Agentes e Follow-ups.
+    // Módulo clínica (fork TOQ): o chatbot sem IA, montado em caixas e setas, por conexão de
+    // WhatsApp. Pedido do Pedro (02/10/2026). Mora no hub de IA porque é a alternativa ao agente:
+    // ligado numa conexão, responde no lugar dele. `manager`+, como Agentes e Follow-ups.
     href: "/app/settings/tenant/clinica/chatbot",
     label: "Chatbot do WhatsApp",
-    description: "Um menu de opções que responde o WhatsApp sem IA: marca, remarca e cancela horários.",
+    description: "Monte em caixas e setas um chatbot que responde o WhatsApp sem IA e marca, remarca e cancela horários.",
     icon: "Signpost",
     group: "ia",
     section: "Montar o agente",

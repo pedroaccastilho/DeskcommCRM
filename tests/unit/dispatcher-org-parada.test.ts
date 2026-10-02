@@ -35,7 +35,7 @@ import { followupGatilhoEtapaHandler } from "@/lib/followup/gatilho-etapa.handle
 import { followupGatilhoLeadHandler } from "@/lib/followup/gatilho-lead.handler";
 import { followupGatilhoPresencaHandler } from "@/lib/followup/gatilho-presenca.handler";
 import { followupGatilhoRetornoHandler } from "@/lib/followup/gatilho-retorno.handler";
-import { chatbotDeMenuHandler } from "@/lib/clinica/chatbot/handler";
+import { chatbotHandler } from "@/lib/clinica/chatbot/handler";
 import { followupReactivityHandler } from "@/lib/followup/reactivity.handler";
 import { avisoDeEtapaHandler } from "@/lib/leads/aviso-de-etapa.handler";
 import { webPushInboundHandler } from "@/lib/notifications/push.handler";
@@ -67,7 +67,7 @@ const PULA: EventHandler[] = [
   mediaDeriveHandler,
   automationRulesHandler,
   followupGatilhoRetornoHandler,
-  chatbotDeMenuHandler,
+  chatbotHandler,
   followupGatilhoEtapaHandler,
   followupGatilhoLeadHandler,
   followupGatilhoCasoHandler,

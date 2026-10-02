@@ -1,5 +1,9 @@
 /**
- * O CHATBOT DE MENU LIGADO AO MUNDO: lê a mensagem, chama o motor e responde pelo WhatsApp.
+ * O CHATBOT DO WHATSAPP LIGADO AO MUNDO: lê a mensagem, anda pelo fluxo desenhado e responde.
+ *
+ * O fluxo é o que a clínica desenhou no construtor (Configurações › Chatbot do WhatsApp,
+ * `./fluxo.ts`); quem anda por ele é `./motor.ts`, e este arquivo dá ao motor a agenda, o
+ * contato e o WhatsApp de verdade.
  *
  * Consumidor de `message.received` no dispatcher do `event_log` (`./handler.ts`). Roda no laço
  * do worker e, como rede de segurança, no cron `event-log-drain` — os dois reivindicam cada
@@ -15,7 +19,7 @@
  *
  * ── Uma voz só ──────────────────────────────────────────────────────────────────────────────
  * Com o chatbot ligado na conexão, o drain do agente de IA pula o turno
- * (`lib/agent-engine/edge/crm/drain.ts`, `chatbotDeMenuLigadoNaSessao`). Sem isso o paciente
+ * (`lib/agent-engine/edge/crm/drain.ts`, `chatbotLigadoNaSessao`). Sem isso o paciente
  * receberia o menu E a resposta da IA.
  *
  * ── Segurança ───────────────────────────────────────────────────────────────────────────────
@@ -33,7 +37,11 @@ import {
   marcarAgendamentoHandler,
 } from "@/app/api/v1/agenda/agendamentos/_handler";
 import { sendMessageHandler } from "@/app/api/v1/messages/_handler";
-import { horariosLivresDaOrg, listaAgendamentos, listaTiposDeAtendimento } from "@/lib/agenda/consulta";
+import {
+  horariosLivresDaOrg,
+  listaAgendamentos,
+  listaTiposDeAtendimento,
+} from "@/lib/agenda/consulta";
 import type { Actor } from "@/lib/api/handlers/types";
 import { ApiError } from "@/lib/api/types";
 import { serviceFromMessage } from "@/lib/atendimento/origem-mensagem";
@@ -48,18 +56,16 @@ import { resolveUserNames } from "@/lib/mcp/tools/_users";
 import { formatCents } from "@/lib/money";
 import { rotuloLocal } from "@/lib/tempo/agora";
 
-import { configDoMetadata } from "./config";
 import {
   HORARIOS_POR_VEZ,
-  responder,
   type CompromissoDoPaciente,
-  type DepsDoChatbot,
-  type EstadoDoChatbot,
   type HorarioOferecido,
-} from "./motor";
+} from "./agenda-conversa";
+import { configDoMetadata } from "./fluxo";
+import { responder, type DepsDoChatbot, type EstadoDoChatbot } from "./motor";
 
 /** A chave do estado dentro de `conversations.metadata`. */
-export const CHAVE_DO_ESTADO = "chatbot_menu";
+export const CHAVE_DO_ESTADO = "chatbot_fluxo";
 
 /** Quantos dias à frente o chatbot procura horário livre. */
 const DIAS_DE_BUSCA = 14;
@@ -77,12 +83,16 @@ interface ConversaLida {
   contact_id: string | null;
   channel_session_id: string | null;
   is_group: boolean | null;
-  force_human: boolean | null;
   assignee_kind: string | null;
   bot_silenced_until: string | null;
   metadata: Record<string, unknown> | null;
-  contacts: { is_blocked: boolean | null } | { is_blocked: boolean | null }[] | null;
+  contacts: ContatoLido | ContatoLido[] | null;
   channel_sessions: { metadata: unknown } | { metadata: unknown }[] | null;
+}
+
+interface ContatoLido {
+  is_blocked: boolean | null;
+  force_human: boolean | null;
 }
 
 function um<T>(v: T | T[] | null): T | null {
@@ -93,13 +103,16 @@ function texto(v: unknown): string | null {
   return typeof v === "string" && v.length > 0 ? v : null;
 }
 
-/** O estado gravado, se tiver a forma que o motor gravou. Forma estranha recomeça do menu. */
+/** O estado gravado, se tiver a forma que o motor gravou. Forma estranha recomeça do Início. */
 export function estadoDoMetadata(metadata: Record<string, unknown> | null): EstadoDoChatbot | null {
   const bruto = metadata?.[CHAVE_DO_ESTADO];
   if (!bruto || typeof bruto !== "object") return null;
   const e = bruto as Record<string, unknown>;
-  if (typeof e.etapa !== "string" || typeof e.atualizado_em !== "string") return null;
+  if (typeof e.noId !== "string" || typeof e.atualizado_em !== "string") return null;
+  if (e.tipo === "pergunta") return bruto as EstadoDoChatbot;
+  if (e.tipo !== "menu" && e.tipo !== "agenda") return null;
   if (typeof e.erros !== "number") return null;
+  if (e.tipo === "agenda" && (!e.etapa || typeof e.etapa !== "object")) return null;
   return bruto as EstadoDoChatbot;
 }
 
@@ -138,8 +151,8 @@ export async function atenderComChatbot(
   const { data: conversaBruta, error: erroConversa } = await admin
     .from("conversations")
     .select(
-      "id, contact_id, channel_session_id, is_group, force_human, assignee_kind, bot_silenced_until, metadata, " +
-        "contacts:contact_id(is_blocked), channel_sessions:channel_session_id(metadata)",
+      "id, contact_id, channel_session_id, is_group, assignee_kind, bot_silenced_until, metadata, " +
+        "contacts:contact_id(is_blocked, force_human), channel_sessions:channel_session_id(metadata)",
     )
     .eq("organization_id", org)
     .eq("id", conversaId)
@@ -156,14 +169,15 @@ export async function atenderComChatbot(
   if (!config?.ativo) return { tipo: "pulou", motivo: "chatbot_desligado" };
 
   if (conversa.is_group !== false) return { tipo: "pulou", motivo: "grupo" };
-  if (um(conversa.contacts)?.is_blocked) return { tipo: "pulou", motivo: "contato_bloqueado" };
+  const contato = um(conversa.contacts);
+  if (contato?.is_blocked) return { tipo: "pulou", motivo: "contato_bloqueado" };
   const agora = new Date();
   if (
     humanoNoComando(
       {
         is_group: false,
         is_blocked: false,
-        force_human: conversa.force_human === true,
+        force_human: contato?.force_human === true,
         assignee_kind: conversa.assignee_kind,
         bot_silenced_until: conversa.bot_silenced_until,
         tags: [],
@@ -202,7 +216,7 @@ export async function atenderComChatbot(
 
   const sessaoId = conversa.channel_session_id;
   const contatoId = conversa.contact_id;
-  const actor: Actor = { type: "webhook_source", id: `chatbot-menu:${sessaoId}` };
+  const actor: Actor = { type: "webhook_source", id: `chatbot:${sessaoId}` };
   const deps = depsReais(admin, { org, contatoId, conversaId, actor, mensagemId });
 
   const resposta = await responder(
@@ -242,9 +256,11 @@ export async function atenderComChatbot(
           organization_id: org,
           serviceBoundary: fronteira,
           actor,
-          requestId: `chatbot-menu:${mensagemId}:${i}`,
+          requestId: `chatbot:${mensagemId}:${i}`,
         },
-        { conversation_id: conversaId, type: "text", body: corpo } as Parameters<typeof sendMessageHandler>[2],
+        { conversation_id: conversaId, type: "text", body: corpo } as Parameters<
+          typeof sendMessageHandler
+        >[2],
       );
       enviadas += 1;
     }
@@ -279,8 +295,8 @@ async function passarParaARecepcao(
     reason: "requested_human",
     origem: "pedido_explicito",
     ...(p.fronteira ? { serviceBoundary: p.fronteira } : {}),
-    motivoTexto: "O paciente pediu a recepção pelo chatbot de menu.",
-    metadata: { source: "chatbot_menu" },
+    motivoTexto: "O chatbot do WhatsApp passou a conversa para a recepção.",
+    metadata: { source: "chatbot_whatsapp" },
   });
   if (r.triggered || r.reason === "idempotent_5s") return;
   logger.warn("[clinica.chatbot] passagem canônica recusada; silenciando à mão", {
@@ -318,7 +334,10 @@ function falhaDaAgenda(e: unknown): { ok: false; mensagem: string; horarioTomado
 }
 
 /** Um horário livre como o paciente lê: "Ter 06/10 às 09:00", no fuso da agenda. */
-function horarioDoSlot(inicio: Date, fuso: string): { inicio: string; rotulo: string; dia: string } {
+function horarioDoSlot(
+  inicio: Date,
+  fuso: string,
+): { inicio: string; rotulo: string; dia: string } {
   const rotulo = rotuloLocal(inicio, fuso);
   // "Ter 06/10" — o rótulo começa pelo dia; é por ele que a lista se espalha.
   return { inicio: inicio.toISOString(), rotulo, dia: rotulo.slice(0, 9) };
@@ -344,7 +363,9 @@ async function profissionaisDoTipo(
     .order("nome_profissional")
     .limit(MAXIMO_DE_PROFISSIONAIS);
   if (error) {
-    logger.warn("[clinica.chatbot] profissionais da modalidade não lidos", { error: error.message });
+    logger.warn("[clinica.chatbot] profissionais da modalidade não lidos", {
+      error: error.message,
+    });
     return [];
   }
   return ((data ?? []) as Array<{ user_id: string; nome_profissional: string }>).map((p) => ({
@@ -360,11 +381,25 @@ function depsReais(
   const ctx = (sufixo: string) => ({
     organization_id: c.org,
     actor: c.actor,
-    requestId: `chatbot-menu:${c.mensagemId}:${sufixo}`,
+    requestId: `chatbot:${c.mensagemId}:${sufixo}`,
   });
 
   return {
     agora: () => new Date(),
+
+    async guardarNome(nome) {
+      // A caixa Pergunta que guarda o nome. Falhar aqui não pode travar a conversa: o nome fica
+      // na mensagem, e a recepção corrige à mão.
+      const { error } = await admin
+        .from("contacts")
+        .update({ name: nome, updated_at: new Date().toISOString() })
+        .eq("organization_id", c.org)
+        .eq("id", c.contatoId)
+        .eq("is_anonymized", false);
+      if (error)
+        logger.warn("[clinica.chatbot] nome do contato não gravado", { error: error.message });
+    },
+
     formatarDinheiro: (cents, moeda) => formatCents(cents, moeda ?? "BRL"),
 
     async tiposParaMarcar() {
@@ -432,7 +467,10 @@ function depsReais(
       const vivos = r.agendamentos
         .filter((a) => a.situacao === "pending" || a.situacao === "confirmed")
         .slice(0, 9);
-      const nomes = await resolveUserNames(admin, vivos.map((a) => a.donoId));
+      const nomes = await resolveUserNames(
+        admin,
+        vivos.map((a) => a.donoId),
+      );
       const tipos = await listaTiposDeAtendimento(admin, c.org);
       const idPorSlug = new Map(tipos.ok ? tipos.tipos.map((t) => [t.slug, t.id]) : []);
       const compromissos: CompromissoDoPaciente[] = vivos.map((a) => {
