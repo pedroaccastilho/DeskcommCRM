@@ -39,10 +39,28 @@ import { z } from "zod";
 import { fail, ok } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
+import { ROLE_RANK, type Role } from "@/lib/auth/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { listaTiposDeAtendimento } from "@/lib/agenda/consulta";
 import { TETO_DE_LEMBRETES_EXTRAS } from "@/lib/agenda/lembretes";
 import { traduzir } from "@/lib/i18n/dicionario";
+
+/**
+ * O PREÇO PADRÃO SÓ O ADMINISTRADOR MUDA (fork TOQ, pedido do Pedro em 02/10/2026).
+ *
+ * O resto do tipo continua do gerente. O preço é a semente da comanda e a base da multa de
+ * cancelamento da clínica, e a clínica quer que valor só o administrador altere. A segunda
+ * chamada a `requireRole` (e não uma comparação de papel aqui) é de propósito: ela mantém o
+ * atalho do platform admin, a cobrança de MFA e o `authz.denied` na trilha.
+ */
+async function precoSoDoAdministrador(
+  papel: Role,
+  requestId: string | undefined,
+): Promise<Response | null> {
+  if (ROLE_RANK[papel] >= ROLE_RANK.admin) return null;
+  const soAdmin = await requireRole("admin", { requestId, resource: "calendar_event_types" });
+  return soAdmin.ok ? null : soAdmin.response;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -287,6 +305,10 @@ export async function POST(req: NextRequest): Promise<Response> {
     // degrada para ele mesmo — que é o contrato de `traduzir`.
     return fail("validation_failed", t(lido.error.issues[0]?.message ?? "corpo inválido"), 422, { requestId });
   }
+  if (lido.data.default_price_cents != null) {
+    const recusa = await precoSoDoAdministrador(autorizado.org.role, requestId);
+    if (recusa) return recusa;
+  }
 
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -337,6 +359,10 @@ export async function PATCH(req: NextRequest): Promise<Response> {
     // Recusa em vez de UPDATE vazio: "alterei" sobre nada é a mesma família de
     // mentira que o "Marcado ✓" sem linha no banco.
     return fail("validation_failed", t("Nenhum campo para alterar."), 422, { requestId });
+  }
+  if ("default_price_cents" in campos) {
+    const recusa = await precoSoDoAdministrador(autorizado.org.role, requestId);
+    if (recusa) return recusa;
   }
 
   const admin = createAdminClient();

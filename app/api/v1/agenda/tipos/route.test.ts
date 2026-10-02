@@ -482,3 +482,91 @@ describe("GET /api/v1/agenda/tipos", () => {
     expect(corpo.data[0]?.reminder_bodies).toEqual({});
   });
 });
+
+/**
+ * O PREÇO PADRÃO SÓ O ADMINISTRADOR MUDA (fork TOQ).
+ *
+ * O dublê de `requireRole` aqui RESPEITA o degrau pedido: com o `authOk` dos blocos acima, que
+ * aprova qualquer degrau, a segunda cobrança da rota passaria sempre e o caso não mediria nada.
+ */
+describe("preço padrão — só o administrador", () => {
+  function papel(role: "manager" | "admin"): void {
+    const user: AuthUser = {
+      id: USER,
+      email: `${role}@example.com`,
+      full_name: null,
+      avatar_url: null,
+      is_platform_admin: false,
+      idioma: "pt-BR" as const,
+      organizations: [{ organization_id: ORG, organization_name: "Org", role }],
+    };
+    const rank = { viewer: 1, agent: 2, ai_operator: 2, manager: 3, admin: 4 } as const;
+    vi.mocked(requireRole).mockImplementation(async (min) =>
+      rank[role] >= rank[min]
+        ? { ok: true, user, org: { orgId: ORG, name: "Org", role } }
+        : { ok: false, response: fail("forbidden_role", "Permissão insuficiente.", 403) },
+    );
+  }
+
+  it("o gerente não muda o preço, e nada é escrito", async () => {
+    papel("manager");
+    const linhas = [linha({ id: TIPO_DA_ORG, organization_id: ORG, default_price_cents: 12000 })];
+    const { escritas } = makeAdmin(linhas);
+    const { PATCH } = await import("./route");
+
+    const res = await PATCH(req("PATCH", { id: TIPO_DA_ORG, default_price_cents: 5000 }));
+
+    expect(res.status).toBe(403);
+    expect(escritas).toHaveLength(0);
+    expect(linhas[0]?.default_price_cents).toBe(12000);
+  });
+
+  it("o gerente também não apaga o preço", async () => {
+    papel("manager");
+    const linhas = [linha({ id: TIPO_DA_ORG, organization_id: ORG, default_price_cents: 12000 })];
+    const { escritas } = makeAdmin(linhas);
+    const { PATCH } = await import("./route");
+
+    const res = await PATCH(req("PATCH", { id: TIPO_DA_ORG, default_price_cents: null }));
+
+    expect(res.status).toBe(403);
+    expect(escritas).toHaveLength(0);
+  });
+
+  it("o gerente segue alterando o resto do tipo", async () => {
+    papel("manager");
+    const linhas = [linha({ id: TIPO_DA_ORG, organization_id: ORG, default_price_cents: 12000 })];
+    makeAdmin(linhas);
+    const { PATCH } = await import("./route");
+
+    const res = await PATCH(req("PATCH", { id: TIPO_DA_ORG, name: "Sessão" }));
+
+    expect(res.status).toBe(200);
+    expect(linhas[0]?.name).toBe("Sessão");
+    expect(linhas[0]?.default_price_cents).toBe(12000);
+  });
+
+  it("o gerente cria tipo sem preço, mas não com preço", async () => {
+    papel("manager");
+    const linhas: Linha[] = [];
+    makeAdmin(linhas);
+    const { POST } = await import("./route");
+    const base = { name: "Retorno", category: "retorno", duration_minutes: 15, location_kind: "in_person" };
+
+    expect((await POST(req("POST", { ...base, default_price_cents: 9000 }))).status).toBe(403);
+    expect(linhas).toHaveLength(0);
+    expect((await POST(req("POST", base))).status).toBe(201);
+  });
+
+  it("o administrador muda o preço", async () => {
+    papel("admin");
+    const linhas = [linha({ id: TIPO_DA_ORG, organization_id: ORG, default_price_cents: 12000 })];
+    makeAdmin(linhas);
+    const { PATCH } = await import("./route");
+
+    const res = await PATCH(req("PATCH", { id: TIPO_DA_ORG, default_price_cents: 15000 }));
+
+    expect(res.status).toBe(200);
+    expect(linhas[0]?.default_price_cents).toBe(15000);
+  });
+});

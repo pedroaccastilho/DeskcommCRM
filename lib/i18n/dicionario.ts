@@ -8776,6 +8776,8 @@ export const DICIONARIO: Traducoes = {
   "Opcional. Vira o valor sugerido na comanda, e pode ser mudado lá.": {
     es: "Opcional. Aparece como valor sugerido en la orden de servicio, donde puedes cambiarlo.",
   },
+  // fork TOQ: o preço padrão só o administrador muda
+  "Só o administrador muda o preço.": { es: "Solo el administrador cambia el precio." },
   "Atendimentos sem comanda": { es: "Atenciones sin orden de servicio" },
   "Já aconteceram e ninguém faturou. Marque o que quer cobrar.": {
     es: "Ya se realizaron y nadie las ha cerrado. Marca las que quieras cobrar.",

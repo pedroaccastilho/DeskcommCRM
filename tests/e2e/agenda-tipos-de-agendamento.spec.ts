@@ -229,6 +229,10 @@ test("o tipo NASCE com responsável — e quem escolhe 'Definir depois' recebe a
   ).toBeVisible({ timeout: 15_000 });
 
   await seletorDoOrfao.selectOption({ index: 1 });
+  // Fork TOQ: o preço padrão só o administrador muda. O gerente o vê, não o edita, e salvar o
+  // resto do tipo continua funcionando (o formulário deixa de mandar o preço).
+  await expect(linhaSemDono.getByTestId(/^editar-preco-/).first()).toHaveAttribute("readonly", "");
+  await expect(linhaSemDono.getByText("Só o administrador muda o preço.")).toBeVisible();
   await linhaSemDono.getByTestId(/^salvar-/).first().click();
   await expect(
     linhaSemDono.getByText("sem responsável"),

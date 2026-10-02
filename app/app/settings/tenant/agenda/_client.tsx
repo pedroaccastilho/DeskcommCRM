@@ -312,6 +312,7 @@ export function TiposDeAgendamentoClient({
   podeLigarClientePelaAgenda,
   colegasPodemMexerNaAgendaLigado,
   podeMudarAgendaDosColegas,
+  podeMudarPreco = true,
 }: {
   tiposIniciais: TipoRow[];
   pessoas: Array<{ id: string; papel: string; nome: string }>;
@@ -326,6 +327,8 @@ export function TiposDeAgendamentoClient({
   /** `organizations.settings.colegas_podem_mexer_na_agenda` (migration 0343). */
   colegasPodemMexerNaAgendaLigado: boolean;
   podeMudarAgendaDosColegas: boolean;
+  /** Fork TOQ: o preço padrão só o administrador muda (a rota cobra de novo). */
+  podeMudarPreco?: boolean;
 }) {
   const t = useT();
   const router = useRouter();
@@ -690,12 +693,18 @@ export function TiposDeAgendamentoClient({
                         // Vazio é uma ESCOLHA (voltar a digitar na hora), e
                         // por isso vira `null` em vez de sumir do corpo: omitir
                         // deixaria o preço antigo gravado e a tela mentindo.
-                        default_price_cents: (() => {
-                          const bruto = String(dados.get("default_price_cents") ?? "").trim();
-                          if (bruto === "") return null;
-                          const cents = parseReaisToCents(bruto);
-                          return cents === null ? null : cents;
-                        })(),
+                        // Quem não pode mudar o preço não o manda: a rota recusa o
+                        // campo inteiro de quem não é administrador (fork TOQ).
+                        ...(podeMudarPreco
+                          ? {
+                              default_price_cents: (() => {
+                                const bruto = String(dados.get("default_price_cents") ?? "").trim();
+                                if (bruto === "") return null;
+                                const cents = parseReaisToCents(bruto);
+                                return cents === null ? null : cents;
+                              })(),
+                            }
+                          : {}),
                         reminder_enabled: dados.get("reminder_enabled") === "on",
                         // O campo desabilitado também não aparece, e omitir é o
                         // certo: desligar o aviso não pode apagar a lista que
@@ -770,10 +779,13 @@ export function TiposDeAgendamentoClient({
                       tipo.default_price_cents === null ? "" : (tipo.default_price_cents / 100).toFixed(2)
                     }
                     data-testid={`editar-preco-${tipo.id}`}
-                    className="rounded-md border border-border bg-surface-elevated p-2 text-sm text-text"
+                    readOnly={!podeMudarPreco}
+                    className={`rounded-md border border-border bg-surface-elevated p-2 text-sm text-text ${podeMudarPreco ? "" : "opacity-60"}`}
                   />
                   <span className="text-[11px] text-text-muted">
-                    {t("Opcional. Vira o valor sugerido na comanda, e pode ser mudado lá.")}
+                    {podeMudarPreco
+                      ? t("Opcional. Vira o valor sugerido na comanda, e pode ser mudado lá.")
+                      : t("Só o administrador muda o preço.")}
                   </span>
                   </label>
                 </div>

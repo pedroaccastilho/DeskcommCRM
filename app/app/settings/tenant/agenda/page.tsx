@@ -122,6 +122,11 @@ export default async function TiposDeAgendamentoPage() {
         // `admin`, e não `manager` como os prazos ao lado: ligar reescreve as
         // etiquetas de todo contato com histórico. A RPC cobra de novo.
         podeLigarClientePelaAgenda={ROLE_RANK[activeOrg.role] >= ROLE_RANK.admin}
+        // Fork TOQ: o preço é a base da multa da clínica, e valor só o administrador muda.
+        // A rota cobra de novo.
+        podeMudarPreco={
+          (user.is_platform_admin && !user.support) || ROLE_RANK[activeOrg.role] >= ROLE_RANK.admin
+        }
       />
     </div>
   );
