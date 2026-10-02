@@ -13,7 +13,7 @@ import { useRemarcarAgendamento } from "@/hooks/agenda/useRemarcarAgendamento";
 import type { MotivoDaGradeTravada } from "@/lib/agenda/grade-interativa";
 import { cn } from "@/lib/utils";
 
-import { GradeDaAgenda } from "./GradeDaAgenda";
+import { GradeDaAgenda, type ColunaDePessoa } from "./GradeDaAgenda";
 import type { Agendamento, Pessoa, VisaoDaAgenda } from "./tipos";
 import { dataDeParede, diaLocalISO } from "@/lib/agenda/fuso";
 
@@ -53,6 +53,7 @@ export function AgendaInterativa({
   onEscolherTipo,
   onMarcarEm,
   onAbrirAgendamento,
+  colunasPorPessoa,
   className,
 }: {
   visao: VisaoDaAgenda;
@@ -105,6 +106,8 @@ export function AgendaInterativa({
    */
   onMarcarEm?: (instante: string) => void;
   onAbrirAgendamento?: (id: string) => void;
+  /** Repassada à grade: o dia com uma coluna por pessoa. */
+  colunasPorPessoa?: ColunaDePessoa[];
   className?: string;
 }) {
   const localeDaData = useLocaleDeData();
@@ -346,6 +349,7 @@ export function AgendaInterativa({
         pessoas={pessoas}
         agendamentos={desenhados}
         onAbrirAgendamento={onAbrirAgendamento}
+        colunasPorPessoa={colunasPorPessoa}
         className="min-h-0 flex-1"
         interacao={
           tipo && onMarcarEm

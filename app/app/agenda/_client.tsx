@@ -42,6 +42,7 @@ import {
 import { useClinicaEu } from "@/components/clinica/ProntuarioDoPaciente";
 import { LegendaDasModalidades, useCoresDaAgenda } from "@/components/clinica/LegendaDasModalidades";
 import { corDaModalidade, modalidadeDoTipo } from "@/lib/clinica/cores-da-agenda";
+import { ResumoDoDia, useColunasDaEquipe } from "@/components/clinica/DiaDaEquipe";
 import { usePessoasDaAgenda } from "@/hooks/agenda/usePessoasDaAgenda";
 import { CalendarPlus, CaretLeft, CaretRight } from "@/lib/ui/icons";
 import { cn } from "@/lib/utils";
@@ -260,6 +261,10 @@ export function AgendaClient({
   );
   const endereco = enderecoEditado ?? tipo?.localDetalhes ?? "";
   const [visao, setVisao] = React.useState<VisaoDaAgenda>("semana");
+  // Módulo clínica: a visão Dia com uma coluna por profissional ("Equipe").
+  // É um jeito de desenhar o dia, não uma quarta visão — o período, a busca e a
+  // navegação continuam os do Dia.
+  const [diaDaEquipe, setDiaDaEquipe] = React.useState(false);
   /**
    * No CELULAR a agenda abre no DIA, não na semana.
    *
@@ -448,6 +453,22 @@ export function AgendaClient({
         ),
     [agendamentos, pintaPorModalidade],
   );
+
+  const mostraEquipe = clinica.data?.instalado === true && visao === "dia" && diaDaEquipe;
+  const agendamentosDoDia = React.useMemo(
+    () =>
+      mostraEquipe
+        ? agendamentosDaGrade.filter((a) => diaLocalISO(new Date(a.comeca), fusoDaAgenda) === format(ancora, "yyyy-MM-dd"))
+        : [],
+    [mostraEquipe, agendamentosDaGrade, fusoDaAgenda, ancora],
+  );
+  const colunasDaEquipe = useColunasDaEquipe({
+    ativo: mostraEquipe,
+    pessoas,
+    agendamentosDoDia,
+    isolada,
+    donoDosHorarios: tipo ? resolverResponsavelDoPainel({ pessoas, donoId: tipo.donoId, usuarioId }).id : null,
+  });
 
   /**
    * O que é ACIONÁVEL — o que a lista "Próximos" pode oferecer botão para fazer.
@@ -649,24 +670,41 @@ export function AgendaClient({
             data-testid="alternador-de-visao"
             className="flex items-center gap-0.5 rounded-md border border-border bg-surface p-0.5"
           >
-            {VISOES.map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                data-testid={`visao-${v.id}`}
-                aria-pressed={visao === v.id}
-                onClick={() => setVisao(v.id)}
-                className={cn(
-                  "rounded-sm px-2.5 py-1 text-xs transition-colors duration-fast ease-out",
-                  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500",
-                  visao === v.id
-                    ? "bg-accent font-semibold text-accent-foreground"
-                    : "text-text-muted hover:bg-surface-elevated hover:text-text",
-                )}
-              >
-                {t(v.rotulo)}
-              </button>
-            ))}
+            {VISOES.flatMap((v) => {
+              const botao = (id: string, rotulo: string, ativo: boolean, escolher: () => void, titulo?: string) => (
+                <button
+                  key={id}
+                  type="button"
+                  data-testid={`visao-${id}`}
+                  aria-pressed={ativo}
+                  title={titulo}
+                  onClick={escolher}
+                  className={cn(
+                    "rounded-sm px-2.5 py-1 text-xs transition-colors duration-fast ease-out",
+                    "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500",
+                    ativo
+                      ? "bg-accent font-semibold text-accent-foreground"
+                      : "text-text-muted hover:bg-surface-elevated hover:text-text",
+                  )}
+                >
+                  {rotulo}
+                </button>
+              );
+              if (v.id !== "dia" || clinica.data?.instalado !== true) {
+                return [botao(v.id, t(v.rotulo), visao === v.id, () => setVisao(v.id))];
+              }
+              // Com o módulo clínica, o Dia ganha um irmão: o mesmo dia, uma coluna por profissional.
+              return [
+                botao("dia", t(v.rotulo), visao === "dia" && !diaDaEquipe, () => {
+                  setVisao("dia");
+                  setDiaDaEquipe(false);
+                }),
+                botao("equipe", t("Equipe"), mostraEquipe, () => {
+                  setVisao("dia");
+                  setDiaDaEquipe(true);
+                }, t("Dia por profissional")),
+              ];
+            })}
           </div>
         </div>
       </div>
@@ -1202,7 +1240,11 @@ export function AgendaClient({
           remarca. Toda a fiação (a consulta de horários da janela desenhada, a
           proposta de remarcação, o otimismo com volta atrás) mora em
           `AgendaInterativa`; aqui fica só o que esta tela já sabia. */}
-      {pintaPorModalidade && <LegendaDasModalidades />}
+      {mostraEquipe ? (
+        <ResumoDoDia agendamentosDoDia={agendamentosDoDia} comCores={pintaPorModalidade} />
+      ) : (
+        pintaPorModalidade && <LegendaDasModalidades />
+      )}
       <AgendaInterativa
         fuso={fusoDaAgenda}
         visao={visao}
@@ -1210,6 +1252,7 @@ export function AgendaClient({
         agora={new Date()}
         pessoas={pessoas}
         agendamentos={agendamentosDaGrade}
+        colunasPorPessoa={colunasDaEquipe}
         recorte={recorteDaGrade}
         tipos={tiposIniciais.map((t) => ({ id: t.id, nome: t.nome, duracaoMin: t.duracaoMin }))}
         tipo={tipo ? { id: tipo.id, duracaoMin: tipo.duracaoMin } : null}
