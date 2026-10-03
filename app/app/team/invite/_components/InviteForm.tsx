@@ -9,6 +9,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { useT } from "@/hooks/i18n/useT";
+import { useActiveOrg } from "@/hooks/auth/AuthProvider";
 import { useInviteMembers } from "@/hooks/team/useInviteMembers";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +31,7 @@ interface ResultState {
 
 export function InviteForm() {
   const t = useT();
+  const clinica = useActiveOrg()?.modulos_ligados?.includes("clinica") === true;
   const [emailsRaw, setEmailsRaw] = useState("");
   const [settings, setSettings] = useState(INTERFACE_COMPLETA);
   const [role, setRole] = useState<Role>("agent");
@@ -100,6 +102,7 @@ export function InviteForm() {
           onChange={setSettings}
           role={role}
           disabled={invite.isPending}
+          menusDaClinica={clinica}
         />
         <Button
           type="submit"
