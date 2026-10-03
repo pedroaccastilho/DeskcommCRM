@@ -11,6 +11,13 @@ import { useT } from "@/hooks/i18n/useT";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { rotuloDoLocal } from "@/lib/agenda/locais";
+import {
+  AvisoDaTolerancia,
+  AvisoDeCancelamento,
+  MultaDaSessao,
+  useSessaoDaClinica,
+} from "@/components/clinica/SessaoNoDetalhe";
+import { avisoDoCancelamento, faltaTravadaAte } from "@/lib/clinica/sessao-no-detalhe";
 
 type Detalhe = {
   meeting?: MeetingDetail | null;
@@ -69,6 +76,7 @@ export function DetalheDoCompromisso({
   const [reason, setReason] = useState("");
   const [draftRevision, setDraftRevision] = useState<number | null>(null);
   const [conflict, setConflict] = useState(false);
+  const [pelaClinica, setPelaClinica] = useState(false);
   const query = useQuery({
     queryKey: ["agenda", "detalhe", id],
     enabled: !!id,
@@ -77,6 +85,10 @@ export function DetalheDoCompromisso({
       (await apiClient.get<{ data: Detalhe }>(`/api/v1/agenda/agendamentos/${id}`)).data,
   });
   const a = query.data;
+  // Sessão da clínica (módulo clínica): multa ao cancelar em cima da hora e tolerância de atraso
+  // antes da falta. `null` fora do módulo, e o painel segue o do núcleo.
+  const clinica = useSessaoDaClinica(a);
+  const faltaTravada = faltaTravadaAte(clinica?.sessao ?? null, query.dataUpdatedAt);
   const formatoDeData =
     a &&
     new Intl.DateTimeFormat(tagDoIdioma, {
@@ -94,6 +106,7 @@ export function DetalheDoCompromisso({
     setReason("");
     setDraftRevision(null);
     setConflict(false);
+    setPelaClinica(false);
   }
   function mutationFailed(error: unknown) {
     showApiError(error);
@@ -116,7 +129,13 @@ export function DetalheDoCompromisso({
   });
   const cancel = useMutation({
     mutationFn: async (decision: { revision: number; reason: string }) =>
-      apiClient.delete("/api/v1/agenda/agendamentos", { id, ...decision }),
+      clinica
+        ? apiClient.post(`/api/v1/clinica/agenda/${id}/cancelar`, {
+            motivo: decision.reason,
+            pela_clinica: pelaClinica,
+            revision: decision.revision,
+          })
+        : apiClient.delete("/api/v1/agenda/agendamentos", { id, ...decision }),
     onSuccess: () => {
       resetDraft();
       void qc.invalidateQueries({ queryKey: ["agenda"] });
@@ -258,6 +277,13 @@ export function DetalheDoCompromisso({
                 </Link>
               </div>
             ) : null}
+            {clinica && a.status === "cancelled" && a.contact_id ? (
+              <MultaDaSessao
+                appointmentId={a.id}
+                contactId={a.contact_id}
+                podeIsentar={podeEditar}
+              />
+            ) : null}
             {staleDraft ? (
               <div role="alert" className="space-y-2 rounded-lg border p-3">
                 <p>
@@ -313,13 +339,21 @@ export function DetalheDoCompromisso({
                         mutation.isPending ||
                         staleDraft ||
                         Date.parse(a.starts_at) > query.dataUpdatedAt ||
-                        a.status === status
+                        a.status === status ||
+                        (status === "no_show" && faltaTravada !== null)
                       }
                     >
                       {t(label)}
                     </Button>
                   ))}
                 </div>
+                {clinica && faltaTravada && Date.parse(a.starts_at) <= query.dataUpdatedAt ? (
+                  <AvisoDaTolerancia
+                    ate={faltaTravada}
+                    fuso={a.time_zone}
+                    minutos={clinica.politica.tolerancia_atraso_minutos}
+                  />
+                ) : null}
                 {/*
                   O SIM que faltava. `pending` é pré-reserva: o horário já está
                   segurado, e só vira compromisso quando alguém aprova. A rota
@@ -350,6 +384,21 @@ export function DetalheDoCompromisso({
                     {t("Lembrar em uma hora")}
                   </Button>
                 ) : null}
+                {clinica ? (
+                  <AvisoDeCancelamento
+                    aviso={avisoDoCancelamento(
+                      clinica.sessao,
+                      clinica.politica,
+                      query.dataUpdatedAt,
+                    )}
+                    fuso={a.time_zone}
+                    pelaClinica={pelaClinica}
+                    onPelaClinica={(v) => {
+                      beginDraft();
+                      setPelaClinica(v);
+                    }}
+                  />
+                ) : null}
                 <label className="block">
                   {t("Motivo do cancelamento")}
                   <input
@@ -363,7 +412,9 @@ export function DetalheDoCompromisso({
                 </label>
                 <Button
                   variant="outline"
-                  disabled={!reason.trim() || cancel.isPending || staleDraft}
+                  disabled={
+                    reason.trim().length < (clinica ? 3 : 1) || cancel.isPending || staleDraft
+                  }
                   onClick={() => cancel.mutate({ revision: draftRevision ?? a.revision, reason })}
                 >
                   {t("Cancelar agendamento")}
