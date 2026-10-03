@@ -4,6 +4,8 @@ import type { SessaoDaGrade } from "./agenda";
 import {
   minhasSessoes,
   pacienteDaVez,
+  proximaJaMarcada,
+  proximoDoDia,
   ultimoRegistro,
   valoresParaRepetir,
   type RegistroAnterior,
@@ -119,5 +121,49 @@ describe("repetir a conduta", () => {
   it("sem registro anterior não há o que repetir", () => {
     expect(ultimoRegistro(registros, "medicina")).toBeNull();
     expect(valoresParaRepetir(null)).toEqual({});
+  });
+});
+
+describe("proximaJaMarcada", () => {
+  it("a primeira sessão futura não cancelada, fora a que acabou de ser atendida", () => {
+    const compromissos = [
+      { id: "hoje", iniciaEm: "2026-10-02T13:30:00.000Z", situacao: "completed" },
+      { id: "cancelada", iniciaEm: "2026-10-05T13:30:00.000Z", situacao: "cancelled" },
+      { id: "dia-9", iniciaEm: "2026-10-09T13:30:00.000Z", situacao: "pending" },
+      { id: "dia-7", iniciaEm: "2026-10-07T13:30:00.000Z", situacao: "confirmed" },
+      { id: "ontem", iniciaEm: "2026-10-01T13:30:00.000Z", situacao: "completed" },
+    ];
+    expect(proximaJaMarcada(compromissos, "hoje", AGORA)?.id).toBe("dia-7");
+  });
+
+  it("sem nada marcado à frente, nenhuma: é quando o profissional precisa marcar", () => {
+    const compromissos = [
+      { id: "hoje", iniciaEm: "2026-10-02T13:30:00.000Z", situacao: "pending" },
+    ];
+    expect(proximaJaMarcada(compromissos, "hoje", AGORA)).toBeNull();
+  });
+});
+
+describe("proximoDoDia", () => {
+  it("o próximo horário aberto depois do atual, pulando quem já foi atendido ou faltou", () => {
+    const minhas = minhasSessoes(
+      [
+        sessao({
+          id: "atual",
+          inicio: "2026-10-02T12:30:00.000Z",
+          fim: "2026-10-02T13:20:00.000Z",
+        }),
+        sessao({ id: "feito", inicio: "2026-10-02T13:30:00.000Z", status: "completed" }),
+        sessao({
+          id: "seguinte",
+          inicio: "2026-10-02T15:00:00.000Z",
+          fim: "2026-10-02T15:50:00.000Z",
+        }),
+      ],
+      "camila",
+      AGORA,
+    );
+    expect(proximoDoDia(minhas, "atual")?.id).toBe("seguinte");
+    expect(proximoDoDia(minhas, "seguinte")).toBeNull();
   });
 });

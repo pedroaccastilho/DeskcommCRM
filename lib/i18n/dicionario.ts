@@ -13252,6 +13252,24 @@ export const DICIONARIO: Traducoes = {
 
   },
 
+  // ─── Clínica: próximo passo depois de assinar (fork TOQ) ───
+  "Marcar": { es: "Agendar" },
+  "Próxima sessão de {nome}": { es: "Próxima sesión de {nome}" },
+  "Mesmo tipo de atendimento e mesmo profissional. Escolha o dia e um horário livre.": {
+    es: "Mismo tipo de atención y mismo profesional. Elige el día y un horario libre.",
+  },
+  "Este horário não tem tipo de atendimento. Marque pela Agenda.": {
+    es: "Este horario no tiene tipo de atención. Agéndalo desde la Agenda.",
+  },
+  "A evolução desta sessão está assinada.": { es: "La evolución de esta sesión está firmada." },
+  "Qual o próximo passo?": { es: "¿Cuál es el próximo paso?" },
+  "Próxima sessão já marcada: {quando}.": { es: "Próxima sesión ya agendada: {quando}." },
+  "Este paciente ainda não tem a próxima sessão marcada.": {
+    es: "Este paciente todavía no tiene la próxima sesión agendada.",
+  },
+  "Marcar outra sessão": { es: "Agendar otra sesión" },
+  "Marcar a próxima sessão": { es: "Agendar la próxima sesión" },
+  "Próximo paciente: {nome}, às {hora}": { es: "Próximo paciente: {nome}, a las {hora}" },
   // ─── Clínica: Meu dia do profissional (fork TOQ) ───
   "Meu dia": { es: "Mi día" },
   "Seus horários de hoje e o paciente da vez, com a evolução ao lado.": {
