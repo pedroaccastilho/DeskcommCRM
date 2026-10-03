@@ -1,6 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import type pg from 'pg';
 
+import { CONFIG_PADRAO } from '@/lib/clinica/chatbot/fluxo';
 import { TIPOS_DERIVAVEIS } from '@/lib/messaging/media/derivable';
 
 import { drainTick } from './drain';
@@ -458,4 +459,41 @@ it("anti-backlog: ordena a última inbound por coalesce(sent_at, created_at), n�
   expect(consultaUltima).toBeDefined();
   expect(consultaUltima).toContain('coalesce(sent_at, created_at) desc');
   expect(consultaUltima).not.toContain('nulls last');
+});
+
+/**
+ * Chatbot do WhatsApp (módulo clínica, fork TOQ): ligado na conexão, quem responde é ele, e a IA fica
+ * calada. Uma voz só, e sem gasto de LLM.
+ */
+function poolDoChatbot(metadataDaConexao: unknown, calls: string[]) {
+  const query = vi.fn().mockImplementation((sql: string) => {
+    calls.push(sql);
+    if (sql.includes('returning e.id')) return { rows: [event] };
+    if (sql.includes('ai_dispatch_mode')) return { rows: [{ mode: null, status: 'active' }] };
+    if (sql.includes('is_group')) return { rows: [{ is_group: false }] };
+    if (sql.includes('from channel_sessions')) return { rows: [{ metadata: metadataDaConexao }] };
+    if (sql.includes('tem_agente')) return { rows: [{ tem_agente: true, tem_roteador: false }] };
+    return { rows: [] };
+  });
+  return { query } as unknown as pg.Pool;
+}
+
+const CHATBOT_LIGADO = {
+  chatbot_fluxo: { ...CONFIG_PADRAO, ativo: true },
+};
+
+it('chatbot ligado na conexão: evento vira done SEM job de IA', async () => {
+  const calls: string[] = [];
+  await drainTick(poolDoChatbot(CHATBOT_LIGADO, calls), knobs, log);
+  expect(calls.some((s) => s.includes('from channel_sessions'))).toBe(true);
+  expect(calls.some((s) => s.includes('job_queue'))).toBe(false);
+  expect(calls.some((s) => s.includes("status = 'done'"))).toBe(true);
+});
+
+it('chatbot DESLIGADO (ou sem configuração): o turno de IA segue como antes', async () => {
+  for (const metadata of [{}, { chatbot_fluxo: { ...CHATBOT_LIGADO.chatbot_fluxo, ativo: false } }]) {
+    const calls: string[] = [];
+    await drainTick(poolDoChatbot(metadata, calls), knobs, log);
+    expect(calls.some((s) => s.includes('tem_agente')), 'chegou à pergunta de quem atende').toBe(true);
+  }
 });

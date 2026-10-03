@@ -1012,6 +1012,18 @@ export const AUDIT_ACTIONS = [
   "clinica.tipo_atendimento_atualizado",
   "clinica.multa_registrada",
   "clinica.multa_isenta",
+  // Pacotes de sessões (fork TOQ, migration 9004). Saldo de pacote é dinheiro pago adiantado:
+  // venda, sessão gasta ou devolvida, congelamento, prorrogação e cancelamento ficam registrados.
+  "clinica.produto_cadastrado",
+  "clinica.produto_alterado",
+  "clinica.pacote_vendido",
+  "clinica.pacote_sessao_lancada",
+  "clinica.pacote_sessao_estornada",
+  "clinica.pacote_congelado",
+  "clinica.pacote_prorrogado",
+  "clinica.pacote_cancelado",
+  // Chatbot de menu do WhatsApp (fork TOQ): quem ligou, desligou ou mudou o menu de uma conexão.
+  "clinica.chatbot_menu_atualizado",
   // Plano de tratamento (migration 9006): o retorno de reavaliação que o sistema marcou sozinho
   // na agenda do avaliador, e se o paciente foi avisado.
   "clinica.retorno_marcado",

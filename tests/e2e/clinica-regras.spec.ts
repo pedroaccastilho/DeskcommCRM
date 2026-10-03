@@ -113,7 +113,9 @@ test.describe("Regras da clínica: só o administrador", () => {
       const multa = page.getByTestId("regra-multa_cancelamento_pct");
       await expect(multa).toHaveValue("30", { timeout: ESPERA });
       await expect(page.getByTestId("regra-pacote_validade_dias")).toHaveValue("60");
-      await expect(page.getByTestId("bloco-pacotes")).toContainText("Guardado para depois");
+      // Os pacotes valem desde a 9004; as reposições ainda não.
+      await expect(page.getByTestId("bloco-pacotes")).toContainText("Em uso");
+      await expect(page.getByTestId("bloco-reposicoes")).toContainText("Guardado para depois");
       await page.screenshot({ path: path.join(EVIDENCIA, "regras-padrao.png"), fullPage: true });
 
       // Valor fora da faixa não salva e diz por quê.
