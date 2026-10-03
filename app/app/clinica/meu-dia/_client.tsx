@@ -20,6 +20,7 @@ import {
   useClinicaEu,
   usePendencias,
 } from "@/components/clinica/ProntuarioDoPaciente";
+import { PacoteDaSessao } from "@/components/clinica/PacotesDoPaciente";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -297,6 +298,11 @@ function ModoAtendimento({
               {hora(sessao.inicio)} · {sessao.tipo?.nome ?? sessao.titulo}
               {sessao.modalidade ? ` · ${t(ROTULO_DA_MODALIDADE[sessao.modalidade])}` : ""}
             </p>
+            {paciente ? (
+              <div className="mt-1">
+                <PacoteDaSessao contactId={paciente.id} modalidade={sessao.modalidade} podeVender />
+              </div>
+            ) : null}
           </div>
           <Badge variant={SITUACAO[sessao.situacao].variante}>
             {t(SITUACAO[sessao.situacao].rotulo)}

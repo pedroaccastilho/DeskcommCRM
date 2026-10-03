@@ -5,6 +5,7 @@ import {
   congeladoAte,
   corpoDaVenda,
   opcoesDeVenda,
+  pacoteDaSessao,
   separarPacotes,
   type PacoteDaFicha,
   type ProdutoDoCatalogo,
@@ -107,5 +108,24 @@ describe("pacotes na ficha do paciente", () => {
     expect(ajustesPermitidos(pacote({ situacao: "cancelado", status: "cancelado" }), true)).toEqual(
       [],
     );
+  });
+});
+
+describe("pacoteDaSessao", () => {
+  it("o ativo da modalidade, com saldo, que vence primeiro: o mesmo que o servidor gasta", () => {
+    const pacotes = [
+      pacote({ id: "vence-depois", valido_ate: "2026-12-30T12:00:00Z" }),
+      pacote({ id: "vence-antes", valido_ate: "2026-11-10T12:00:00Z" }),
+      pacote({ id: "sem-saldo", valido_ate: "2026-10-20T12:00:00Z", saldo: 0 }),
+      pacote({ id: "pilates", modalidade: "pilates", valido_ate: "2026-10-15T12:00:00Z" }),
+      pacote({ id: "vencido", situacao: "vencido", valido_ate: "2026-10-05T12:00:00Z" }),
+    ];
+    expect(pacoteDaSessao(pacotes, "fisioterapia")?.id).toBe("vence-antes");
+    expect(pacoteDaSessao(pacotes, "pilates")?.id).toBe("pilates");
+  });
+
+  it("sem pacote valendo na modalidade, ou sessão sem modalidade, é avulsa", () => {
+    expect(pacoteDaSessao([pacote()], "medicina")).toBeNull();
+    expect(pacoteDaSessao([pacote()], null)).toBeNull();
   });
 });

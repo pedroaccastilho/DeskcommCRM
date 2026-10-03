@@ -14,3 +14,6 @@ dirigida por `tests/e2e/clinica-meu-dia.spec.ts`.
   dia de daqui a uma semana, com os horários livres do profissional.
 - `proxima-marcada.png`: a sessão marcada aparece no próximo passo como "Próxima sessão já
   marcada", e o botão passa a oferecer marcar outra.
+- `modo-atendimento.png` também mostra, abaixo do nome do paciente, o pacote que a sessão vai
+  gastar ("Restam 10 de 10 sessões no pacote"). Depois de "Compareceu", a spec confere que o saldo
+  na tela passou para 9.

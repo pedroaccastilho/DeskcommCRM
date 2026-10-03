@@ -115,3 +115,20 @@ export function ajustesPermitidos(p: PacoteDaFicha, gerencia: boolean): AjusteDo
   if (gerencia && p.situacao === "ativo") ajustes.push("cancelar");
   return ajustes;
 }
+
+/**
+ * O pacote que a sessão vai gastar: o ativo da modalidade, com saldo, que vence primeiro. É a
+ * mesma escolha do servidor ao marcar "Compareceu" (`fn_clinica_consumir_sessao`), para a tela
+ * mostrar antes o que vai acontecer depois. `null` quando a sessão é avulsa.
+ */
+export function pacoteDaSessao(
+  pacotes: readonly PacoteDaFicha[],
+  modalidade: Modalidade | null,
+): PacoteDaFicha | null {
+  if (!modalidade) return null;
+  return (
+    pacotes
+      .filter((p) => p.situacao === "ativo" && p.modalidade === modalidade && p.saldo > 0)
+      .sort((a, b) => a.valido_ate.localeCompare(b.valido_ate))[0] ?? null
+  );
+}
