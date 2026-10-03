@@ -13852,7 +13852,7 @@ export const DICIONARIO: Traducoes = {
   "% da sessão": { es: "% de la sesión" },
   "Tolerância de atraso": { es: "Tolerancia de retraso" },
   "Pacotes": { es: "Paquetes" },
-  "Fica guardado e passa a valer quando os pacotes entrarem no sistema.": { es: "Queda guardado y empieza a regir cuando los paquetes lleguen al sistema." },
+  "Já vale: é o pacote padrão da venda quando ele não sai do catálogo abaixo, o limite do congelamento e o ponto em que a recepção vê a renovação.": { es: "Ya rige: es el paquete estándar de la venta cuando no sale del catálogo de abajo, el límite del congelamiento y el punto en que la recepción ve la renovación." },
   "Sessões do pacote": { es: "Sesiones del paquete" },
   "sessões": { es: "sesiones" },
   "Validade do pacote": { es: "Validez del paquete" },
@@ -13878,6 +13878,19 @@ export const DICIONARIO: Traducoes = {
   "Nenhum tipo de agendamento ativo. Crie os tipos em Configurações › Tipos de agendamento.": { es: "Ningún tipo de cita activo. Cree los tipos en Configuración › Tipos de cita." },
   "Não é atendimento da clínica": { es: "No es atención de la clínica" },
   "Preço da sessão (R$)": { es: "Precio de la sesión (R$)" },
+  // clínica: pacotes de sessões (fork TOQ, migration 9004)
+  "Reposições": { es: "Reposiciones" },
+  "Fica guardado e passa a valer quando as reposições entrarem no sistema.": { es: "Queda guardado y empieza a regir cuando las reposiciones lleguen al sistema." },
+  "Pacotes à venda": { es: "Paquetes a la venta" },
+  "A recepção escolhe um destes na venda. O valor pode ficar em branco até a clínica definir os preços. Mudar aqui não muda pacote já vendido.": { es: "La recepción elige uno de estos en la venta. El valor puede quedar en blanco hasta que la clínica defina los precios. Cambiar aquí no cambia paquetes ya vendidos." },
+  "Não foi possível carregar os pacotes à venda.": { es: "No se pudieron cargar los paquetes a la venta." },
+  "Novo pacote": { es: "Nuevo paquete" },
+  "Ex.: Fisioterapia 10 sessões": { es: "Ej.: Fisioterapia 10 sesiones" },
+  "Sessões": { es: "Sesiones" },
+  "Validade (dias)": { es: "Validez (días)" },
+  "Valor do pacote (R$)": { es: "Valor del paquete (R$)" },
+  "Sem preço": { es: "Sin precio" },
+  "À venda": { es: "A la venta" },
 };
 
 /**

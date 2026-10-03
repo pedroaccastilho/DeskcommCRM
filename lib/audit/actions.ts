@@ -1012,6 +1012,16 @@ export const AUDIT_ACTIONS = [
   "clinica.tipo_atendimento_atualizado",
   "clinica.multa_registrada",
   "clinica.multa_isenta",
+  // Pacotes de sessões (fork TOQ, migration 9004). Saldo de pacote é dinheiro pago adiantado:
+  // venda, sessão gasta ou devolvida, congelamento, prorrogação e cancelamento ficam registrados.
+  "clinica.produto_cadastrado",
+  "clinica.produto_alterado",
+  "clinica.pacote_vendido",
+  "clinica.pacote_sessao_lancada",
+  "clinica.pacote_sessao_estornada",
+  "clinica.pacote_congelado",
+  "clinica.pacote_prorrogado",
+  "clinica.pacote_cancelado",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

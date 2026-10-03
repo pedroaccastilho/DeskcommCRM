@@ -1,9 +1,10 @@
 "use client";
 /**
- * As regras da clínica, editadas pelo administrador (migrations 9002 e 9003).
+ * As regras da clínica, editadas pelo administrador (migrations 9002 a 9004).
  *
- * Três blocos de números (faltas e cancelamento, pacotes, alertas) num formulário só, e a lista
- * dos tipos de agendamento com modalidade e preço, salva linha a linha. Cada bloco diz se a regra
+ * Blocos de números (faltas e cancelamento, pacotes, reposições, alertas) num formulário só, a
+ * lista dos tipos de agendamento com modalidade e preço, salva linha a linha, e o catálogo dos
+ * pacotes que a clínica vende. Cada bloco diz se a regra
  * já vale ou se fica guardada para a parte do sistema que ainda vai chegar, porque um número que
  * a tela aceita e nada usa precisa dizer isso a quem o digita.
  */
@@ -64,12 +65,12 @@ const BLOCOS: Bloco[] = [
   {
     id: "pacotes",
     titulo: "Pacotes",
-    situacao: "guardado",
-    aviso: "Fica guardado e passa a valer quando os pacotes entrarem no sistema.",
+    situacao: "em_uso",
+    aviso:
+      "Já vale: é o pacote padrão da venda quando ele não sai do catálogo abaixo, o limite do congelamento e o ponto em que a recepção vê a renovação.",
     campos: [
       { chave: "pacote_sessoes_padrao", rotulo: "Sessões do pacote", unidade: "sessões", min: 1, max: 100 },
       { chave: "pacote_validade_dias", rotulo: "Validade do pacote", unidade: "dias", min: 1, max: 730 },
-      { chave: "reposicoes_por_mes", rotulo: "Reposições no pilates", unidade: "por mês", min: 0, max: 31 },
       {
         chave: "congelamento_max_dias",
         rotulo: "Congelamento por viagem ou afastamento",
@@ -84,6 +85,15 @@ const BLOCOS: Bloco[] = [
         min: 0,
         max: 20,
       },
+    ],
+  },
+  {
+    id: "reposicoes",
+    titulo: "Reposições",
+    situacao: "guardado",
+    aviso: "Fica guardado e passa a valer quando as reposições entrarem no sistema.",
+    campos: [
+      { chave: "reposicoes_por_mes", rotulo: "Reposições no pilates", unidade: "por mês", min: 0, max: 31 },
     ],
   },
   {
@@ -114,6 +124,7 @@ const BLOCOS: Bloco[] = [
 
 const CHAVE_REGRAS = ["clinica", "regras"];
 const CHAVE_TIPOS = ["clinica", "tipos-atendimento"];
+const CHAVE_PRODUTOS = ["clinica", "produtos"];
 
 const campo = "rounded-md border border-border bg-surface-elevated p-2 text-sm text-text";
 
@@ -152,6 +163,7 @@ export function RegrasDaClinica() {
         aoSalvar={() => setSalvas(true)}
       />
       <TiposDeAtendimento />
+      <CatalogoDePacotes />
     </div>
   );
 }
@@ -403,6 +415,201 @@ function LinhaDoTipo({ tipo }: { tipo: TipoDaClinica }) {
         onClick={() => salvar.mutate()}
       >
         {t("Salvar")}
+      </Button>
+    </li>
+  );
+}
+
+type ProdutoDoCatalogo = {
+  id: string;
+  nome: string;
+  modalidade: Modalidade;
+  sessoes: number;
+  validade_dias: number;
+  valor_cents: number | null;
+  ativo: boolean;
+};
+
+/**
+ * Os pacotes que a clínica vende (migration 9004). O valor é opcional: a clínica ainda não
+ * definiu os preços, e o pacote é vendido e controlado sem ele. Mudar o catálogo não muda pacote
+ * já vendido; tirar de venda é desligar, porque o vendido aponta para cá.
+ */
+function CatalogoDePacotes() {
+  const t = useT();
+  const produtos = useQuery({
+    queryKey: CHAVE_PRODUTOS,
+    queryFn: async () =>
+      (await apiClient.get<{ data: ProdutoDoCatalogo[] }>("/api/v1/clinica/produtos")).data,
+  });
+  const lista = produtos.data ?? [];
+
+  return (
+    <section
+      className="flex flex-col gap-3 rounded-md border border-border p-3"
+      data-testid="bloco-catalogo"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-sm font-semibold">{t("Pacotes à venda")}</h2>
+        <Badge variant="success">{t("Em uso")}</Badge>
+      </div>
+      <p className="text-xs text-text-muted">
+        {t(
+          "A recepção escolhe um destes na venda. O valor pode ficar em branco até a clínica definir os preços. Mudar aqui não muda pacote já vendido.",
+        )}
+      </p>
+      {produtos.isError ? (
+        <p className="text-danger text-sm">{t("Não foi possível carregar os pacotes à venda.")}</p>
+      ) : produtos.isLoading ? null : (
+        <ul className="divide-y divide-border/60">
+          {lista.map((produto) => (
+            <LinhaDoProduto key={JSON.stringify(produto)} produto={produto} />
+          ))}
+          <LinhaDoProduto key="novo" produto={null} />
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function LinhaDoProduto({ produto }: { produto: ProdutoDoCatalogo | null }) {
+  const t = useT();
+  const qc = useQueryClient();
+  const [nome, setNome] = useState(produto?.nome ?? "");
+  const [modalidade, setModalidade] = useState<Modalidade>(produto?.modalidade ?? "fisioterapia");
+  const [sessoes, setSessoes] = useState(String(produto?.sessoes ?? 10));
+  const [validade, setValidade] = useState(String(produto?.validade_dias ?? 60));
+  const [valor, setValor] = useState(centavosParaTexto(produto?.valor_cents ?? null));
+  const [ativo, setAtivo] = useState(produto?.ativo ?? true);
+
+  const valorCents = valor.trim() === "" ? null : parseReaisToCents(valor);
+  const valorInvalido = valor.trim() !== "" && valorCents === null;
+  const nSessoes = Number(sessoes);
+  const nValidade = Number(validade);
+  const valido =
+    nome.trim().length >= 2 &&
+    Number.isInteger(nSessoes) &&
+    nSessoes >= 1 &&
+    nSessoes <= 100 &&
+    Number.isInteger(nValidade) &&
+    nValidade >= 1 &&
+    nValidade <= 730 &&
+    !valorInvalido;
+  const corpo = {
+    nome: nome.trim(),
+    modalidade,
+    sessoes: nSessoes,
+    validade_dias: nValidade,
+    valor_cents: valorCents,
+    ativo,
+  };
+  const mudou =
+    produto === null ||
+    corpo.nome !== produto.nome ||
+    corpo.modalidade !== produto.modalidade ||
+    corpo.sessoes !== produto.sessoes ||
+    corpo.validade_dias !== produto.validade_dias ||
+    corpo.valor_cents !== produto.valor_cents ||
+    corpo.ativo !== produto.ativo;
+
+  const salvar = useMutation({
+    mutationFn: () =>
+      produto === null
+        ? apiClient.post("/api/v1/clinica/produtos", corpo)
+        : apiClient.patch(`/api/v1/clinica/produtos/${produto.id}`, corpo),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: CHAVE_PRODUTOS }),
+    onError: showApiError,
+  });
+  const pode = !salvar.isPending && valido && mudou;
+
+  return (
+    <li
+      className="flex flex-wrap items-end gap-2 py-2"
+      data-testid={produto ? `produto-${produto.id}` : "produto-novo"}
+    >
+      <label className="flex min-w-40 flex-1 flex-col gap-1 text-xs text-text-muted">
+        {produto ? t("Nome") : t("Novo pacote")}
+        <input
+          value={nome}
+          maxLength={120}
+          placeholder={t("Ex.: Fisioterapia 10 sessões")}
+          data-testid="produto-nome"
+          onChange={(e) => setNome(e.target.value)}
+          className={campo}
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-xs text-text-muted">
+        {t("Modalidade")}
+        <select
+          value={modalidade}
+          data-testid="produto-modalidade"
+          onChange={(e) => setModalidade(e.target.value as Modalidade)}
+          className={campo}
+        >
+          {MODALIDADES.map((m) => (
+            <option key={m} value={m}>
+              {t(ROTULO_DA_MODALIDADE[m])}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex flex-col gap-1 text-xs text-text-muted">
+        {t("Sessões")}
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={100}
+          value={sessoes}
+          data-testid="produto-sessoes"
+          onChange={(e) => setSessoes(e.target.value)}
+          className={`${campo} w-20`}
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-xs text-text-muted">
+        {t("Validade (dias)")}
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={730}
+          value={validade}
+          data-testid="produto-validade"
+          onChange={(e) => setValidade(e.target.value)}
+          className={`${campo} w-20`}
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-xs text-text-muted">
+        {t("Valor do pacote (R$)")}
+        <input
+          value={valor}
+          inputMode="decimal"
+          placeholder={t("Sem preço")}
+          aria-invalid={valorInvalido}
+          data-testid="produto-valor"
+          onChange={(e) => setValor(e.target.value)}
+          className={`${campo} w-28 ${valorInvalido ? "border-danger" : ""}`}
+        />
+      </label>
+      {produto ? (
+        <label className="flex items-center gap-2 pb-2 text-xs text-text-muted">
+          <input
+            type="checkbox"
+            checked={ativo}
+            data-testid="produto-ativo"
+            onChange={(e) => setAtivo(e.target.checked)}
+          />
+          {t("À venda")}
+        </label>
+      ) : null}
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={!pode}
+        data-testid="salvar-produto"
+        onClick={() => salvar.mutate()}
+      >
+        {produto ? t("Salvar") : t("Adicionar")}
       </Button>
     </li>
   );
