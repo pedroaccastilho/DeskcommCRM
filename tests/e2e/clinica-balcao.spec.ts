@@ -127,7 +127,9 @@ test.describe("Balcão da recepção com o módulo clínica", () => {
       let n = 0;
       for (const [chave, p] of Object.entries(pacientes)) {
         n += 1;
-        const contato = await novoContato(orgId, p.nome, `55119900${sufixo.slice(-2)}${n}0${n}`.slice(0, 13));
+        // E.164 só com dígitos: o sufixo é base 36 e não serve aqui.
+        const telefone = `+551199${String(Date.now()).slice(-6)}${n}`;
+        const contato = await novoContato(orgId, p.nome, telefone);
         contatos.push(contato);
         const comeca = new Date(Date.now() + p.minutos * 60_000);
         comeca.setSeconds(0, 0);
