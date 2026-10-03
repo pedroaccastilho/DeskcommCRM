@@ -115,13 +115,11 @@ test.describe("Balcão da recepção com o módulo clínica", () => {
       .single();
     if (erroTipo || !tipo) throw new Error(`calendar_event_types insert: ${erroTipo?.message}`);
     const tipoId = (tipo as { id: string }).id;
-    const { error: erroEtiqueta } = await admin
-      .from("clinica_tipos_atendimento")
-      .insert({
-        organization_id: orgId,
-        event_type_id: tipoId,
-        modalidade: "fisioterapia",
-      } as never);
+    const { error: erroEtiqueta } = await admin.from("clinica_tipos_atendimento").insert({
+      organization_id: orgId,
+      event_type_id: tipoId,
+      modalidade: "fisioterapia",
+    } as never);
     if (erroEtiqueta) throw new Error(`clinica_tipos_atendimento insert: ${erroEtiqueta.message}`);
 
     const contatos: string[] = [];
@@ -173,6 +171,11 @@ test.describe("Balcão da recepção com o módulo clínica", () => {
       await page.getByTestId(`fila-${ids.passouDaTolerancia}`).click();
       const painel = page.getByTestId("painel-do-paciente");
       await expect(painel).toContainText(pacientes.passouDaTolerancia.nome);
+      // Sem pacote vendido, a recepção vê que a sessão é avulsa e pode vender ali mesmo.
+      await expect(painel.getByTestId("pacote-da-sessao")).toContainText("Sessão avulsa", {
+        timeout: ESPERA,
+      });
+      await expect(painel.getByTestId("vender-pacote-da-sessao")).toHaveText("Vender pacote");
       const faltou = painel.getByTestId("acao-faltou");
       await expect(faltou).toBeEnabled();
       await faltou.click();

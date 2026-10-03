@@ -13270,6 +13270,10 @@ export const DICIONARIO: Traducoes = {
   "Marcar outra sessão": { es: "Agendar otra sesión" },
   "Marcar a próxima sessão": { es: "Agendar la próxima sesión" },
   "Próximo paciente: {nome}, às {hora}": { es: "Próximo paciente: {nome}, a las {hora}" },
+  // ─── Clínica: pacote no atendimento (fork TOQ) ───
+  "no pacote. Vale até {data}.": { es: "en el paquete. Vale hasta el {data}." },
+  "Sessão avulsa, sem pacote valendo.": { es: "Sesión suelta, sin paquete vigente." },
+  "Renovar pacote": { es: "Renovar paquete" },
   // ─── Clínica: Meu dia do profissional (fork TOQ) ───
   "Meu dia": { es: "Mi día" },
   "Seus horários de hoje e o paciente da vez, com a evolução ao lado.": {
