@@ -1168,6 +1168,7 @@ jobs:
         clinica-prontuario.spec.ts
         clinica-cancelar-com-multa.spec.ts
         clinica-pacotes-na-ficha.spec.ts
+        clinica-pacotes-renovar.spec.ts
         clinica-agenda-cores.spec.ts
         clinica-ficha-resumo.spec.ts
         clinica-balcao.spec.ts

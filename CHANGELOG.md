@@ -8,6 +8,24 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.72.0] — 2026-10-03
+
+### Adicionado
+
+- **Com o módulo clínica, a recepção ganha o Balcão, com a fila do dia e o paciente lado a lado** Com o módulo clínica instalado, o menu ganha o Balcão, para quem é Atendente ou acima. A tela mostra a fila do dia com filtros por situação (sem confirmação, a caminho, passou do horário, encerrados) e, ao lado, o paciente escolhido, com uma ação principal em destaque: confirmar a presença, registrar a falta depois da tolerância ou remarcar. Remarcar, cancelar e mandar WhatsApp abrem em janelas rápidas, sem sair da tela. A janela de cancelamento mostra a multa antes do clique, e o painel avisa quando o paciente tem multa em aberto.
+
+- **Construtor de chatbot do WhatsApp, sem IA, no módulo clínica** Com o módulo clínica instalado, a tela IA › Chatbot do WhatsApp monta, para cada conexão, um chatbot de regras em caixas e setas, no mesmo estilo do editor de fluxos dos Follow-ups. As caixas são Mensagem, Menu de opções (até nove opções numeradas, cada uma com a sua seta), Pergunta (a resposta pode virar o nome do contato), Marcar horário, Próximos horários, Remarcar ou cancelar (com aviso da multa antes de cancelar em cima da hora), Passar para a recepção e Fim. Um fluxo pronto já vem montado, a tela aponta o que falta ligar antes de salvar, e "Testar conversa" conversa com o desenho atual usando uma agenda de exemplo. Ligado numa conexão, o chatbot responde no lugar da IA, que fica calada nela. Quando uma pessoa da equipe assume a conversa, ele para de responder. Pedido de atendente vai para a recepção, e sinal de urgência manda procurar o pronto atendimento e chama a equipe.
+
+- **Com o módulo clínica, cada membro da equipe pode receber o menu pronto do seu cargo** Em Equipe, na interface de cada membro, e no convite, aparecem três menus prontos quando o módulo clínica está instalado: Recepção, Profissional de saúde e Educador físico. Um clique deixa o menu da pessoa só com o que ela usa no dia. Quem recebe o menu da Recepção passa a começar o dia no Balcão; profissionais e educadores começam na Agenda. O papel continua decidindo o que cada um pode fazer: o cargo só arruma o menu.
+
+- **Com o módulo clínica, o profissional de saúde ganha o Meu dia, com o paciente da vez em modo atendimento** Com o módulo clínica instalado, o profissional de saúde tem a tela Meu dia: os próprios horários de hoje e, ao lado, o paciente da vez. Ali ele vê o que foi feito na última sessão, marca que o paciente compareceu e escreve a evolução já vinculada à sessão, sem sair da tela. Um botão repete a conduta da última sessão, e a dor (ou o esforço, no pilates) se escolhe com um toque na escala de 0 a 10, também na aba Prontuário da ficha. Os menus prontos de Profissional de saúde e de Educador físico passam a abrir no Meu dia.
+
+- **Pacotes de sessões na ficha do paciente** No módulo "clínica", a ficha do paciente ganha o bloco "Pacotes". Ele mostra quantas sessões restam no pacote que está valendo, até quando ele vale, se está congelado e o aviso "Hora de renovar" quando o saldo chega ao limite das Regras da clínica. O botão "Vender pacote" oferece os pacotes do catálogo e, para cada modalidade, o pacote padrão das Regras, que funciona mesmo antes de a clínica definir os preços. A venda só é confirmada depois de marcar que o paciente leu e aceitou a política de cancelamento, que aparece na própria janela com a antecedência, a multa e a tolerância em vigor. A recepção congela o pacote uma vez; a gerência também prorroga e cancela, com motivo e reembolso opcional. Os pacotes que já venceram, acabaram ou foram cancelados ficam recolhidos embaixo. O perfil Somente leitura não vê o bloco.
+
+- **Oferecer renovação no Balcão da recepção** No módulo "clínica", o Balcão da recepção ganha a lista "Oferecer renovação", embaixo da fila do dia. Ela mostra os pacientes cujo pacote chegou ao limite de sessões das Regras da clínica (2 no padrão), com quantas sessões restam e até quando o pacote vale, os que vencem antes primeiro. Cada linha abre a ficha do paciente, onde fica o botão "Vender pacote". A lista some quando não há ninguém perto do fim.
+
+- **Pacotes de sessões na clínica** No módulo "clínica", a clínica passa a vender e controlar pacotes de sessões, como o de 10 sessões que vale 60 dias. O administrador cadastra os pacotes à venda em Configurações › Regras da clínica, com nome, modalidade, sessões, validade e um valor que pode ficar em branco enquanto a clínica não define os preços. A venda registra o aceite da política de cancelamento com os termos do momento, e um clique duplo não vende dois pacotes. A agenda mexe no saldo sozinha: a sessão marcada como "Compareceu" e a falta sem aviso gastam uma sessão do pacote que vence primeiro, e a sessão que volta a ficar agendada, é remarcada ou é cancelada devolve a sessão. O cancelamento em cima da hora de quem tem pacote cobra a multa sobre o valor da sessão no pacote. A recepção congela o pacote uma vez, até o máximo das Regras, e a gerência prorroga ou cancela com motivo, com o reembolso sugerido pelas sessões restantes ao preço avulso. A recepção tem uma lista dos pacotes perto do fim para oferecer a renovação. O perfil Somente leitura não vê pacotes nem valores. A tela de venda e o saldo na ficha do paciente chegam numa versão seguinte; até lá, o que muda na tela é o catálogo e o bloco "Pacotes" das Regras, que passa a valer.
+
 ## [1.71.0] — 2026-10-02
 
 ### Adicionado
@@ -9782,7 +9800,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.71.0...HEAD
+[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.72.0...HEAD
+[1.72.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.71.0...v1.72.0
 [1.71.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.70.0...v1.71.0
 [1.70.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.69.0...v1.70.0
 [1.69.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.68.0...v1.69.0
