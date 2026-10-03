@@ -13915,6 +13915,12 @@ export const DICIONARIO: Traducoes = {
   "{n} aguardando confirmação": { es: "{n} por confirmar" },
   "{n} falta": { es: "{n} ausencia" },
   "{n} faltas": { es: "{n} ausencias" },
+  // clínica: a lista de renovação dos pacotes, para a recepção
+  "Oferecer renovação": { es: "Ofrecer renovación" },
+  "{n} paciente está perto do fim do pacote.": { es: "{n} paciente está cerca del fin del paquete." },
+  "{n} pacientes estão perto do fim do pacote.": { es: "{n} pacientes están cerca del fin del paquete." },
+  "{pacote}: resta {n} de {total} sessões. Vale até {data}.": { es: "{pacote}: queda {n} de {total} sesiones. Vale hasta el {data}." },
+  "{pacote}: restam {n} de {total} sessões. Vale até {data}.": { es: "{pacote}: quedan {n} de {total} sesiones. Vale hasta el {data}." },
   // clínica: os pacotes de sessões na ficha do paciente
   "d 'de' MMMM 'de' yyyy": { es: "d 'de' MMMM 'de' yyyy" },
   "Congelar": { es: "Congelar" },
