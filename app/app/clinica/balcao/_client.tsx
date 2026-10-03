@@ -29,11 +29,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useActiveOrg } from "@/hooks/auth/AuthProvider";
+import { useAgora } from "@/hooks/clinica/useAgora";
 import { usePessoasDaAgenda } from "@/hooks/agenda/usePessoasDaAgenda";
 import { useConversationCounts } from "@/hooks/inbox/useConversationCounts";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
-import { instanteDe } from "@/lib/agenda/fuso";
 import { apiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/types";
 import { POLITICA_PADRAO, type PoliticaDaAgenda, type SessaoDaGrade } from "@/lib/clinica/agenda";
@@ -48,6 +48,7 @@ import {
   type SituacaoNoBalcao,
 } from "@/lib/clinica/balcao";
 import { corDaModalidade } from "@/lib/clinica/cores-da-agenda";
+import { limitesDoDia } from "@/lib/clinica/dia-no-fuso";
 import { formatCents, moedaServidaOu } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
@@ -97,29 +98,6 @@ const ROTULO_DA_ACAO: Record<AcaoDoBalcao, string> = {
   cancelar: "Cancelar",
   ficha: "Abrir ficha",
 };
-
-/** Os limites do dia `AAAA-MM-DD` no fuso da organização. */
-function limitesDoDia(hoje: string, fuso: string): { de: string; ate: string } {
-  const [ano, mes, dia] = hoje.split("-").map(Number) as [number, number, number];
-  const amanha = new Date(Date.UTC(ano, mes - 1, dia + 1, 12));
-  return {
-    de: instanteDe({ ano, mes, dia }, fuso).toISOString(),
-    ate: instanteDe(
-      { ano: amanha.getUTCFullYear(), mes: amanha.getUTCMonth() + 1, dia: amanha.getUTCDate() },
-      fuso,
-    ).toISOString(),
-  };
-}
-
-/** O relógio da tela anda sozinho: a falta libera e o atraso aparece sem recarregar. */
-function useAgora(): Date {
-  const [agora, setAgora] = React.useState(() => new Date());
-  React.useEffect(() => {
-    const id = window.setInterval(() => setAgora(new Date()), 30_000);
-    return () => window.clearInterval(id);
-  }, []);
-  return agora;
-}
 
 export function Balcao({ fuso, hoje }: { fuso: string; hoje: string }) {
   const t = useT();

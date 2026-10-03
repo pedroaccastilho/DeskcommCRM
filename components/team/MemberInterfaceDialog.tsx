@@ -1,5 +1,6 @@
 "use client";
 import { useT } from "@/hooks/i18n/useT";
+import { useActiveOrg } from "@/hooks/auth/AuthProvider";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +31,7 @@ export function MemberInterfaceDialog({
   onClose: () => void;
 }) {
   const t = useT();
+  const clinica = useActiveOrg()?.modulos_ligados?.includes("clinica") === true;
   const [settings, setSettings] = useState(lerInterface(member.interface_settings).settings);
   const qc = useQueryClient();
   const router = useRouter();
@@ -59,6 +61,7 @@ export function MemberInterfaceDialog({
           onChange={setSettings}
           role={member.role as Role}
           disabled={save.isPending}
+          menusDaClinica={clinica}
         />
         <Button
           disabled={
