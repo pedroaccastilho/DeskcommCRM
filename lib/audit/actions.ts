@@ -1022,6 +1022,8 @@ export const AUDIT_ACTIONS = [
   "clinica.pacote_congelado",
   "clinica.pacote_prorrogado",
   "clinica.pacote_cancelado",
+  // Chatbot de menu do WhatsApp (fork TOQ): quem ligou, desligou ou mudou o menu de uma conexão.
+  "clinica.chatbot_menu_atualizado",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

@@ -26,6 +26,7 @@ import { haQuemAtendaASessao } from '@/lib/ai/agents/quem-atende-a-sessao';
 import { decidirElegibilidadeDaConversa } from '@/lib/ai/elegibilidade/consulta-pg';
 import { deveCederTurnoAoRetorno } from '@/lib/followup/ceder-turno-ao-retorno';
 import { ehOperante } from '@/lib/organizacao/operante';
+import { chatbotLigadoNaSessao } from '@/lib/clinica/chatbot/sessao';
 
 const DRAIN_CONSUMER = 'agent-engine';
 
@@ -281,6 +282,17 @@ async function processEvent(
   );
   if (convRows[0]?.is_group !== false) {
     log.info('drain: conversa de grupo ou inexistente — evento pulado', { event_id: event.id });
+    return 'processado';
+  }
+
+  // Chatbot do WhatsApp ligado nesta conexão (módulo clínica, fork TOQ): quem responde é ele
+  // (`lib/clinica/chatbot/handler.ts`, no dispatcher do event_log), e a IA fica calada. Sem isto
+  // o paciente receberia a resposta do chatbot E a do agente.
+  if (await chatbotLigadoNaSessao(pool, event.organization_id, p.channel_session_id)) {
+    log.info('drain: conexão atendida pelo chatbot — turno pulado (sem gasto)', {
+      event_id: event.id,
+      channel_session_id: p.channel_session_id,
+    });
     return 'processado';
   }
 
