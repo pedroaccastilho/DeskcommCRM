@@ -9,7 +9,7 @@
  * sair da Agenda, as janelas rápidas da sessão: remarcar, WhatsApp, marcar a próxima e o
  * prontuário do paciente.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import * as React from "react";
 
@@ -48,6 +48,10 @@ export function useSessaoDaClinica(
     queryKey: ["agenda", "clinica-sessao", compromisso?.id, compromisso?.starts_at],
     enabled: ativo,
     retry: false,
+    // Remarcar muda o horário, e o horário está na chave. Sem guardar a resposta anterior, o
+    // painel perdia a sessão da clínica enquanto a nova carregava, e a janela aberta por cima
+    // (a próxima sessão, o WhatsApp) fechava sozinha na cara de quem estava escolhendo.
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       const busca = new URLSearchParams({
         de: compromisso!.starts_at,
