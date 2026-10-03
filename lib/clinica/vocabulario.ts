@@ -64,7 +64,7 @@ export const UFS = [
 export interface CampoDoModelo {
   chave: string;
   rotulo: string;
-  tipo: "escala" | "numero" | "texto" | "texto_longo" | "opcoes";
+  tipo: "escala" | "numero" | "texto" | "texto_longo" | "opcoes" | "data";
   /** Sem ele preenchido o registro não é assinado (a rota recusa com 422). */
   obrigatorio?: boolean;
   /** Para `tipo: "opcoes"`: o valor gravado e o rótulo de cada opção. */
@@ -141,6 +141,24 @@ const AVALIACAO_DE_FISIOTERAPIA: readonly CampoDoModelo[] = [
   { chave: "frequencia_semanal", rotulo: "Frequência semanal", tipo: "numero" },
 ];
 
+/**
+ * O plano da avaliação: o que vira o plano de tratamento que a recepção também vê (migration
+ * 9006). As chaves são lidas pelo gatilho `fn_clinica_plano_do_registro`; trocar uma aqui pede a
+ * mesma troca lá. A data da reavaliação é decidida pelo avaliador, e o retorno já fica marcado
+ * com ele nesse dia (`lib/clinica/retorno-agendado.ts`).
+ */
+export const CAMPO_DATA_DA_REAVALIACAO: CampoDoModelo = {
+  chave: "data_reavaliacao",
+  rotulo: "Data da reavaliação",
+  tipo: "data",
+};
+
+const PLANO_DA_AVALIACAO: readonly CampoDoModelo[] = [
+  { chave: "numero_de_sessoes", rotulo: "Número de sessões previsto", tipo: "numero" },
+  { chave: "frequencia_semanal", rotulo: "Frequência semanal", tipo: "numero" },
+  CAMPO_DATA_DA_REAVALIACAO,
+];
+
 const AVALIACAO_MEDICA: readonly CampoDoModelo[] = [
   { chave: "queixa", rotulo: "Queixa principal", tipo: "texto" },
   { chave: "hda", rotulo: "História da doença atual", tipo: "texto_longo" },
@@ -173,9 +191,16 @@ export function modeloDoRegistro(
 ): readonly CampoDoModelo[] {
   if (tipo === "adendo") return [];
   if (tipo === "alta") return ALTA;
-  if (tipo === "avaliacao" || tipo === "anamnese") {
+  if (tipo === "anamnese") {
     if (modalidade === "fisioterapia") return AVALIACAO_DE_FISIOTERAPIA;
     if (modalidade === "medicina") return AVALIACAO_MEDICA;
+  }
+  if (tipo === "avaliacao") {
+    // A fisioterapia já pede sessões e frequência (COFFITO 414/2012); ganha só a data.
+    if (modalidade === "fisioterapia")
+      return [...AVALIACAO_DE_FISIOTERAPIA, CAMPO_DATA_DA_REAVALIACAO];
+    if (modalidade === "medicina") return [...AVALIACAO_MEDICA, ...PLANO_DA_AVALIACAO];
+    return [...MODELO_DA_MODALIDADE[modalidade], ...PLANO_DA_AVALIACAO];
   }
   return MODELO_DA_MODALIDADE[modalidade];
 }
@@ -194,6 +219,13 @@ export function camposParaMostrar(
   return [...doTipo, ...MODELO_DA_MODALIDADE[modalidade].filter((c) => !vistas.has(c.chave))];
 }
 
+/** Data de calendário `AAAA-MM-DD` que existe (31/02 não passa). */
+export function ehDataValida(v: unknown): v is string {
+  if (typeof v !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+  const d = new Date(`${v}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+}
+
 /** O que falta preencher para assinar: rótulos dos obrigatórios vazios ou opção inválida. */
 export function camposObrigatoriosFaltando(
   modalidade: Modalidade,
@@ -205,6 +237,7 @@ export function camposObrigatoriosFaltando(
       const v = conteudo[c.chave];
       const vazio = v === undefined || (typeof v === "string" && v.trim() === "");
       if (c.tipo === "opcoes" && !vazio) return !c.opcoes?.some((o) => o.valor === v);
+      if (c.tipo === "data" && !vazio) return !ehDataValida(v);
       return Boolean(c.obrigatorio) && vazio;
     })
     .map((c) => c.rotulo);
@@ -212,5 +245,6 @@ export function camposObrigatoriosFaltando(
 
 /** O valor como aparece para quem lê: opção vira o rótulo dela; o resto, o texto gravado. */
 export function valorParaMostrar(c: CampoDoModelo, v: string | number): string {
+  if (c.tipo === "data" && ehDataValida(v)) return v.split("-").reverse().join("/");
   return c.opcoes?.find((o) => o.valor === v)?.rotulo ?? String(v);
 }

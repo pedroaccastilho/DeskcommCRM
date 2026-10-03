@@ -46,7 +46,10 @@ vi.mock("@/lib/api/client", () => ({
   },
 }));
 vi.mock("@/hooks/i18n/useT", () => ({ useT: () => (s: string) => s }));
-vi.mock("@/hooks/i18n/useLocaleDeData", () => ({ useTagDeIdioma: () => "pt-BR" }));
+vi.mock("@/hooks/i18n/useLocaleDeData", () => ({
+  useTagDeIdioma: () => "pt-BR",
+  useLocaleDeData: () => undefined,
+}));
 vi.mock("@/components/feedback/ApiErrorToast", () => ({ showApiError: vi.fn() }));
 
 import { ProntuarioDoPaciente } from "./ProntuarioDoPaciente";

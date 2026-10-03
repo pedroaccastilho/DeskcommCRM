@@ -41,6 +41,7 @@ import { origemDoContato } from "@/lib/leads/origem-do-contato";
 import { phoneForDisplay } from "@/lib/channels/phone-variants";
 import { DialButton } from "@/components/voice/DialButton";
 import { ProntuarioDoPaciente, useClinicaEu } from "@/components/clinica/ProntuarioDoPaciente";
+import { PlanoDeTratamento } from "@/components/clinica/PlanoDeTratamento";
 import { ResumoDoPaciente } from "@/components/clinica/ResumoDoPaciente";
 import { OrigemNaFicha } from "@/components/clinica/OrigemDoPaciente";
 import { PacotesDoPaciente } from "@/components/clinica/PacotesDoPaciente";
@@ -245,6 +246,7 @@ export function ContactDetailClient({ contactId, abaInicial, sessaoInicial }: Pr
       {/* Módulo clínica: próxima sessão, reavaliação e equipe, antes de tudo. Some
           sozinho quando o contato não tem sessão na agenda. */}
       <ResumoDoPaciente contactId={contactId} ativo={temProntuario && !contact.is_anonymized} />
+      <PlanoDeTratamento contactId={contactId} ativo={temProntuario && !contact.is_anonymized} />
 
       <ConversaNoDossie conversa={contact.conversa} />
 
