@@ -24,7 +24,11 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 type LinhaComPaciente = LinhaDoPacote & {
-  contacts: { name: string | null; display_name: string | null; phone_number: string | null } | null;
+  contacts: {
+    name: string | null;
+    display_name: string | null;
+    phone_number: string | null;
+  } | null;
 };
 
 export async function GET(): Promise<Response> {
@@ -53,7 +57,10 @@ export async function GET(): Promise<Response> {
   const regras = await regrasDaOrganizacao(supabase, org);
   const limite = regras.sessoes_restantes_aviso_renovacao;
   const lista = ((data ?? []) as unknown as LinhaComPaciente[])
-    .map(({ contacts, ...linha }) => ({ ...pacoteComSaldo(linha, limite, agora), paciente: contacts }))
+    .map(({ contacts, ...linha }) => ({
+      ...pacoteComSaldo(linha, limite, agora),
+      paciente: contacts,
+    }))
     .filter((p) => p.precisa_renovar);
   return ok(lista, { requestId, meta: { total: lista.length } });
 }

@@ -47,12 +47,17 @@ export interface PacoteParaSituacao {
   valido_ate: string;
 }
 
-export function saldoDoPacote(p: Pick<PacoteParaSituacao, "sessoes_total" | "sessoes_usadas">): number {
+export function saldoDoPacote(
+  p: Pick<PacoteParaSituacao, "sessoes_total" | "sessoes_usadas">,
+): number {
   return Math.max(0, p.sessoes_total - p.sessoes_usadas);
 }
 
 /** Cancelado vence esgotado, que vence vencido: é a ordem do que a recepção precisa saber. */
-export function situacaoDoPacote(p: PacoteParaSituacao, agora: Date = new Date()): SituacaoDoPacote {
+export function situacaoDoPacote(
+  p: PacoteParaSituacao,
+  agora: Date = new Date(),
+): SituacaoDoPacote {
   if (p.status === "cancelado") return "cancelado";
   if (saldoDoPacote(p) === 0) return "esgotado";
   if (new Date(p.valido_ate).getTime() < agora.getTime()) return "vencido";
@@ -60,12 +65,19 @@ export function situacaoDoPacote(p: PacoteParaSituacao, agora: Date = new Date()
 }
 
 /** Pacote ativo com poucas sessões: hora de oferecer a renovação. */
-export function precisaRenovar(p: PacoteParaSituacao, limite: number, agora: Date = new Date()): boolean {
+export function precisaRenovar(
+  p: PacoteParaSituacao,
+  limite: number,
+  agora: Date = new Date(),
+): boolean {
   return situacaoDoPacote(p, agora) === "ativo" && saldoDoPacote(p) <= limite;
 }
 
 /** Quanto vale uma sessão dentro do pacote, ou `null` quando o pacote não tem valor. */
-export function valorDaSessaoNoPacote(valorCents: number | null, sessoesTotal: number): number | null {
+export function valorDaSessaoNoPacote(
+  valorCents: number | null,
+  sessoesTotal: number,
+): number | null {
   if (valorCents === null || sessoesTotal <= 0) return null;
   return Math.round(valorCents / sessoesTotal);
 }

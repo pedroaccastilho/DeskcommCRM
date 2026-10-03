@@ -64,7 +64,9 @@ export const pacotesQuerySchema = z.object({
   situacao: z.enum(SITUACOES_DO_PACOTE).optional(),
 });
 
-export const congelarPacoteSchema = z.object({ dias: z.number().int().min(1).max(180), motivo }).strict();
+export const congelarPacoteSchema = z
+  .object({ dias: z.number().int().min(1).max(180), motivo })
+  .strict();
 
 export const prorrogarPacoteSchema = z.object({ dias: validadeDias, motivo }).strict();
 

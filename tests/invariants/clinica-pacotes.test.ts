@@ -43,7 +43,11 @@ function erroComoDono(comando: string): string {
   }
 }
 
-function consumir(appointment: string, motivo: "realizada" | "falta" | null, org = GOV_ORG): string {
+function consumir(
+  appointment: string,
+  motivo: "realizada" | "falta" | null,
+  org = GOV_ORG,
+): string {
   return sql(
     `select coalesce(string_agg(coalesce(pacote_id::text, '') || '|' || coalesce(saldo::text, '') || '|' || acao, ','), '')
        from public.fn_clinica_consumir_sessao('${org}', '${appointment}', 'fisioterapia', ${
@@ -115,7 +119,10 @@ describe("pacotes: quem vê e quem escreve", () => {
         ),
       ).toBe(0);
       expect(
-        writeCountAs(quem, `update public.clinica_pacotes set sessoes_total = 100 where id = '${PACOTE_A}'`),
+        writeCountAs(
+          quem,
+          `update public.clinica_pacotes set sessoes_total = 100 where id = '${PACOTE_A}'`,
+        ),
       ).toBe(0);
       expect(writeCountAs(quem, `delete from public.clinica_pacote_consumos`)).toBe(0);
     }
@@ -128,7 +135,9 @@ describe("pacotes: quem vê e quem escreve", () => {
   });
 
   it("uma clínica não vê o pacote da outra", () => {
-    expect(countAs(GOV_ADMIN, `select count(*) from public.clinica_pacotes where id = '${PACOTE_B}';`)).toBe(0);
+    expect(
+      countAs(GOV_ADMIN, `select count(*) from public.clinica_pacotes where id = '${PACOTE_B}';`),
+    ).toBe(0);
   });
 
   it("só o administrador cadastra o pacote no catálogo", () => {
@@ -141,7 +150,9 @@ describe("pacotes: quem vê e quem escreve", () => {
 
   it("o catálogo aceita pacote sem preço (a clínica ainda não definiu os valores)", () => {
     expect(
-      sql(`select count(*) from public.clinica_produtos where nome = 'Pilates 10' and valor_cents is null;`).trim(),
+      sql(
+        `select count(*) from public.clinica_produtos where nome = 'Pilates 10' and valor_cents is null;`,
+      ).trim(),
     ).toBe("1");
   });
 
@@ -171,7 +182,9 @@ describe("pacotes: saldo", () => {
     expect(consumir(sessao(1), "realizada")).toBe(`${PACOTE_A}|8|ja_lancada`);
     expect(consumir(sessao(1), "falta")).toBe(`${PACOTE_A}|8|ja_lancada`);
     expect(
-      sql(`select motivo from public.clinica_pacote_consumos where appointment_id = '${sessao(1)}';`).trim(),
+      sql(
+        `select motivo from public.clinica_pacote_consumos where appointment_id = '${sessao(1)}';`,
+      ).trim(),
     ).toBe("falta");
   });
 
@@ -184,15 +197,19 @@ describe("pacotes: saldo", () => {
     for (let n = 2; n <= 10; n += 1) consumir(sessao(n), "realizada");
     expect(saldo(PACOTE_A)).toBe(0);
     expect(consumir(sessao(11), "realizada")).toBe("");
-    expect(sql(`select count(*) from public.clinica_pacote_consumos where pacote_id = '${PACOTE_A}';`).trim()).toBe(
-      "10",
-    );
+    expect(
+      sql(
+        `select count(*) from public.clinica_pacote_consumos where pacote_id = '${PACOTE_A}';`,
+      ).trim(),
+    ).toBe("10");
   });
 
   it("sessão de outra clínica é recusada, mesmo pelo servidor", () => {
-    expect(erroComoDono(`select * from public.fn_clinica_consumir_sessao('${GOV_ORG}', '${SESSAO_B}', 'fisioterapia', 'realizada')`)).toMatch(
-      /clinica_sessao_de_outra_organizacao/,
-    );
+    expect(
+      erroComoDono(
+        `select * from public.fn_clinica_consumir_sessao('${GOV_ORG}', '${SESSAO_B}', 'fisioterapia', 'realizada')`,
+      ),
+    ).toMatch(/clinica_sessao_de_outra_organizacao/);
     expect(saldo(PACOTE_B)).toBe(10);
   });
 });
@@ -208,19 +225,27 @@ describe("pacotes: congelar, prorrogar e cancelar", () => {
     `select public.fn_clinica_ajustar_pacote('${GOV_ORG}', '${pacote}', '${tipo}', ${dias ?? "null"}, '${motivo}', ${valor ?? "null"}, null)`;
 
   it("congelamento acima do máximo das Regras é recusado, e pacote vencido não congela", () => {
-    expect(erroComoDono(ajustar(PACOTE_C, "congelamento", 31))).toMatch(/clinica_congelamento_acima_do_maximo/);
-    expect(erroComoDono(ajustar(PACOTE_VENCIDO, "congelamento", 10))).toMatch(/clinica_pacote_vencido/);
+    expect(erroComoDono(ajustar(PACOTE_C, "congelamento", 31))).toMatch(
+      /clinica_congelamento_acima_do_maximo/,
+    );
+    expect(erroComoDono(ajustar(PACOTE_VENCIDO, "congelamento", 10))).toMatch(
+      /clinica_pacote_vencido/,
+    );
   });
 
   it("congela uma vez só, e a validade anda os dias congelados", () => {
-    const antes = sql(`select valido_ate from public.clinica_pacotes where id = '${PACOTE_C}';`).trim();
+    const antes = sql(
+      `select valido_ate from public.clinica_pacotes where id = '${PACOTE_C}';`,
+    ).trim();
     expect(erroComoDono(ajustar(PACOTE_C, "congelamento", 20))).toBe("");
     expect(
       sql(
         `select (valido_ate - '${antes}'::timestamptz) = interval '20 days' from public.clinica_pacotes where id = '${PACOTE_C}';`,
       ).trim(),
     ).toBe("t");
-    expect(erroComoDono(ajustar(PACOTE_C, "congelamento", 5))).toMatch(/clinica_pacote_ja_congelado/);
+    expect(erroComoDono(ajustar(PACOTE_C, "congelamento", 5))).toMatch(
+      /clinica_pacote_ja_congelado/,
+    );
   });
 
   it("prorrogar um pacote vencido conta a partir de hoje", () => {
@@ -233,9 +258,13 @@ describe("pacotes: congelar, prorrogar e cancelar", () => {
   });
 
   it("cancelar guarda motivo e reembolso sugerido; o cancelado não gasta mais e o prorrogado volta a valer", () => {
-    expect(erroComoDono(ajustar(PACOTE_C, "cancelamento", null, "mudou de cidade", 30000))).toBe("");
+    expect(erroComoDono(ajustar(PACOTE_C, "cancelamento", null, "mudou de cidade", 30000))).toBe(
+      "",
+    );
     expect(
-      sql(`select status || '/' || cancelamento_motivo from public.clinica_pacotes where id = '${PACOTE_C}';`).trim(),
+      sql(
+        `select status || '/' || cancelamento_motivo from public.clinica_pacotes where id = '${PACOTE_C}';`,
+      ).trim(),
     ).toBe("cancelado/mudou de cidade");
     expect(
       sql(

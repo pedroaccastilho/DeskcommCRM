@@ -84,7 +84,12 @@ export async function ajustarPacoteNaRota<C>(
     return fail("not_found", "Pacote não encontrado nesta clínica.", 404, { requestId });
   }
 
-  const pedido = await ajuste.preparar(lido.data, antes.data as unknown as LinhaDoPacote, admin, org);
+  const pedido = await ajuste.preparar(
+    lido.data,
+    antes.data as unknown as LinhaDoPacote,
+    admin,
+    org,
+  );
   const { error } = await admin.rpc("fn_clinica_ajustar_pacote", {
     p_org: org,
     p_pacote: id,

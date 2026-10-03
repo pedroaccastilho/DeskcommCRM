@@ -129,7 +129,11 @@ test.describe("Pacotes de sessões", () => {
 
     const { data: contato, error: erroContato } = await admin
       .from("contacts")
-      .insert({ organization_id: orgId, name: `Paciente do pacote ${sufixo}`, source: "manual" } as never)
+      .insert({
+        organization_id: orgId,
+        name: `Paciente do pacote ${sufixo}`,
+        source: "manual",
+      } as never)
       .select("id")
       .single();
     if (erroContato || !contato) throw new Error(`contacts insert: ${erroContato?.message}`);
@@ -181,12 +185,20 @@ test.describe("Pacotes de sessões", () => {
 
       await page.reload();
       const catalogo = page.getByTestId("bloco-catalogo");
-      await expect(catalogo.locator(`input[value="${nomeDoProduto}"]`)).toBeVisible({ timeout: ESPERA });
+      await expect(catalogo.locator(`input[value="${nomeDoProduto}"]`)).toBeVisible({
+        timeout: ESPERA,
+      });
       await catalogo.scrollIntoViewIfNeeded();
       await page.screenshot({ path: path.join(EVIDENCIA, "catalogo.png"), fullPage: true });
 
       const produtos = (await (await page.request.get("/api/v1/clinica/produtos")).json()) as {
-        data: Array<{ id: string; nome: string; sessoes: number; validade_dias: number; valor_cents: number }>;
+        data: Array<{
+          id: string;
+          nome: string;
+          sessoes: number;
+          validade_dias: number;
+          valor_cents: number;
+        }>;
       };
       const produto = produtos.data.find((p) => p.nome === nomeDoProduto)!;
       expect(produto).toMatchObject({ sessoes: 10, validade_dias: 60, valor_cents: 120000 });
@@ -206,7 +218,12 @@ test.describe("Pacotes de sessões", () => {
       const venda = await vender();
       expect(venda.status()).toBe(201);
       const vendido = ((await venda.json()) as { data: Pacote }).data;
-      expect(vendido).toMatchObject({ saldo: 10, situacao: "ativo", valor_cents: 120000, aceite_multa_pct: 30 });
+      expect(vendido).toMatchObject({
+        saldo: 10,
+        situacao: "ativo",
+        valor_cents: 120000,
+        aceite_multa_pct: 30,
+      });
       const dias = (new Date(vendido.valido_ate).getTime() - Date.now()) / (24 * 60 * MINUTO);
       expect(dias).toBeGreaterThan(59.9);
       expect(dias).toBeLessThan(60.1);
@@ -254,11 +271,17 @@ test.describe("Pacotes de sessões", () => {
       // 6. "Somente leitura" não vê pacote nem catálogo.
       await context.clearCookies();
       await entrar(page, creds.users.viewer!.email, creds.password);
-      expect((await page.request.get(`/api/v1/clinica/pacotes?contact_id=${pacienteId}`)).status()).toBe(403);
+      expect(
+        (await page.request.get(`/api/v1/clinica/pacotes?contact_id=${pacienteId}`)).status(),
+      ).toBe(403);
       expect((await page.request.get("/api/v1/clinica/produtos")).status()).toBe(403);
     } finally {
       await admin.from("clinica_pacotes").delete().eq("contact_id", pacienteId);
-      await admin.from("clinica_produtos").delete().eq("organization_id", orgId).eq("nome", nomeDoProduto);
+      await admin
+        .from("clinica_produtos")
+        .delete()
+        .eq("organization_id", orgId)
+        .eq("nome", nomeDoProduto);
       await admin.from("clinica_multas").delete().eq("contact_id", pacienteId);
       await admin.from("calendar_appointments").delete().in("id", [jaAconteceu, emCimaDaHora]);
       await admin.from("contacts").delete().eq("id", pacienteId);

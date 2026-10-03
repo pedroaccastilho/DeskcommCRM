@@ -135,7 +135,9 @@ export async function POST(req: NextRequest): Promise<Response> {
       .maybeSingle();
     if (contato.error) throw contato.error;
     if (!contato.data) {
-      throw new Recusa(fail("not_found", "Paciente não encontrado nesta clínica.", 404, { requestId }));
+      throw new Recusa(
+        fail("not_found", "Paciente não encontrado nesta clínica.", 404, { requestId }),
+      );
     }
 
     let produto: ProdutoDoCatalogo | null = null;
@@ -149,7 +151,9 @@ export async function POST(req: NextRequest): Promise<Response> {
       if (lidoProduto.error) throw lidoProduto.error;
       produto = (lidoProduto.data as ProdutoDoCatalogo | null) ?? null;
       if (!produto) {
-        throw new Recusa(fail("not_found", "Pacote do catálogo não encontrado.", 404, { requestId }));
+        throw new Recusa(
+          fail("not_found", "Pacote do catálogo não encontrado.", 404, { requestId }),
+        );
       }
       if (!produto.ativo) {
         throw new Recusa(
@@ -170,9 +174,12 @@ export async function POST(req: NextRequest): Promise<Response> {
     const regras = await regrasDaOrganizacao(admin, org);
     const modalidade = (produto?.modalidade ?? corpo.modalidade) as Modalidade;
     const sessoes = corpo.sessoes ?? produto?.sessoes ?? regras.pacote_sessoes_padrao;
-    const validadeDias = corpo.validade_dias ?? produto?.validade_dias ?? regras.pacote_validade_dias;
+    const validadeDias =
+      corpo.validade_dias ?? produto?.validade_dias ?? regras.pacote_validade_dias;
     const valorDoCatalogo =
-      produto?.valor_cents === null || produto?.valor_cents === undefined ? null : Number(produto.valor_cents);
+      produto?.valor_cents === null || produto?.valor_cents === undefined
+        ? null
+        : Number(produto.valor_cents);
     const valorCents = corpo.valor_cents !== undefined ? corpo.valor_cents : valorDoCatalogo;
     const agora = new Date();
 
@@ -197,7 +204,10 @@ export async function POST(req: NextRequest): Promise<Response> {
       .select(COLUNAS_DO_PACOTE)
       .single();
     if (error) throw error;
-    const pacote = pacoteComSaldo(data as unknown as LinhaDoPacote, regras.sessoes_restantes_aviso_renovacao);
+    const pacote = pacoteComSaldo(
+      data as unknown as LinhaDoPacote,
+      regras.sessoes_restantes_aviso_renovacao,
+    );
 
     await audit({
       action: "clinica.pacote_vendido",

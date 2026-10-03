@@ -40,17 +40,21 @@ describe("saldo e situação", () => {
   it("cancelado vence esgotado, que vence vencido", () => {
     expect(situacaoDoPacote(pacote(), AGORA)).toBe("ativo");
     expect(situacaoDoPacote(pacote({ valido_ate: "2026-10-01T00:00:00Z" }), AGORA)).toBe("vencido");
-    expect(situacaoDoPacote(pacote({ sessoes_usadas: 10, valido_ate: "2026-10-01T00:00:00Z" }), AGORA)).toBe(
-      "esgotado",
+    expect(
+      situacaoDoPacote(pacote({ sessoes_usadas: 10, valido_ate: "2026-10-01T00:00:00Z" }), AGORA),
+    ).toBe("esgotado");
+    expect(situacaoDoPacote(pacote({ status: "cancelado", sessoes_usadas: 10 }), AGORA)).toBe(
+      "cancelado",
     );
-    expect(situacaoDoPacote(pacote({ status: "cancelado", sessoes_usadas: 10 }), AGORA)).toBe("cancelado");
   });
 
   it("renovação: pacote ativo com o saldo no limite das Regras (2)", () => {
     expect(precisaRenovar(pacote({ sessoes_usadas: 8 }), 2, AGORA)).toBe(true);
     expect(precisaRenovar(pacote({ sessoes_usadas: 7 }), 2, AGORA)).toBe(false);
     expect(precisaRenovar(pacote({ sessoes_usadas: 10 }), 2, AGORA)).toBe(false);
-    expect(precisaRenovar(pacote({ sessoes_usadas: 9, valido_ate: "2026-10-01T00:00:00Z" }), 2, AGORA)).toBe(false);
+    expect(
+      precisaRenovar(pacote({ sessoes_usadas: 9, valido_ate: "2026-10-01T00:00:00Z" }), 2, AGORA),
+    ).toBe(false);
   });
 });
 
@@ -62,10 +66,18 @@ describe("dinheiro", () => {
   });
 
   it("o reembolso é das restantes pelo preço avulso, sem passar do que foi pago", () => {
-    expect(reembolsoSugerido({ restantes: 4, precoAvulsoCents: 18000, valorPagoCents: 150000 })).toBe(72000);
-    expect(reembolsoSugerido({ restantes: 9, precoAvulsoCents: 18000, valorPagoCents: 150000 })).toBe(150000);
-    expect(reembolsoSugerido({ restantes: 4, precoAvulsoCents: null, valorPagoCents: 150000 })).toBeNull();
-    expect(reembolsoSugerido({ restantes: 4, precoAvulsoCents: 18000, valorPagoCents: null })).toBe(72000);
+    expect(
+      reembolsoSugerido({ restantes: 4, precoAvulsoCents: 18000, valorPagoCents: 150000 }),
+    ).toBe(72000);
+    expect(
+      reembolsoSugerido({ restantes: 9, precoAvulsoCents: 18000, valorPagoCents: 150000 }),
+    ).toBe(150000);
+    expect(
+      reembolsoSugerido({ restantes: 4, precoAvulsoCents: null, valorPagoCents: 150000 }),
+    ).toBeNull();
+    expect(reembolsoSugerido({ restantes: 4, precoAvulsoCents: 18000, valorPagoCents: null })).toBe(
+      72000,
+    );
   });
 });
 

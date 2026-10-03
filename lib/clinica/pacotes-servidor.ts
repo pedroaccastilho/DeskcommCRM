@@ -55,7 +55,10 @@ export interface LinhaDoPacote {
 }
 
 /** O pacote como as rotas o devolvem (contrato em `/mnt/project-files/backend/contrato-agenda-clinica.md`). */
-export interface PacoteComSaldo extends Omit<LinhaDoPacote, "clinica_pacote_consumos" | "valor_cents"> {
+export interface PacoteComSaldo extends Omit<
+  LinhaDoPacote,
+  "clinica_pacote_consumos" | "valor_cents"
+> {
   valor_cents: number | null;
   sessoes_usadas: number;
   saldo: number;
@@ -87,7 +90,10 @@ export function pacoteComSaldo(
 }
 
 /** As Regras da clínica gravadas, ou as padrão (pacote de 10 sessões, 60 dias, aviso com 2). */
-export async function regrasDaOrganizacao(db: SB, organizationId: string): Promise<RegrasDaClinica> {
+export async function regrasDaOrganizacao(
+  db: SB,
+  organizationId: string,
+): Promise<RegrasDaClinica> {
   const { data, error } = await db
     .from("clinica_politicas")
     .select(COLUNAS_DAS_REGRAS.join(", "))
@@ -206,41 +212,44 @@ export async function lancarSessaoNoPacote(
 }
 
 /** Recusas de `fn_clinica_ajustar_pacote`, com a mensagem para a recepção. */
-export const RECUSAS_DO_AJUSTE: Record<string, { status: number; code: string; mensagem: string }> = {
-  clinica_pacote_nao_encontrado: {
-    status: 404,
-    code: "not_found",
-    mensagem: "Pacote não encontrado nesta clínica.",
-  },
-  clinica_pacote_cancelado: {
-    status: 409,
-    code: "clinica_pacote_cancelado",
-    mensagem: "Este pacote já foi cancelado.",
-  },
-  clinica_pacote_ja_congelado: {
-    status: 409,
-    code: "clinica_pacote_ja_congelado",
-    mensagem: "Este pacote já foi congelado uma vez. O congelamento vale uma vez por pacote.",
-  },
-  clinica_pacote_vencido: {
-    status: 409,
-    code: "clinica_pacote_vencido",
-    mensagem: "Este pacote já venceu. Para voltar a usá-lo, peça à gerência para prorrogar.",
-  },
-  clinica_congelamento_acima_do_maximo: {
-    status: 422,
-    code: "clinica_congelamento_acima_do_maximo",
-    mensagem: "O congelamento passa do máximo permitido nas Regras da clínica.",
-  },
-  clinica_prorrogacao_invalida: {
-    status: 422,
-    code: "validation_failed",
-    mensagem: "Informe de 1 a 730 dias de prorrogação.",
-  },
-};
+export const RECUSAS_DO_AJUSTE: Record<string, { status: number; code: string; mensagem: string }> =
+  {
+    clinica_pacote_nao_encontrado: {
+      status: 404,
+      code: "not_found",
+      mensagem: "Pacote não encontrado nesta clínica.",
+    },
+    clinica_pacote_cancelado: {
+      status: 409,
+      code: "clinica_pacote_cancelado",
+      mensagem: "Este pacote já foi cancelado.",
+    },
+    clinica_pacote_ja_congelado: {
+      status: 409,
+      code: "clinica_pacote_ja_congelado",
+      mensagem: "Este pacote já foi congelado uma vez. O congelamento vale uma vez por pacote.",
+    },
+    clinica_pacote_vencido: {
+      status: 409,
+      code: "clinica_pacote_vencido",
+      mensagem: "Este pacote já venceu. Para voltar a usá-lo, peça à gerência para prorrogar.",
+    },
+    clinica_congelamento_acima_do_maximo: {
+      status: 422,
+      code: "clinica_congelamento_acima_do_maximo",
+      mensagem: "O congelamento passa do máximo permitido nas Regras da clínica.",
+    },
+    clinica_prorrogacao_invalida: {
+      status: 422,
+      code: "validation_failed",
+      mensagem: "Informe de 1 a 730 dias de prorrogação.",
+    },
+  };
 
 /** A recusa conhecida que o banco levantou, ou `null` (erro de verdade). */
-export function recusaDoAjuste(error: { message?: string } | null): (typeof RECUSAS_DO_AJUSTE)[string] | null {
+export function recusaDoAjuste(
+  error: { message?: string } | null,
+): (typeof RECUSAS_DO_AJUSTE)[string] | null {
   const msg = error?.message ?? "";
   for (const [chave, recusa] of Object.entries(RECUSAS_DO_AJUSTE)) {
     if (msg.includes(chave)) return recusa;
