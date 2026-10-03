@@ -30,6 +30,8 @@ const CHAMADORES: Record<string, string> = {
   "lib/ai/runtime/finalize.ts": "devolve null ao turno; o gate já nega a org parada antes de existir turno",
   "lib/automation/actions/send-ai-message.ts": "o desfecho vira failed na execução da regra; registro do instante, sem retentativa",
   "lib/automation/actions/send-whatsapp.ts": "o desfecho vira failed na execução da regra; registro do instante, sem retentativa",
+  "lib/clinica/chatbot/executor.ts":
+    "o catch só registra no log e encerra a resposta, sem fila nem retentativa; o dispatcher já pula a org parada (naOrgParada: pula)",
   "lib/campanhas/acoes.ts": "ação disparada da tela: o erro sobe para quem clicou, sem estado gravado",
   "lib/mcp/tools/messages.ts": "ferramenta MCP: o erro sobe ao cliente; o token da org parada já é recusado antes",
   "lib/mcp/tools/start-conversation.ts": "ferramenta MCP: o erro sobe ao cliente; o token da org parada já é recusado antes",
