@@ -6,6 +6,8 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
+
 import { moduloClinicaNaoInstalado } from "./api";
 import { ORIGENS_PADRAO, type OrigemDaClinica, type TipoDeOrigem } from "./origens";
 
@@ -91,7 +93,7 @@ export async function origemDoPaciente(
   const { data, error } = await db
     .from("clinica_pacientes_origem")
     .select(
-      "origem_id, detalhe, indicado_por_contact_id, registrado_por_user_id, updated_at, indicou:contacts!clinica_pacientes_origem_indicado_por_contact_id_fkey(id, name, display_name)",
+      "origem_id, detalhe, indicado_por_contact_id, registrado_por_user_id, updated_at, indicou:contacts!clinica_pacientes_origem_indicado_por_contact_id_fkey(id, name, display_name, phone_number)",
     )
     .eq("organization_id", organizationId)
     .eq("contact_id", contactId)
@@ -108,7 +110,12 @@ export async function origemDoPaciente(
       detalhe: string | null;
       registrado_por_user_id: string | null;
       updated_at: string;
-      indicou: { id: string; name: string | null; display_name: string | null } | null;
+      indicou: {
+        id: string;
+        name: string | null;
+        display_name: string | null;
+        phone_number: string | null;
+      } | null;
     };
     const o = porId.get(linha.origem_id);
     return {
@@ -118,7 +125,7 @@ export async function origemDoPaciente(
       indicado_por: linha.indicou
         ? {
             id: linha.indicou.id,
-            nome: linha.indicou.display_name ?? linha.indicou.name ?? "Paciente",
+            nome: rotuloDoContato(linha.indicou),
           }
         : null,
       automatica: false,
