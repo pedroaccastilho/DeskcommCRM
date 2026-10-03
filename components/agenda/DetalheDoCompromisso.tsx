@@ -12,6 +12,7 @@ import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { rotuloDoLocal } from "@/lib/agenda/locais";
 import {
+  AcoesDaSessao,
   AvisoDaTolerancia,
   AvisoDeCancelamento,
   MultaDaSessao,
@@ -220,6 +221,9 @@ export function DetalheDoCompromisso({
                 )[a.status] ?? a.status,
               )}
             </p>
+            {clinica ? (
+              <AcoesDaSessao sessao={clinica.sessao} fuso={a.time_zone} podeEditar={podeEditar} />
+            ) : null}
             {a.contact_id ? (
               <Link href={`/app/contacts/${a.contact_id}`} className="underline">
                 {t("Ver contato")}
