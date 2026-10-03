@@ -1028,6 +1028,9 @@ export const AUDIT_ACTIONS = [
   "clinica.paciente_origem_registrada",
   // Chatbot de menu do WhatsApp (fork TOQ): quem ligou, desligou ou mudou o menu de uma conexão.
   "clinica.chatbot_menu_atualizado",
+  // Plano de tratamento (migration 9006): o retorno de reavaliação que o sistema marcou sozinho
+  // na agenda do avaliador, e se o paciente foi avisado.
+  "clinica.retorno_marcado",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

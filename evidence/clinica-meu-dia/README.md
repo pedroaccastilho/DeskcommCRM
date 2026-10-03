@@ -10,3 +10,7 @@ dirigida por `tests/e2e/clinica-meu-dia.spec.ts`.
   plano da última sessão, e a dor 3 foi escolhida na escala de 0 a 10.
 - `meu-dia-celular.png`: em 390 px, a lista e o atendimento empilham sem rolagem lateral, com a
   evolução da sessão já assinada.
+- `proxima-sessao.png`: depois de assinar, o próximo passo abre a janela da próxima sessão, já no
+  dia de daqui a uma semana, com os horários livres do profissional.
+- `proxima-marcada.png`: a sessão marcada aparece no próximo passo como "Próxima sessão já
+  marcada", e o botão passa a oferecer marcar outra.

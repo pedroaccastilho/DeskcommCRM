@@ -13252,6 +13252,24 @@ export const DICIONARIO: Traducoes = {
 
   },
 
+  // ─── Clínica: próximo passo depois de assinar (fork TOQ) ───
+  "Marcar": { es: "Agendar" },
+  "Próxima sessão de {nome}": { es: "Próxima sesión de {nome}" },
+  "Mesmo tipo de atendimento e mesmo profissional. Escolha o dia e um horário livre.": {
+    es: "Mismo tipo de atención y mismo profesional. Elige el día y un horario libre.",
+  },
+  "Este horário não tem tipo de atendimento. Marque pela Agenda.": {
+    es: "Este horario no tiene tipo de atención. Agéndalo desde la Agenda.",
+  },
+  "A evolução desta sessão está assinada.": { es: "La evolución de esta sesión está firmada." },
+  "Qual o próximo passo?": { es: "¿Cuál es el próximo paso?" },
+  "Próxima sessão já marcada: {quando}.": { es: "Próxima sesión ya agendada: {quando}." },
+  "Este paciente ainda não tem a próxima sessão marcada.": {
+    es: "Este paciente todavía no tiene la próxima sesión agendada.",
+  },
+  "Marcar outra sessão": { es: "Agendar otra sesión" },
+  "Marcar a próxima sessão": { es: "Agendar la próxima sesión" },
+  "Próximo paciente: {nome}, às {hora}": { es: "Próximo paciente: {nome}, a las {hora}" },
   // ─── Clínica: Meu dia do profissional (fork TOQ) ───
   "Meu dia": { es: "Mi día" },
   "Seus horários de hoje e o paciente da vez, com a evolução ao lado.": {
@@ -13994,6 +14012,34 @@ export const DICIONARIO: Traducoes = {
   "Saturação (%)": { es: "Saturación (%)" },
   "Temperatura (°C)": { es: "Temperatura (°C)" },
   "Procedimento realizado": { es: "Procedimiento realizado" },
+  // clínica: plano de tratamento e retorno de reavaliação (fork TOQ, migration 9006)
+  "Data da reavaliação": { es: "Fecha de la reevaluación" },
+  "Plano de tratamento": { es: "Plan de tratamiento" },
+  "Avaliado": { es: "Evaluado" },
+  "Em tratamento": { es: "En tratamiento" },
+  "Sessão {n} de {total}": { es: "Sesión {n} de {total}" },
+  "Sessões feitas": { es: "Sesiones realizadas" },
+  "{n} sessão feita": { es: "{n} sesión realizada" },
+  "{n} sessões feitas": { es: "{n} sesiones realizadas" },
+  "passou do previsto: hora de reavaliar": { es: "superó lo previsto: momento de reevaluar" },
+  "{n}x por semana": { es: "{n}x por semana" },
+  "Avaliado por {nome} em {dia}": { es: "Evaluado por {nome} el {dia}" },
+  "Alta com {n} de {total} sessões": { es: "Alta con {n} de {total} sesiones" },
+  "Reavaliação sem data definida.": { es: "Reevaluación sin fecha definida." },
+  "Retorno marcado:": { es: "Retorno agendado:" },
+  "O dia pedido ({dia}) estava cheio; o sistema reservou o horário livre mais próximo.": { es: "El día pedido ({dia}) estaba lleno; el sistema reservó el horario libre más cercano." },
+  "Paciente avisado pelo WhatsApp.": { es: "Paciente avisado por WhatsApp." },
+  "A confirmação pelo WhatsApp não saiu. Avise o paciente.": { es: "La confirmación por WhatsApp no salió. Avise al paciente." },
+  "O retorno de reavaliação foi cancelado. Marque outro na agenda.": { es: "El retorno de reevaluación fue cancelado. Agende otro en la agenda." },
+  "Reavaliação pedida para {dia}. Falta ligar um tipo de agendamento a esta modalidade; a recepção marca à mão.": { es: "Reevaluación pedida para el {dia}. Falta vincular un tipo de cita a esta modalidad; la recepción la agenda a mano." },
+  "Reavaliação pedida para {dia}. Marcando o retorno…": { es: "Reevaluación pedida para el {dia}. Agendando el retorno…" },
+  "Reavaliação pedida para {dia}. Não havia horário livre; a recepção precisa marcar.": { es: "Reevaluación pedida para el {dia}. No había horario libre; la recepción debe agendarla." },
+  "Retorno de reavaliação marcado: {quando}.": { es: "Retorno de reevaluación agendado: {quando}." },
+  "O dia pedido estava cheio; ficou no horário livre mais próximo. A recepção foi avisada.": { es: "El día pedido estaba lleno; quedó en el horario libre más cercano. La recepción fue avisada." },
+  "A confirmação pelo WhatsApp não saiu; a recepção vai avisar o paciente.": { es: "La confirmación por WhatsApp no salió; la recepción avisará al paciente." },
+  "O retorno não pôde ser marcado sozinho. A recepção recebeu uma tarefa para marcar.": { es: "El retorno no se pudo agendar automáticamente. La recepción recibió una tarea para agendarlo." },
+  "Seu retorno de reavaliação com {profissional} ficou marcado para {quando}.": { es: "Tu retorno de reevaluación con {profissional} quedó agendado para {quando}." },
+  "Se precisar mudar, é só responder esta mensagem.": { es: "Si necesitas cambiarlo, solo responde este mensaje." },
   // clínica: regras da clínica, só do administrador (fork TOQ, migration 9003)
   "Regras da clínica": { es: "Reglas de la clínica" },
   "Multa, tolerância, modalidades, preços, pacotes e alertas da clínica. Só administradores.": { es: "Multa, tolerancia, modalidades, precios, paquetes y alertas de la clínica. Solo administradores." },

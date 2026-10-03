@@ -7,7 +7,8 @@
  *
  *   - marcar que o paciente compareceu;
  *   - repetir a conduta da última sessão com um toque e escolher a dor na escala de 0 a 10;
- *   - assinar a evolução sem sair da tela.
+ *   - assinar a evolução sem sair da tela;
+ *   - marcar a próxima sessão do paciente pela janela do próximo passo, também sem sair.
  *
  * ⚠️ Instalar é da INSTALAÇÃO e não se desfaz, como em `clinica-prontuario`.
  */
@@ -90,6 +91,28 @@ test.describe("Meu dia do profissional com o módulo clínica", () => {
       await expect(page.getByText("Ana Fisio E2E").first()).toBeVisible({ timeout: ESPERA });
     }
 
+    // Para marcar a próxima sessão, o profissional precisa ter publicado horários de atendimento.
+    // Guarda o que havia e devolve no fim: outras specs usam o mesmo administrador.
+    const { data: dispAntes } = await admin
+      .from("attendant_availability")
+      .select("organization_id, user_id, is_available, schedule")
+      .eq("organization_id", orgId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    const { error: erroDisp } = await admin.from("attendant_availability").upsert(
+      {
+        organization_id: orgId,
+        user_id: userId,
+        is_available: true,
+        schedule: {
+          timezone: "America/Sao_Paulo",
+          windows: [0, 1, 2, 3, 4, 5, 6].map((dow) => ({ dow, start: "08:00", end: "20:00" })),
+        },
+      } as never,
+      { onConflict: "organization_id,user_id" },
+    );
+    if (erroDisp) throw new Error(`attendant_availability upsert: ${erroDisp.message}`);
+
     const sufixo = String(Date.now()).slice(-7);
     const { data: tipo, error: erroTipo } = await admin
       .from("calendar_event_types")
@@ -98,18 +121,20 @@ test.describe("Meu dia do profissional com o módulo clínica", () => {
         name: `Fisioterapia meu dia ${sufixo}`,
         slug: `fisio-meu-dia-${sufixo}`,
         default_price_cents: 15000,
+        duration_minutes: 50,
+        minimum_notice_minutes: 0,
+        booking_window_days: 60,
+        is_active: true,
       } as never)
       .select("id")
       .single();
     if (erroTipo || !tipo) throw new Error(`calendar_event_types insert: ${erroTipo?.message}`);
     const tipoId = (tipo as { id: string }).id;
-    await admin
-      .from("clinica_tipos_atendimento")
-      .insert({
-        organization_id: orgId,
-        event_type_id: tipoId,
-        modalidade: "fisioterapia",
-      } as never);
+    await admin.from("clinica_tipos_atendimento").insert({
+      organization_id: orgId,
+      event_type_id: tipoId,
+      modalidade: "fisioterapia",
+    } as never);
 
     const nome = `Davi Atendido ${sufixo}`;
     const { data: contato, error: erroContato } = await admin
@@ -142,6 +167,7 @@ test.describe("Meu dia do profissional com o módulo clínica", () => {
       throw new Error(`calendar_appointments insert: ${erroSessao?.message}`);
     const sessaoId = (sessao as { id: string }).id;
 
+    let proximaId: string | null = null;
     try {
       // A sessão anterior, assinada pelo próprio profissional pela API do prontuário.
       const anterior = await page.request.post("/api/v1/clinica/prontuario", {
@@ -189,7 +215,13 @@ test.describe("Meu dia do profissional com o módulo clínica", () => {
       await page.screenshot({ path: path.join(EVIDENCIA, "evolucao-pronta.png"), fullPage: true });
       await modo.getByTestId("assinar-registro").click();
       await expect(page.getByText("Evolução assinada.")).toBeVisible({ timeout: ESPERA });
-      await expect(modo.getByTestId("evolucao-assinada")).toBeVisible({ timeout: ESPERA });
+      const proximoPasso = modo.getByTestId("evolucao-assinada");
+      await expect(proximoPasso).toBeVisible({ timeout: ESPERA });
+      await expect(proximoPasso).toContainText("Qual o próximo passo?");
+      await expect(proximoPasso).toContainText(
+        "Este paciente ainda não tem a próxima sessão marcada.",
+        { timeout: ESPERA },
+      );
 
       const { data: gravados } = await admin
         .from("prontuario_registros")
@@ -202,6 +234,40 @@ test.describe("Meu dia do profissional com o módulo clínica", () => {
         conduta: "Fortalecimento de glúteo médio",
       });
 
+      // Próximo passo: marcar a próxima sessão, já sugerida para daqui a uma semana.
+      await proximoPasso.getByTestId("marcar-proxima").click();
+      const janela = page.getByTestId("janela-proxima-sessao");
+      await expect(janela).toBeVisible({ timeout: ESPERA });
+      await expect(janela.getByRole("heading")).toContainText("Próxima sessão de Davi");
+      const horarios = janela.getByRole("group", { name: "Horários livres" });
+      await expect(horarios).toBeVisible({ timeout: ESPERA });
+      await page.screenshot({ path: path.join(EVIDENCIA, "proxima-sessao.png"), fullPage: true });
+      await horarios.getByRole("button").first().click();
+      await janela.getByTestId("confirmar-proxima-sessao").click();
+      await expect(janela).toHaveCount(0, { timeout: ESPERA });
+      await expect(proximoPasso.getByTestId("proxima-ja-marcada")).toBeVisible({ timeout: ESPERA });
+      await expect(proximoPasso.getByTestId("marcar-proxima")).toHaveText("Marcar outra sessão");
+      await page.screenshot({ path: path.join(EVIDENCIA, "proxima-marcada.png"), fullPage: true });
+
+      const { data: marcadas } = await admin
+        .from("calendar_appointments")
+        .select("id, starts_at, owner_user_id, event_type_id, status")
+        .eq("contact_id", contactId)
+        .neq("id", sessaoId);
+      expect(marcadas).toHaveLength(1);
+      const marcada = marcadas![0] as {
+        id: string;
+        starts_at: string;
+        owner_user_id: string;
+        event_type_id: string;
+      };
+      proximaId = marcada.id;
+      expect(marcada.owner_user_id).toBe(userId);
+      expect(marcada.event_type_id).toBe(tipoId);
+      const diasAte = (new Date(marcada.starts_at).getTime() - Date.now()) / 86_400_000;
+      expect(diasAte).toBeGreaterThan(5);
+      expect(diasAte).toBeLessThan(8);
+
       // Celular: lista e atendimento empilham sem rolagem lateral.
       await page.setViewportSize({ width: 390, height: 844 });
       await page.reload();
@@ -212,9 +278,21 @@ test.describe("Meu dia do profissional com o módulo clínica", () => {
       expect(largura).toBeLessThanOrEqual(390);
       await page.screenshot({ path: path.join(EVIDENCIA, "meu-dia-celular.png"), fullPage: true });
     } finally {
+      if (proximaId) await admin.from("calendar_appointments").delete().eq("id", proximaId);
       await admin.from("calendar_appointments").delete().eq("id", sessaoId);
       await admin.from("clinica_tipos_atendimento").delete().eq("event_type_id", tipoId);
       await admin.from("calendar_event_types").delete().eq("id", tipoId);
+      if (dispAntes) {
+        await admin
+          .from("attendant_availability")
+          .upsert(dispAntes as never, { onConflict: "organization_id,user_id" });
+      } else {
+        await admin
+          .from("attendant_availability")
+          .delete()
+          .eq("organization_id", orgId)
+          .eq("user_id", userId);
+      }
     }
   });
 });
