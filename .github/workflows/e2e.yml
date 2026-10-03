@@ -1164,6 +1164,7 @@ jobs:
         honorarios-instalar-e-pagar.spec.ts
         clinica-regras.spec.ts
         clinica-pacotes.spec.ts
+        clinica-origens.spec.ts
         clinica-prontuario.spec.ts
         clinica-cancelar-com-multa.spec.ts
         clinica-pacotes-na-ficha.spec.ts
