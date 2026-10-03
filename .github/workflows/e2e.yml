@@ -1172,6 +1172,7 @@ jobs:
         clinica-prontuario.spec.ts
         clinica-cancelar-com-multa.spec.ts
         clinica-pacotes-na-ficha.spec.ts
+        clinica-pacotes-renovar.spec.ts
         clinica-agenda-cores.spec.ts
         clinica-ficha-resumo.spec.ts
         clinica-balcao.spec.ts
@@ -1224,6 +1225,10 @@ jobs:
       # orgs, pessoas, token, fonte de captação e pedido de LGPD pelo service
       # role e apaga tudo no fim; não depende de seed de passo nem de vizinha.
       # PREVISÃO, não medida: ~1,5 min de caso.
+      #
+      # `clinica-meu-dia` entrou em 2026-10-03 (fork TOQ) na PARTE_6, porque a
+      # PARTE_5 já passa do orçamento. Instala o módulo clínica, então fica por
+      # ÚLTIMO: nenhuma vizinha desta parte roda com a clínica instalada.
       SPECS_PARTE_6: >-
         agenda-google-meet.spec.ts
         agenda-presenca-recuperacao.spec.ts
@@ -1237,6 +1242,7 @@ jobs:
         redes-sociais-volta-nao-desloga.spec.ts
         sons-dos-avisos.spec.ts
         suspensao-administrativa.spec.ts
+        clinica-meu-dia.spec.ts
 
       # ─── FORA_DO_CI — as que ficaram fora, e o motivo de cada uma ───
       #

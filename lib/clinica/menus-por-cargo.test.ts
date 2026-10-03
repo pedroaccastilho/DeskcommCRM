@@ -33,15 +33,23 @@ describe("menus prontos por cargo da clínica", () => {
     );
     expect(portasDoMenu("saude")).toContain("/app/clinica/pendencias");
     expect(portasDoMenu("saude")).not.toContain("/app/inbox");
-    expect(portasDoMenu("educador")).toEqual(["/app/agenda", "/app/contacts", "/app/tasks"]);
+    expect(portasDoMenu("saude")).toContain("/app/clinica/meu-dia");
+    expect(portasDoMenu("educador")).toEqual([
+      "/app/agenda",
+      "/app/clinica/meu-dia",
+      "/app/contacts",
+      "/app/tasks",
+    ]);
   });
 
   it("cada cargo abre na sua tela; o menu completo continua abrindo na inbox", () => {
     expect(homeDaInterface(interfaceDoCargo("recepcao"), false, "agent")).toBe(
       "/app/clinica/balcao",
     );
-    expect(homeDaInterface(interfaceDoCargo("saude"), false, "agent")).toBe("/app/agenda");
-    expect(homeDaInterface(interfaceDoCargo("educador"), false, "agent")).toBe("/app/agenda");
+    expect(homeDaInterface(interfaceDoCargo("saude"), false, "agent")).toBe("/app/clinica/meu-dia");
+    expect(homeDaInterface(interfaceDoCargo("educador"), false, "agent")).toBe(
+      "/app/clinica/meu-dia",
+    );
     expect(homeDaInterface(INTERFACE_COMPLETA, false, "agent")).toBe("/app/inbox");
   });
 
