@@ -231,6 +231,13 @@ jobs:
 
       - name: Typecheck
         if: matrix.parte == 1
+        # O tsc do projeto inteiro, sem o cache incremental, usa ~4,2 GB de heap
+        # (medido em 03/10/2026 com `--extendedDiagnostics`: 4,21 GB na main e no
+        # PR #31), e o limite padrão do Node no runner é ~4 GB: a main passava na
+        # beira e o #28 abortou com "JavaScript heap out of memory" (exit 134).
+        # O runner tem 16 GB; 6 GB devolve a folga sem mudar o que é checado.
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: pnpm typecheck
 
       # Na parte 2, não na 1: o porquê e a conta estão no cabeçalho do job.
