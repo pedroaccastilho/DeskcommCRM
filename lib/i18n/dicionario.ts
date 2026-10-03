@@ -13252,6 +13252,30 @@ export const DICIONARIO: Traducoes = {
 
   },
 
+  // ─── Clínica: Meu dia do profissional (fork TOQ) ───
+  "Meu dia": { es: "Mi día" },
+  "Seus horários de hoje e o paciente da vez, com a evolução ao lado.": {
+    es: "Tus horarios de hoy y el paciente de turno, con la evolución al lado.",
+  },
+  "Minha agenda": { es: "Mi agenda" },
+  "Nenhum horário seu marcado para hoje.": { es: "No tienes horarios agendados para hoy." },
+  "Quando houver horário seu hoje, o paciente da vez aparece aqui.": {
+    es: "Cuando tengas un horario hoy, el paciente de turno aparece aquí.",
+  },
+  "1 evolução de outro dia para registrar": { es: "1 evolución de otro día por registrar" },
+  "evoluções de outros dias para registrar": { es: "evoluciones de otros días por registrar" },
+  "Presença registrada.": { es: "Asistencia registrada." },
+  "Prontuário completo": { es: "Historia clínica completa" },
+  "Este horário não tem paciente vinculado.": { es: "Este horario no tiene paciente vinculado." },
+  "Última sessão": { es: "Última sesión" },
+  "Primeira sessão deste paciente nesta modalidade.": {
+    es: "Primera sesión de este paciente en esta modalidad.",
+  },
+  "A evolução desta sessão já está assinada.": { es: "La evolución de esta sesión ya está firmada." },
+  "Evolução assinada.": { es: "Evolución firmada." },
+  "Mesmo tratamento da última sessão?": { es: "¿Mismo tratamiento de la última sesión?" },
+  "Repetir a conduta": { es: "Repetir la conducta" },
+  "Escolher de 0 a 10": { es: "Elegir de 0 a 10" },
   // ─── Clínica: menu pronto por cargo (fork TOQ) ───
   "Menu pronto por cargo": { es: "Menú listo por cargo" },
   "Recepção": { es: "Recepción" },
@@ -13260,11 +13284,11 @@ export const DICIONARIO: Traducoes = {
   "Balcão, agenda, conversas, pacientes e tarefas. Abre no Balcão.": {
     es: "Recepción, agenda, conversaciones, pacientes y tareas. Abre en Recepción.",
   },
-  "Agenda, evoluções pendentes, pacientes e tarefas. Abre na Agenda.": {
-    es: "Agenda, evoluciones pendientes, pacientes y tareas. Abre en la Agenda.",
+  "Meu dia, agenda, evoluções pendentes, pacientes e tarefas. Abre no Meu dia.": {
+    es: "Mi día, agenda, evoluciones pendientes, pacientes y tareas. Abre en Mi día.",
   },
-  "Agenda, alunos e tarefas. Abre na Agenda.": {
-    es: "Agenda, alumnos y tareas. Abre en la Agenda.",
+  "Meu dia, agenda, alunos e tarefas. Abre no Meu dia.": {
+    es: "Mi día, agenda, alumnos y tareas. Abre en Mi día.",
   },
   "O menu da pessoa fica só com o que ela usa no dia. Dá para ajustar área por área logo abaixo.": {
     es: "El menú de la persona queda solo con lo que usa en el día. Se puede ajustar área por área justo abajo.",

@@ -29,14 +29,20 @@ export const MENUS_POR_CARGO: readonly MenuDoCargo[] = [
   {
     id: "saude",
     rotulo: "Profissional de saúde",
-    descricao: "Agenda, evoluções pendentes, pacientes e tarefas. Abre na Agenda.",
-    destinos: ["/app/agenda", "/app/clinica/pendencias", "/app/contacts", "/app/tasks"],
+    descricao: "Meu dia, agenda, evoluções pendentes, pacientes e tarefas. Abre no Meu dia.",
+    destinos: [
+      "/app/clinica/meu-dia",
+      "/app/agenda",
+      "/app/clinica/pendencias",
+      "/app/contacts",
+      "/app/tasks",
+    ],
   },
   {
     id: "educador",
     rotulo: "Educador físico",
-    descricao: "Agenda, alunos e tarefas. Abre na Agenda.",
-    destinos: ["/app/agenda", "/app/contacts", "/app/tasks"],
+    descricao: "Meu dia, agenda, alunos e tarefas. Abre no Meu dia.",
+    destinos: ["/app/clinica/meu-dia", "/app/agenda", "/app/contacts", "/app/tasks"],
   },
 ];
 
