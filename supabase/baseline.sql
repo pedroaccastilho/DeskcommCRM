@@ -45897,6 +45897,13 @@ begin
 
   -- A origem do paciente (migration 9005), depois das tabelas dos pacotes (o relatório as lê).
   perform public.fn_clinica_provisionar_origens();
+
+  -- As etapas da sessão (migration 9007, outra frente) também se encadeiam aqui. A chamada é
+  -- protegida para a ordem de mesclagem não importar: quem recriar esta função por último
+  -- mantém a chamada do outro, e sem a 9007 nada acontece.
+  if to_regprocedure('public.fn_clinica_provisionar_etapas()') is not null then
+    execute 'select public.fn_clinica_provisionar_etapas()';
+  end if;
 end;
 $f$;
 
