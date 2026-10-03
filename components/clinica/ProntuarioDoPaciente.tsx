@@ -9,13 +9,17 @@
  */
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
+import { chaveDosPlanos } from "@/components/clinica/PlanoDeTratamento";
 import { useT } from "@/hooks/i18n/useT";
-import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
+import { useLocaleDeData, useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
+import { dataDeParede } from "@/lib/agenda/fuso";
 import { apiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/types";
 import {
@@ -48,6 +52,15 @@ type Eu = {
   profissional: { modalidades: Modalidade[]; nome_profissional: string } | null;
   /** Administrador da clínica: vê quem abriu o prontuário, mesmo sem ser profissional. */
   ve_acessos?: boolean;
+};
+
+/** O que a assinatura de uma avaliação devolve sobre o retorno de reavaliação (migration 9006). */
+type RetornoDaAssinatura = {
+  situacao:
+    "marcado" | "marcado_outro_dia" | "sem_horario" | "sem_tipo" | "a_marcar" | "nao_pedido";
+  inicio: string | null;
+  fuso: string | null;
+  aviso: "enviado" | "nao_deu" | null;
 };
 
 type Acesso = { id: string; user_id: string | null; nome: string | null; acessado_em: string };
@@ -215,7 +228,7 @@ export function ProntuarioDoPaciente({
                         <dd className="mt-0.5 whitespace-pre-wrap">
                           {c.opcoes
                             ? t(valorParaMostrar(c, r.conteudo[c.chave]!))
-                            : String(r.conteudo[c.chave])}
+                            : valorParaMostrar(c, r.conteudo[c.chave]!)}
                         </dd>
                       </div>
                     ))}
@@ -336,6 +349,35 @@ export function FormularioDeRegistro({
   const [sessao, setSessao] = useState<string | null>(sessaoInicial ?? null);
   const tagDoIdioma = useTagDeIdioma();
   const pendencias = usePendencias(Boolean(sessao));
+  const localeDaData = useLocaleDeData();
+
+  /** O retorno marcado ao assinar a avaliação, dito na hora para quem assinou. */
+  const avisarDoRetorno = (r: RetornoDaAssinatura | null) => {
+    if (!r) return;
+    if ((r.situacao === "marcado" || r.situacao === "marcado_outro_dia") && r.inicio) {
+      const quando = format(
+        dataDeParede(new Date(r.inicio), r.fuso ?? "UTC"),
+        t("EEEE, d 'de' MMMM, HH:mm"),
+        { locale: localeDaData },
+      );
+      toast.success(t("Retorno de reavaliação marcado: {quando}.").replace("{quando}", quando), {
+        description:
+          r.situacao === "marcado_outro_dia"
+            ? t(
+                "O dia pedido estava cheio; ficou no horário livre mais próximo. A recepção foi avisada.",
+              )
+            : r.aviso === "enviado"
+              ? t("Paciente avisado pelo WhatsApp.")
+              : t("A confirmação pelo WhatsApp não saiu; a recepção vai avisar o paciente."),
+      });
+      return;
+    }
+    if (r.situacao === "sem_horario" || r.situacao === "sem_tipo") {
+      toast.warning(
+        t("O retorno não pôde ser marcado sozinho. A recepção recebeu uma tarefa para marcar."),
+      );
+    }
+  };
   const sessaoVinculada = pendencias.data?.find((p) => p.appointment_id === sessao);
 
   const modalidade = adendoDe ? adendoDe.modalidade : modalidadeEscolhida;
@@ -355,23 +397,29 @@ export function FormularioDeRegistro({
         preenchido[c.chave] =
           c.tipo === "escala" || c.tipo === "numero" ? Number(v.replace(",", ".")) : v;
       }
-      return apiClient.post("/api/v1/clinica/prontuario", {
-        contact_id: contactId,
-        modalidade,
-        tipo: adendoDe ? "adendo" : tipo,
-        appointment_id: adendoDe ? null : sessao,
-        adendo_de: adendoDe?.id ?? null,
-        conteudo: preenchido,
-        texto: texto.trim() || null,
-      });
+      return apiClient.post<{ data: { retorno?: RetornoDaAssinatura | null } }>(
+        "/api/v1/clinica/prontuario",
+        {
+          contact_id: contactId,
+          modalidade,
+          tipo: adendoDe ? "adendo" : tipo,
+          appointment_id: adendoDe ? null : sessao,
+          adendo_de: adendoDe?.id ?? null,
+          conteudo: preenchido,
+          texto: texto.trim() || null,
+        },
+      );
     },
-    onSuccess: () => {
+    onSuccess: (resposta) => {
+      avisarDoRetorno(resposta.data?.retorno ?? null);
       setConteudo({});
       setTexto("");
       setSessao(null);
       aoAssinar();
       void qc.invalidateQueries({ queryKey: ["clinica", "prontuario", contactId] });
       void qc.invalidateQueries({ queryKey: ["clinica", "pendencias"] });
+      void qc.invalidateQueries({ queryKey: chaveDosPlanos(contactId) });
+      void qc.invalidateQueries({ queryKey: ["agenda"] });
     },
     onError: showApiError,
   });
@@ -503,6 +551,14 @@ export function FormularioDeRegistro({
                       </option>
                     ))}
                   </select>
+                ) : c.tipo === "data" ? (
+                  <input
+                    type="date"
+                    value={conteudo[c.chave] ?? ""}
+                    data-testid={`registro-campo-${c.chave}`}
+                    onChange={(e) => setConteudo((v) => ({ ...v, [c.chave]: e.target.value }))}
+                    className={campo}
+                  />
                 ) : c.tipo === "texto_longo" ? (
                   <textarea
                     rows={3}

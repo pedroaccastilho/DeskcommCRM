@@ -8,6 +8,12 @@
  *
  * Toda leitura que devolve registro grava uma linha em `prontuario_acessos` (quem abriu o
  * prontuário de quem). A gravação passa pela RLS: só profissional consegue, e é ele quem lê.
+ *
+ * A única exceção ao "sem service_role" vem DEPOIS de o registro estar assinado pela sessão:
+ * a avaliação com data de reavaliação marca o retorno na agenda do avaliador
+ * (`lib/clinica/retorno-agendado.ts`, migration 9006). Ali não se lê nem se escreve prontuário:
+ * só o plano que o gatilho criou, a agenda e a mensagem ao paciente, sempre com a organização de
+ * `requireRole`.
  */
 import { randomUUID } from "node:crypto";
 
@@ -22,9 +28,11 @@ import {
   falhaDoProntuario,
   moduloClinicaNaoInstalado,
 } from "@/lib/clinica/api";
+import { marcarRetornoDaAvaliacao } from "@/lib/clinica/retorno-agendado";
 import { criarRegistroSchema } from "@/lib/clinica/schemas";
 import { requireSupportWrite } from "@/lib/impersonate/support";
 import { logger } from "@/lib/logger";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -118,5 +126,16 @@ export async function POST(req: NextRequest): Promise<Response> {
     metadata: { contact_id: data.contact_id, modalidade: data.modalidade, tipo: data.tipo },
   });
 
-  return ok(data, { requestId, status: 201 });
+  // O retorno de reavaliação: só avaliação traz a data, e a função nunca lança.
+  const retorno =
+    data.tipo === "avaliacao"
+      ? await marcarRetornoDaAvaliacao(createAdminClient(), {
+          organizationId: authz.org.orgId,
+          avaliacaoId: data.id,
+          userId: authz.user.id,
+          requestId,
+        })
+      : null;
+
+  return ok({ ...data, retorno }, { requestId, status: 201 });
 }

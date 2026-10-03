@@ -10,7 +10,11 @@ import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
 
-import { JanelaWhatsApp, useRecarregarBalcao } from "@/components/clinica/JanelasDaSessao";
+import {
+  JanelaProximaSessao,
+  JanelaWhatsApp,
+  useRecarregarBalcao,
+} from "@/components/clinica/JanelasDaSessao";
 import {
   FormularioDeRegistro,
   useClinicaEu,
@@ -31,10 +35,14 @@ import { faltaLiberada, type SituacaoNoBalcao } from "@/lib/clinica/balcao";
 import { corDaModalidade } from "@/lib/clinica/cores-da-agenda";
 import { limitesDoDia } from "@/lib/clinica/dia-no-fuso";
 import {
+  DIAS_ATE_A_PROXIMA_SUGERIDA,
   minhasSessoes,
   pacienteDaVez,
+  proximaJaMarcada,
+  proximoDoDia,
   ultimoRegistro,
   valoresParaRepetir,
+  type CompromissoFuturo,
   type RegistroAnterior,
   type SessaoDoMeuDia,
 } from "@/lib/clinica/meu-dia";
@@ -195,6 +203,8 @@ export function MeuDia({ fuso, hoje }: { fuso: string; hoje: string }) {
           <ModoAtendimento
             key={selecionada.id}
             sessao={selecionada}
+            proximo={proximoDoDia(minhas, selecionada.id)}
+            aoChamarProximo={setEscolhida}
             agora={agora}
             fuso={fuso}
             hora={hora}
@@ -214,6 +224,8 @@ export function MeuDia({ fuso, hoje }: { fuso: string; hoje: string }) {
 
 function ModoAtendimento({
   sessao,
+  proximo,
+  aoChamarProximo,
   agora,
   fuso,
   hora,
@@ -222,6 +234,9 @@ function ModoAtendimento({
   carregandoEu,
 }: {
   sessao: SessaoDoMeuDia;
+  /** O próximo horário aberto do dia, para chamar depois de assinar. */
+  proximo: SessaoDoMeuDia | null;
+  aoChamarProximo: (id: string) => void;
   agora: Date;
   fuso: string;
   hora: (iso: string) => string;
@@ -370,9 +385,14 @@ function ModoAtendimento({
           </Card>
 
           {jaRegistrada ? (
-            <Card className="p-4 text-sm" role="status" data-testid="evolucao-assinada">
-              {t("A evolução desta sessão já está assinada.")}
-            </Card>
+            <ProximoPasso
+              sessao={sessao}
+              proximo={proximo}
+              aoChamarProximo={aoChamarProximo}
+              agora={agora}
+              fuso={fuso}
+              hora={hora}
+            />
           ) : (
             <FormularioDeRegistro
               contactId={paciente.id}
@@ -398,5 +418,122 @@ function ModoAtendimento({
         />
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Depois de assinar: o que o profissional costuma fazer em seguida, sem sair da tela. Marcar a
+ * próxima sessão (ou ver que ela já está marcada) e chamar o próximo paciente do dia.
+ */
+function ProximoPasso({
+  sessao,
+  proximo,
+  aoChamarProximo,
+  agora,
+  fuso,
+  hora,
+}: {
+  sessao: SessaoDoMeuDia;
+  proximo: SessaoDoMeuDia | null;
+  aoChamarProximo: (id: string) => void;
+  agora: Date;
+  fuso: string;
+  hora: (iso: string) => string;
+}) {
+  const t = useT();
+  const tag = useTagDeIdioma();
+  const [marcando, setMarcando] = React.useState(false);
+  const paciente = sessao.paciente;
+  // A janela de busca é lida uma vez: o painel é montado por sessão.
+  const [janela] = React.useState(() => {
+    const de = new Date();
+    const ate = new Date(de.getTime() + 60 * 24 * 60 * 60 * 1000);
+    return { de: de.toISOString(), ate: ate.toISOString() };
+  });
+
+  const futuras = useQuery({
+    // Começa com "agenda": marcar por qualquer tela invalida esta lista também.
+    queryKey: ["agenda", "do-paciente", paciente?.id ?? "", janela.de],
+    queryFn: async () =>
+      (
+        await apiClient.get<{ data: CompromissoFuturo[] }>(
+          `/api/v1/agenda/agendamentos?contact_id=${encodeURIComponent(paciente!.id)}&de=${encodeURIComponent(janela.de)}&ate=${encodeURIComponent(janela.ate)}`,
+        )
+      ).data,
+    enabled: Boolean(paciente),
+    retry: false,
+  });
+  const marcada = proximaJaMarcada(futuras.data ?? [], sessao.id, agora);
+  const quando = (iso: string) =>
+    new Intl.DateTimeFormat(tag, {
+      weekday: "long",
+      day: "numeric",
+      month: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: fuso,
+    }).format(new Date(iso));
+
+  const textoDaMarcada = (iso: string) =>
+    t("Próxima sessão já marcada: {quando}.").replace("{quando}", quando(iso));
+
+  return (
+    <Card className="flex flex-col gap-4 p-4" role="status" data-testid="evolucao-assinada">
+      <div>
+        <h3 className="font-semibold">{t("A evolução desta sessão está assinada.")}</h3>
+        <p className="text-sm text-text-muted">{t("Qual o próximo passo?")}</p>
+      </div>
+
+      <div className="flex flex-col gap-2" data-testid="proxima-sessao">
+        {futuras.isLoading ? (
+          <p className="text-sm text-text-muted">{t("Carregando…")}</p>
+        ) : marcada ? (
+          <p className="text-sm first-letter:uppercase" data-testid="proxima-ja-marcada">
+            {textoDaMarcada(marcada.iniciaEm)}
+          </p>
+        ) : (
+          <p className="text-sm text-text-muted">
+            {t("Este paciente ainda não tem a próxima sessão marcada.")}
+          </p>
+        )}
+        {paciente && sessao.tipo ? (
+          <div>
+            <Button
+              size="lg"
+              variant={marcada ? "outline" : "primary"}
+              onClick={() => setMarcando(true)}
+              data-testid="marcar-proxima"
+            >
+              {marcada ? t("Marcar outra sessão") : t("Marcar a próxima sessão")}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+
+      {proximo ? (
+        <div className="border-t border-border pt-3">
+          <Button
+            variant="ghost"
+            onClick={() => aoChamarProximo(proximo.id)}
+            data-testid="chamar-proximo"
+            className="h-auto justify-start px-2 py-1.5 text-left"
+          >
+            {t("Próximo paciente: {nome}, às {hora}")
+              .replace("{nome}", proximo.paciente?.nome ?? proximo.titulo)
+              .replace("{hora}", hora(proximo.inicio))}
+          </Button>
+        </div>
+      ) : null}
+
+      {marcando ? (
+        <JanelaProximaSessao
+          sessao={sessao}
+          fuso={fuso}
+          aberta
+          diasAteASugerida={DIAS_ATE_A_PROXIMA_SUGERIDA}
+          aoFechar={() => setMarcando(false)}
+        />
+      ) : null}
+    </Card>
   );
 }
