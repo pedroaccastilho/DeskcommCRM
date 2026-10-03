@@ -16,6 +16,7 @@ import { useLocaleDeData } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
 import { apiClient } from "@/lib/api/client";
 import type { PacoteDaFicha } from "@/lib/clinica/pacotes-na-ficha";
+import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 
 type PacoteParaRenovar = PacoteDaFicha & {
   paciente: {
@@ -62,9 +63,7 @@ export function PacotesParaRenovar({ ativo = true }: { ativo?: boolean }) {
               href={`/app/contacts/${p.contact_id}`}
               className="grid gap-0.5 rounded-sm hover:bg-surface-elevated"
             >
-              <span className="text-sm text-text">
-                {p.paciente?.display_name || p.paciente?.name || t("Paciente sem nome")}
-              </span>
+              <span className="text-sm text-text">{rotuloDoContato(p.paciente, t)}</span>
               <span className="text-sm text-text-muted">
                 {t(
                   p.saldo === 1

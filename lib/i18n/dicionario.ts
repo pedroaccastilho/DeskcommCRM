@@ -13860,7 +13860,6 @@ export const DICIONARIO: Traducoes = {
   "Oferecer renovação": { es: "Ofrecer renovación" },
   "{n} paciente está perto do fim do pacote.": { es: "{n} paciente está cerca del fin del paquete." },
   "{n} pacientes estão perto do fim do pacote.": { es: "{n} pacientes están cerca del fin del paquete." },
-  "Paciente sem nome": { es: "Paciente sin nombre" },
   "{pacote}: resta {n} de {total} sessões. Vale até {data}.": { es: "{pacote}: queda {n} de {total} sesiones. Vale hasta el {data}." },
   "{pacote}: restam {n} de {total} sessões. Vale até {data}.": { es: "{pacote}: quedan {n} de {total} sesiones. Vale hasta el {data}." },
   // clínica: os pacotes de sessões na ficha do paciente
