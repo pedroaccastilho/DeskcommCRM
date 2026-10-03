@@ -4,9 +4,12 @@
  * A interface atual mostra o CRM inteiro a todo mundo. A nova mostra a cada pessoa só o trabalho
  * dela, e o cargo é deduzido do que já está cadastrado, sem pedir nada a ninguém:
  *
+ *  - Administrador → gestão, SEMPRE, mesmo que também atenda (decisão do Pedro, 2026-10-03:
+ *    "o administrador tem acesso a tudo, independente de cargo e função");
  *  - profissional de saúde ativo com conselho CREF → educador físico (turmas e alunos);
- *  - outro profissional de saúde ativo → profissional (meu dia, minha agenda, meus pacientes);
- *  - Gerente ou Administrador que não atende → gestão (vê a clínica inteira);
+ *  - outro profissional de saúde ativo → profissional, só da própria área (fisioterapeuta vê
+ *    fisioterapia, médico vê medicina);
+ *  - Gerente que não atende → gestão (vê a clínica inteira);
  *  - o resto → recepção.
  *
  * Não decide acesso: quem decide é a RLS e o papel na rota. Só decide o que a tela mostra.
@@ -29,6 +32,7 @@ export interface CadastroDeProfissional {
 }
 
 export function cargoDe(role: Role, profissional: CadastroDeProfissional | null): Cargo {
+  if (role === "admin") return "gestao";
   if (profissional?.ativo) return profissional.conselho === "CREF" ? "educador" : "saude";
   if (ROLE_RANK[role] >= ROLE_RANK.manager) return "gestao";
   return "recepcao";
@@ -40,15 +44,33 @@ export function atende(cargo: Cargo): boolean {
 }
 
 /**
- * Os cargos que a pessoa pode "experimentar" pelo menu, para comparar as telas. Gestão vê como
- * qualquer um; quem atende pode alternar entre o próprio dia e a visão da recepção. O papel no
- * banco não muda: uma ação que o papel não permite continua recusada pela rota.
+ * As visões que a pessoa pode abrir pelo menu. Administrador e Gerente veem a clínica inteira e
+ * podem abrir a visão da recepção e a do profissional (a "Meu dia" mostra as sessões de quem
+ * está logado). Quem atende e é Gerente alterna entre o próprio dia e a gestão. O papel no banco
+ * não muda: uma ação que o papel não permite continua recusada pela rota.
  */
 export function cargosParaVer(role: Role, real: Cargo): Cargo[] {
   if (ROLE_RANK[role] >= ROLE_RANK.manager) {
-    return atende(real) ? [real, "recepcao", "gestao"] : ["gestao", "recepcao", "saude"];
+    return atende(real) ? [real, "gestao", "recepcao"] : ["gestao", "recepcao", "saude"];
   }
   return [real];
+}
+
+/** Configurações da clínica: só para o Administrador (Pedro, 2026-10-03). */
+export function veConfiguracoes(role: Role): boolean {
+  return role === "admin";
+}
+
+/**
+ * As modalidades que a tela mostra para quem atende: só as do cadastro dele. Gestão e recepção
+ * veem todas (`null`). Ex.: a fisioterapeuta não vê a agenda de medicina.
+ */
+export function modalidadesDaVisao(
+  cargo: Cargo,
+  profissional: CadastroDeProfissional | null,
+): readonly string[] | null {
+  if (!atende(cargo) || !profissional?.ativo) return null;
+  return profissional.modalidades;
 }
 
 export interface ItemDoMenu {
