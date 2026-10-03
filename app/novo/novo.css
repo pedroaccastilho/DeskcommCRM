@@ -91,9 +91,6 @@
   .novo .n-palco {
     padding-left: 116px;
   }
-  .novo .n-abas {
-    display: none;
-  }
 }
 
 .novo .n-trilho .n-porta {
@@ -179,6 +176,28 @@
 .novo .n-abas .n-porta[aria-current="page"] {
   color: var(--n-tinta);
   background: var(--n-papel);
+}
+
+@media (min-width: 900px) {
+  .novo .n-abas {
+    display: none;
+  }
+  .novo .n-palco {
+    padding-bottom: 0;
+  }
+}
+
+.novo span.n-inicial {
+  display: inline-block;
+}
+
+.novo .n-inicial::first-letter {
+  text-transform: uppercase;
+}
+
+/* Grade sem colunas declaradas: uma coluna que encolhe, nunca a largura do texto mais comprido. */
+.novo .grid:not([class*="grid-cols"]) {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 /* ─── Peças ─────────────────────────────────────────────────────────────── */
@@ -487,6 +506,10 @@
 }
 
 @media (min-width: 900px) {
+  .n-folha .grid:not([class*="grid-cols"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .n-folha .n-pegador {
     display: none;
   }

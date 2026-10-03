@@ -38,6 +38,9 @@ import {
   hora,
 } from "@/components/novo/pecas";
 import { diaLocalISO } from "@/lib/agenda/fuso";
+import { useT } from "@/lib/i18n/IdiomaProvider";
+import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
+import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 
 const SITUACAO: Record<string, { rotulo: string; classe: string }> = {
   pending: { rotulo: "A confirmar", classe: "n-selo-aviso" },
@@ -48,6 +51,8 @@ const SITUACAO: Record<string, { rotulo: string; classe: string }> = {
 };
 
 export function Paciente({ contactId }: { contactId: string }) {
+  const t = useT();
+  const tag = useTagDeIdioma();
   const { fuso, eu, role } = useNovo();
   const paciente = usePaciente(contactId);
   const sessoes = useSessoesDoPaciente(contactId);
@@ -78,7 +83,7 @@ export function Paciente({ contactId }: { contactId: string }) {
   }
 
   const c = paciente.data;
-  const nome = c.display_name || c.name || c.phone_number || "Sem nome";
+  const nome = rotuloDoContato(c, t);
   const nascimento = c.birthdate ? idade(c.birthdate) : null;
   const vigentes = (pacotes.data ?? []).filter((p) => p.situacao === "ativo");
   const futuras = sessoes.data?.futuras ?? [];
@@ -109,7 +114,7 @@ export function Paciente({ contactId }: { contactId: string }) {
               className="n-botao n-botao-escuro"
               onClick={() => setEscrever(true)}
             >
-              Escrever evolução
+              {t("Escrever evolução")}
             </button>
           )}
           {role !== "viewer" && (
@@ -128,7 +133,7 @@ export function Paciente({ contactId }: { contactId: string }) {
       <div className="n-entra mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Numero
           rotulo="Próxima sessão"
-          valor={futuras[0] ? dataCurta(futuras[0].iniciaEm, fuso) : "—"}
+          valor={futuras[0] ? dataCurta(futuras[0].iniciaEm, fuso, tag) : "—"}
           detalhe={futuras[0] ? hora(futuras[0].iniciaEm, fuso) : "nada marcado"}
         />
         <Numero rotulo="Realizadas" valor={String(realizadas)} detalhe="nos últimos 60 dias" />
@@ -150,7 +155,7 @@ export function Paciente({ contactId }: { contactId: string }) {
         />
       </div>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="grid content-start gap-8">
           {ehProfissional ? (
             <Secao titulo="Prontuário" contagem={prontuario.data?.length}>
@@ -174,19 +179,19 @@ export function Paciente({ contactId }: { contactId: string }) {
             </Secao>
           ) : (
             <div className="n-cartao n-suave p-5 text-sm">
-              O prontuário é visto só pelos profissionais de saúde da clínica.
+              {t("O prontuário é visto só pelos profissionais de saúde da clínica.")}
             </div>
           )}
 
           <Secao titulo="Histórico recente" contagem={passadas.length}>
             {passadas.length === 0 ? (
-              <p className="n-suave px-1 text-sm">Nenhuma sessão nos últimos 60 dias.</p>
+              <p className="n-suave px-1 text-sm">{t("Nenhuma sessão nos últimos 60 dias.")}</p>
             ) : (
               <ul className="n-cartao grid gap-0.5 p-2">
                 {passadas.slice(0, 12).map((s) => (
                   <li key={s.id} className="flex items-center gap-3 px-3 py-2.5">
-                    <span className="n-numero w-28 text-sm font-semibold capitalize">
-                      {dataCurta(s.iniciaEm, fuso)}
+                    <span className="n-numero n-inicial w-28 text-sm font-semibold">
+                      {dataCurta(s.iniciaEm, fuso, tag)}
                     </span>
                     <span className="n-suave flex-1 truncate text-sm">
                       {s.tipo?.nome ?? s.titulo}
@@ -203,7 +208,7 @@ export function Paciente({ contactId }: { contactId: string }) {
 
         <aside className="grid content-start gap-5">
           <section className="n-cartao p-5">
-            <h2 className="mb-3 text-[15px] font-bold">Próximas sessões</h2>
+            <h2 className="mb-3 text-[15px] font-bold">{t("Próximas sessões")}</h2>
             {futuras.length === 0 ? (
               <p className="n-suave text-sm">Nada marcado.</p>
             ) : (
@@ -212,13 +217,13 @@ export function Paciente({ contactId }: { contactId: string }) {
                   <li key={s.id} className="flex items-center gap-3">
                     <span className="grid w-12 flex-none place-items-center rounded-xl bg-[var(--n-papel)] py-1.5">
                       <span className="n-titulo n-numero text-lg leading-none">
-                        {new Intl.DateTimeFormat("pt-BR", {
+                        {new Intl.DateTimeFormat(tag, {
                           day: "numeric",
                           timeZone: fuso,
                         }).format(new Date(s.iniciaEm))}
                       </span>
                       <span className="n-fraco text-[10px] font-bold uppercase">
-                        {new Intl.DateTimeFormat("pt-BR", { month: "short", timeZone: fuso })
+                        {new Intl.DateTimeFormat(tag, { month: "short", timeZone: fuso })
                           .format(new Date(s.iniciaEm))
                           .replace(".", "")}
                       </span>
@@ -227,12 +232,12 @@ export function Paciente({ contactId }: { contactId: string }) {
                       <span className="block truncate text-sm font-bold">
                         {s.tipo?.nome ?? s.titulo}
                       </span>
-                      <span className="n-suave text-xs capitalize">
-                        {new Intl.DateTimeFormat("pt-BR", {
+                      <span className="n-suave n-inicial text-xs">
+                        {new Intl.DateTimeFormat(tag, {
                           weekday: "long",
                           timeZone: fuso,
                         }).format(new Date(s.iniciaEm))}{" "}
-                        às {hora(s.iniciaEm, fuso)}
+                        {t("às")} {hora(s.iniciaEm, fuso)}
                       </span>
                     </span>
                     <span className={`n-selo ${SITUACAO[s.situacao]?.classe ?? "n-selo-neutro"}`}>
@@ -249,7 +254,7 @@ export function Paciente({ contactId }: { contactId: string }) {
               <h2 className="mb-3 text-[15px] font-bold">Pacotes</h2>
               {vigentes.length === 0 ? (
                 <p className="n-suave text-sm">
-                  Nenhum pacote valendo. A venda fica na ficha da versão atual.
+                  {t("Nenhum pacote valendo. A venda fica na ficha da versão atual.")}
                 </p>
               ) : (
                 <ul className="grid gap-4">
@@ -284,8 +289,9 @@ export function Paciente({ contactId }: { contactId: string }) {
                       <p
                         className={`mt-1.5 text-xs ${p.precisa_renovar ? "font-bold text-[var(--n-aviso)]" : "n-suave"}`}
                       >
-                        {p.precisa_renovar ? "Hora de oferecer a renovação · " : ""}vale até{" "}
-                        {new Intl.DateTimeFormat("pt-BR", {
+                        {p.precisa_renovar ? `${t("Hora de oferecer a renovação")} · ` : ""}
+                        {t("vale até")}{" "}
+                        {new Intl.DateTimeFormat(tag, {
                           day: "numeric",
                           month: "long",
                           timeZone: "UTC",
@@ -302,7 +308,7 @@ export function Paciente({ contactId }: { contactId: string }) {
             href={`/app/contacts/${contactId}`}
             className="n-fraco px-1 text-sm font-semibold hover:underline"
           >
-            Abrir a ficha completa na versão atual ›
+            {t("Abrir a ficha completa na versão atual")} ›
           </a>
         </aside>
       </div>
@@ -341,7 +347,7 @@ function Numero({
     <div className="n-cartao p-4">
       <p className="n-suave text-xs font-bold">{rotulo}</p>
       <p
-        className={`n-titulo n-numero mt-1 truncate text-[28px] leading-tight capitalize ${alerta ? "text-[var(--n-alerta)]" : ""}`}
+        className={`n-titulo n-numero n-inicial mt-1 truncate text-[28px] leading-tight ${alerta ? "text-[var(--n-alerta)]" : ""}`}
       >
         {valor}
       </p>
@@ -351,6 +357,7 @@ function Numero({
 }
 
 function Registro({ registro: r, fuso }: { registro: RegistroDoProntuario; fuso: string }) {
+  const tag = useTagDeIdioma();
   const campos = camposParaMostrar(r.modalidade, r.tipo).filter(
     (c) => r.conteudo[c.chave] !== undefined && String(r.conteudo[c.chave]).trim() !== "",
   );
@@ -367,8 +374,8 @@ function Registro({ registro: r, fuso }: { registro: RegistroDoProntuario; fuso:
             {ROTULO_DO_TIPO[r.tipo]}{" "}
             <span className="n-suave font-semibold">· {ROTULO_DA_MODALIDADE[r.modalidade]}</span>
           </h3>
-          <span className="n-fraco text-xs font-semibold capitalize">
-            {dataCurta(r.assinado_em, fuso)} · {hora(r.assinado_em, fuso)}
+          <span className="n-fraco n-inicial text-xs font-semibold">
+            {dataCurta(r.assinado_em, fuso, tag)} · {hora(r.assinado_em, fuso)}
           </span>
         </header>
         {campos.length > 0 && (

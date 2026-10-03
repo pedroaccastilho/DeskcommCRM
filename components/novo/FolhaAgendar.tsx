@@ -10,19 +10,23 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import { showApiError } from "@/components/feedback/ApiErrorToast";
-import { useHorariosLivres } from "@/hooks/agenda/useHorariosLivres";
 import { instanteDe, partesNoFuso } from "@/lib/agenda/fuso";
 import { apiClient } from "@/lib/api/client";
 import { randomId } from "@/lib/random-id";
 
 import { useNovo } from "./Casca";
 import {
+  mensagemDoErro,
   useBuscaDePacientes,
+  useHorariosLivresDaFolha,
   useRecarregar,
   useTiposDeAtendimento,
   type ProfissionalDaGrade,
 } from "./dados";
 import { Avatar, Folha, PontoDaModalidade, dataLonga, hora, primeiroNome } from "./pecas";
+import { useT } from "@/lib/i18n/IdiomaProvider";
+import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
+import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 
 export interface PacienteEscolhido {
   id: string;
@@ -58,6 +62,8 @@ function Conteudo({
   profissionais: ProfissionalDaGrade[];
   pacienteInicial: PacienteEscolhido | null;
 }) {
+  const t = useT();
+  const tag = useTagDeIdioma();
   const { fuso, meuId, soAsMinhas, modalidades } = useNovo();
   const recarregar = useRecarregar();
   const [chave] = React.useState(() => randomId());
@@ -105,7 +111,7 @@ function Conteudo({
           ).toISOString(),
         }
       : null;
-  const livres = useHorariosLivres(filtro);
+  const livres = useHorariosLivresDaFolha(filtro);
   const [agora] = React.useState(() => Date.now());
   const slots = (livres.data?.slots ?? []).filter((s) => new Date(s.inicio).getTime() > agora);
 
@@ -123,7 +129,7 @@ function Conteudo({
       ),
     onSuccess: () => {
       toast.success(
-        `${primeiroNome(paciente!.nome)} agendado para ${dataLonga(slot!, fuso)}, ${hora(slot!, fuso)}.`,
+        `${primeiroNome(paciente!.nome)} agendado para ${dataLonga(slot!, fuso, tag)}, ${hora(slot!, fuso)}.`,
       );
       recarregar();
       aoFechar();
@@ -161,7 +167,7 @@ function Conteudo({
               />
               <div className="mt-2 grid max-h-56 gap-1 overflow-y-auto">
                 {(pacientes.data ?? []).slice(0, 8).map((c) => {
-                  const nome = c.display_name || c.name || c.phone_number || "Sem nome";
+                  const nome = rotuloDoContato(c, t);
                   return (
                     <button
                       key={c.id}
@@ -201,8 +207,9 @@ function Conteudo({
             ))}
             {tipos.isSuccess && tiposDaVisao.length === 0 && (
               <p className="n-suave text-sm">
-                Nenhum tipo de atendimento com modalidade. O administrador marca em Configurações ›
-                Regras da clínica.
+                {t(
+                  "Nenhum tipo de atendimento com modalidade. O administrador marca em Configurações › Regras da clínica.",
+                )}
               </p>
             )}
           </div>
@@ -230,7 +237,7 @@ function Conteudo({
         {/* 3. Quando */}
         {tipo && dono && (
           <div>
-            <p className="n-rotulo">Quando</p>
+            <p className="n-rotulo">{t("Quando")}</p>
             <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
               {dias.map((d, i) => {
                 const data = new Date(Date.UTC(d.ano, d.mes - 1, d.dia, 12));
@@ -249,10 +256,10 @@ function Conteudo({
                         : "bg-[var(--n-papel)]"
                     }`}
                   >
-                    <span className="capitalize opacity-75">
+                    <span className="n-inicial opacity-75">
                       {i === 0
                         ? "Hoje"
-                        : new Intl.DateTimeFormat("pt-BR", { weekday: "short", timeZone: "UTC" })
+                        : new Intl.DateTimeFormat(tag, { weekday: "short", timeZone: "UTC" })
                             .format(data)
                             .replace(".", "")}
                     </span>
@@ -262,9 +269,16 @@ function Conteudo({
               })}
             </div>
             {livres.isLoading ? (
-              <p className="n-fraco text-sm">Procurando horários…</p>
+              <p className="n-fraco text-sm">{t("Procurando horários…")}</p>
+            ) : livres.isError ? (
+              <p
+                className="rounded-2xl bg-[var(--n-aviso-suave)] p-3 text-sm text-[var(--n-aviso)]"
+                role="status"
+              >
+                {mensagemDoErro(livres.error)}
+              </p>
             ) : slots.length === 0 ? (
-              <p className="n-suave text-sm">Nenhum horário livre neste dia.</p>
+              <p className="n-suave text-sm">{t("Nenhum horário livre neste dia.")}</p>
             ) : (
               <div className="grid grid-cols-4 gap-2">
                 {slots.map((s) => (

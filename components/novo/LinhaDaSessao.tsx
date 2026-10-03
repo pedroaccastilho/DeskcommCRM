@@ -82,7 +82,9 @@ export function LinhaDaSessao({
           style={{ background: `var(--agenda-modalidade-${sessao.modalidade ?? "outra"})` }}
           aria-hidden
         />
-        <Avatar nome={nome} tamanho={40} />
+        <span className="hidden flex-none sm:block">
+          <Avatar nome={nome} tamanho={40} />
+        </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-bold">{nome}</span>
           <span className="n-suave flex items-center gap-1.5 truncate text-[13px]">
@@ -93,7 +95,9 @@ export function LinhaDaSessao({
             </span>
           </span>
         </span>
-        <span className={`n-selo ${selo.classe} hidden sm:inline-flex`}>{selo.rotulo}</span>
+        <span className="hidden flex-none sm:block">
+          <span className={`n-selo ${selo.classe}`}>{selo.rotulo}</span>
+        </span>
       </button>
       {acao && (
         <button

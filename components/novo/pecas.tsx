@@ -17,7 +17,11 @@ function tomDo(nome: string): string {
 }
 
 export function iniciais(nome: string): string {
-  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  const partes = nome
+    .replace(/\(.*?\)/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((p) => /\p{L}/u.test(p));
   if (partes.length === 0) return "?";
   const primeira = partes[0]!.charAt(0);
   const ultima = partes.length > 1 ? partes[partes.length - 1]!.charAt(0) : "";
@@ -165,10 +169,12 @@ export function Carregando({ linhas = 3 }: { linhas?: number }) {
   );
 }
 
+/** "14:05" — a hora com 24 h é igual em português e em espanhol, então não depende do idioma. */
 export function hora(iso: string, fuso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
+  return new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
+    hourCycle: "h23",
     timeZone: fuso,
   }).format(new Date(iso));
 }
@@ -185,8 +191,9 @@ export function horaDecimal(iso: string, fuso: string): number {
   return h + m / 60;
 }
 
-export function dataLonga(iso: string, fuso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
+/** `tag` vem de `useTagDeIdioma()`: a data segue o idioma escolhido na conta. */
+export function dataLonga(iso: string, fuso: string, tag: string): string {
+  return new Intl.DateTimeFormat(tag, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -194,8 +201,8 @@ export function dataLonga(iso: string, fuso: string): string {
   }).format(new Date(iso));
 }
 
-export function dataCurta(iso: string, fuso: string): string {
-  return new Intl.DateTimeFormat("pt-BR", {
+export function dataCurta(iso: string, fuso: string, tag: string): string {
+  return new Intl.DateTimeFormat(tag, {
     weekday: "short",
     day: "numeric",
     month: "short",

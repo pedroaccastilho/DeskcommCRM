@@ -21,10 +21,14 @@ import {
 import { FolhaAgendar } from "@/components/novo/FolhaAgendar";
 import { FolhaDaSessao, seloDa } from "@/components/novo/FolhaDaSessao";
 import { Avatar, Carregando, hora, horaDecimal, useAgora } from "@/components/novo/pecas";
+import { useT } from "@/lib/i18n/IdiomaProvider";
+import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 
 const ALTURA_DA_HORA = 72;
 
 export function Agenda() {
+  const t = useT();
+  const tag = useTagDeIdioma();
   const { fuso, meuId, soAsMinhas, modalidades, role } = useNovo();
   const agora = useAgora();
   const hoje = diaLocalISO(agora, fuso);
@@ -63,7 +67,7 @@ export function Agenda() {
   const sessaoAberta = (grade.data?.sessoes ?? []).find((s) => s.id === aberta) ?? null;
   const nomeDe = (id: string | null) => (id && todos.find((p) => p.user_id === id)?.nome) || null;
 
-  const tituloDoDia = new Intl.DateTimeFormat("pt-BR", {
+  const tituloDoDia = new Intl.DateTimeFormat(tag, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -75,9 +79,9 @@ export function Agenda() {
       <header className="n-entra flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="n-suave text-sm font-semibold">
-            {dia === hoje ? "Hoje" : dia < hoje ? "Dia que passou" : "Próximos dias"}
+            {dia === hoje ? t("Hoje") : dia < hoje ? t("Dia que passou") : t("Próximos dias")}
           </p>
-          <h1 className="n-titulo mt-1 text-[38px] leading-tight capitalize sm:text-[46px]">
+          <h1 className="n-titulo n-inicial mt-1 text-[38px] leading-tight sm:text-[46px]">
             {tituloDoDia}
           </h1>
         </div>
@@ -89,7 +93,7 @@ export function Agenda() {
               aria-pressed={daEquipe}
               onClick={() => setDaEquipe((v) => !v)}
             >
-              {daEquipe ? "Ver só a minha" : "Ver a equipe da minha área"}
+              {daEquipe ? t("Ver só a minha") : t("Ver a equipe da minha área")}
             </button>
           )}
           {role !== "viewer" && (
@@ -131,8 +135,8 @@ export function Agenda() {
                       : "bg-[var(--n-cartao)]"
                 }`}
               >
-                <span className="capitalize opacity-70">
-                  {new Intl.DateTimeFormat("pt-BR", { weekday: "short", timeZone: "UTC" })
+                <span className="n-inicial opacity-70">
+                  {new Intl.DateTimeFormat(tag, { weekday: "short", timeZone: "UTC" })
                     .format(data)
                     .replace(".", "")}
                 </span>
@@ -144,7 +148,7 @@ export function Agenda() {
         <button
           type="button"
           className="n-botao n-botao-suave n-botao-pequeno"
-          aria-label="Próxima semana"
+          aria-label={t("Próxima semana")}
           onClick={() => setDia((d) => somarDias(d, 7))}
         >
           ›
@@ -167,8 +171,9 @@ export function Agenda() {
           </div>
         ) : colunas.length === 0 && semDono.length === 0 ? (
           <p className="n-suave p-8 text-center">
-            Nenhum profissional de saúde cadastrado. O administrador cadastra em Configurações ›
-            Profissionais de saúde.
+            {t(
+              "Nenhum profissional de saúde cadastrado. O administrador cadastra em Configurações › Profissionais de saúde.",
+            )}
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -189,17 +194,18 @@ export function Agenda() {
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-bold">
                       {p.nome}
-                      {p.user_id === meuId ? " (você)" : ""}
+                      {p.user_id === meuId ? ` (${t("você")})` : ""}
                     </span>
                     <span className="n-fraco block truncate text-xs">
-                      {sessoes.filter((s) => s.profissional_user_id === p.user_id).length} sessões
+                      {sessoes.filter((s) => s.profissional_user_id === p.user_id).length}{" "}
+                      {t("sessões")}
                     </span>
                   </span>
                 </div>
               ))}
               {semDono.length > 0 && (
                 <div className="flex items-center border-b border-l border-[var(--n-linha)] px-4 py-3 text-sm font-bold">
-                  Sem profissional
+                  {t("Sem profissional")}
                 </div>
               )}
 
@@ -295,7 +301,7 @@ function Bloco({
     <button
       type="button"
       onClick={aoAbrir}
-      className="absolute inset-x-1.5 z-[1] overflow-hidden rounded-2xl px-3 py-2 text-left transition-transform hover:-translate-y-0.5"
+      className={`absolute inset-x-1.5 z-[1] overflow-hidden rounded-2xl px-3 text-left ${altura < 46 ? "py-1.5" : "py-2"} transition-transform hover:-translate-y-0.5`}
       style={{
         top: (inicio - janelaDe) * ALTURA_DA_HORA + 2,
         height: altura,
@@ -306,14 +312,26 @@ function Bloco({
       }}
       data-testid="novo-bloco"
     >
-      <span className="n-numero block text-[11px] font-bold" style={{ color: cor }}>
-        {hora(sessao.inicio, fuso)}
-        {altura > 46 ? ` · ${selo.rotulo}` : ""}
-      </span>
-      <span className="block truncate text-[13.5px] font-bold">
-        {sessao.paciente?.nome ?? sessao.titulo}
-      </span>
-      {altura > 60 && <span className="n-suave block truncate text-xs">{sessao.tipo?.nome}</span>}
+      {altura < 46 ? (
+        <span className="flex items-baseline gap-2 truncate text-[13px] font-bold">
+          <span className="n-numero text-[11px]" style={{ color: cor }}>
+            {hora(sessao.inicio, fuso)}
+          </span>
+          <span className="truncate">{sessao.paciente?.nome ?? sessao.titulo}</span>
+        </span>
+      ) : (
+        <>
+          <span className="n-numero block text-[11px] font-bold" style={{ color: cor }}>
+            {hora(sessao.inicio, fuso)} · {selo.rotulo}
+          </span>
+          <span className="block truncate text-[13.5px] font-bold">
+            {sessao.paciente?.nome ?? sessao.titulo}
+          </span>
+          {altura > 60 && (
+            <span className="n-suave block truncate text-xs">{sessao.tipo?.nome}</span>
+          )}
+        </>
+      )}
     </button>
   );
 }

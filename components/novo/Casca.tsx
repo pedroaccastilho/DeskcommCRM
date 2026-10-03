@@ -29,6 +29,7 @@ import { CalendarBlank, Gear, Sun, UsersThree, WhatsappLogo } from "@/lib/ui/ico
 
 import { useEu, type Eu } from "./dados";
 import { Avatar } from "./pecas";
+import { useT } from "@/lib/i18n/IdiomaProvider";
 
 interface Contexto {
   fuso: string;
@@ -100,6 +101,7 @@ export function Casca({
   clinicaInstalada: boolean;
   children: React.ReactNode;
 }) {
+  const t = useT();
   const { user, activeOrg } = useAuth();
   const role: Role = activeOrg?.role ?? "viewer";
   const eu = useEu();
@@ -157,7 +159,7 @@ export function Casca({
             <a
               href="/app/settings"
               className="n-porta"
-              title="Configurações (abre na versão atual)"
+              title={t("Configurações (abre na versão atual)")}
             >
               <Gear size={22} />
               Ajustes
@@ -173,13 +175,14 @@ export function Casca({
         ) : (
           <div className="n-conteudo">
             <div className="n-cartao p-8 text-center">
-              <h1 className="n-titulo text-3xl">Falta instalar o módulo clínica</h1>
+              <h1 className="n-titulo text-3xl">{t("Falta instalar o módulo clínica")}</h1>
               <p className="n-suave mx-auto mt-3 max-w-md">
-                A interface nova mostra a agenda, os pacientes e o prontuário da clínica. Peça ao
-                administrador para instalar o módulo em Configurações da instalação › Módulos.
+                {t(
+                  "A interface nova mostra a agenda, os pacientes e o prontuário da clínica. Peça ao administrador para instalar o módulo em Configurações da instalação › Módulos.",
+                )}
               </p>
               <a href="/app" className="n-botao n-botao-escuro mt-6">
-                Voltar para a versão atual
+                {t("Voltar para a versão atual")}
               </a>
             </div>
           </div>
@@ -227,6 +230,7 @@ function Monograma({ marca }: { marca: { nome: string; logoUrl: string | null } 
 
 /** O avatar abre o menu da pessoa: ver como outro cargo, voltar para a versão atual, sair. */
 function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
+  const t = useT();
   const { signOut } = useAuth();
   const { meuNome, cargo, cargos, trocarCargo, role } = useNovo();
   const [aberto, setAberto] = React.useState(false);
@@ -252,7 +256,7 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
         data-testid="novo-menu-da-pessoa"
       >
         <Avatar nome={meuNome} tamanho={compacto ? 24 : 32} claro />
-        {compacto ? "Você" : ROTULO_DO_CARGO[cargo].split(" ")[0]}
+        {compacto ? t("Você") : ROTULO_DO_CARGO[cargo].split(" ")[0]}
       </button>
       {aberto && (
         <div
@@ -279,7 +283,7 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
                   className="n-linha-clicavel items-center justify-between px-2 py-2 text-sm"
                 >
                   {ROTULO_DO_CARGO[c]}
-                  {c === cargo && <span className="n-selo n-selo-ok">agora</span>}
+                  {c === cargo && <span className="n-selo n-selo-ok">{t("agora")}</span>}
                 </button>
               ))}
             </div>
@@ -287,11 +291,11 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
           <div className="border-t border-[var(--n-linha)] pt-2">
             {veConfiguracoes(role) && (
               <a href="/app/settings" className="n-linha-clicavel px-2 py-2 text-sm">
-                Configurações
+                {t("Configurações")}
               </a>
             )}
             <a href="/app" className="n-linha-clicavel px-2 py-2 text-sm" data-testid="novo-voltar">
-              Voltar para a versão atual
+              {t("Voltar para a versão atual")}
             </a>
             <button
               type="button"

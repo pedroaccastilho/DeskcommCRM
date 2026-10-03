@@ -25,6 +25,7 @@ import {
 import { useNovo } from "./Casca";
 import { useRecarregar } from "./dados";
 import { Folha, primeiroNome } from "./pecas";
+import { useT } from "@/lib/i18n/IdiomaProvider";
 
 const TIPOS: TipoDeRegistro[] = ["evolucao", "avaliacao", "alta"];
 
@@ -41,6 +42,7 @@ export function FolhaDeEvolucao({
   modalidadeSugerida: Modalidade | null;
   aoFechar: () => void;
 }) {
+  const t = useT();
   const { eu } = useNovo();
   const recarregar = useRecarregar();
   const minhas = (eu?.profissional?.modalidades ?? []) as Modalidade[];
@@ -84,8 +86,9 @@ export function FolhaDeEvolucao({
     return (
       <Folha aberta aoFechar={aoFechar} titulo="Prontuário">
         <p className="n-suave text-sm">
-          Só profissional de saúde cadastrado escreve no prontuário. O cadastro fica em
-          Configurações › Profissionais de saúde.
+          {t(
+            "Só profissional de saúde cadastrado escreve no prontuário. O cadastro fica em Configurações › Profissionais de saúde.",
+          )}
         </p>
       </Folha>
     );
@@ -143,12 +146,12 @@ export function FolhaDeEvolucao({
         ))}
 
         <label className="block">
-          <span className="n-rotulo">Observações</span>
+          <span className="n-rotulo">{t("Observações")}</span>
           <textarea
             className="n-campo"
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
-            placeholder="O que mais vale registrar desta sessão"
+            placeholder={t("O que mais vale registrar desta sessão")}
           />
         </label>
 

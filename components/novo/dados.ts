@@ -10,11 +10,13 @@ import * as React from "react";
 
 import { instanteDe } from "@/lib/agenda/fuso";
 import { apiClient } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/types";
 import type { PoliticaDaAgenda, SessaoDaGrade } from "@/lib/clinica/agenda";
 import type { PacoteDaFicha } from "@/lib/clinica/pacotes-na-ficha";
 import type { Modalidade, TipoDeRegistro } from "@/lib/clinica/vocabulario";
 import type { CadastroDeProfissional } from "@/lib/novo/cargo";
 import type { Contact } from "@/lib/types/contacts";
+import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 
 export interface Eu {
   instalado: boolean;
@@ -141,7 +143,7 @@ function normalizarPendencia(bruto: unknown): Pendencia {
   return {
     appointment_id: p.appointment_id,
     contact_id: p.contact_id,
-    paciente: p.contato?.display_name || p.contato?.name || p.titulo,
+    paciente: nomeDoContato(p.contato) ?? p.titulo,
     titulo: p.titulo,
     inicio: p.comeca,
     atrasada: p.atrasada,
@@ -289,6 +291,44 @@ export function useSessoesDoPaciente(contactId: string) {
     },
     retry: false,
   });
+}
+
+export interface FiltroDeHorarios {
+  event_type_id: string;
+  owner_user_id?: string;
+  de: string;
+  ate: string;
+}
+
+/**
+ * Os horários livres, sem toast de erro: quando a agenda do profissional ainda não tem horário de
+ * atendimento, a folha mostra a frase da rota no lugar dos horários, onde a pessoa está olhando.
+ */
+export function useHorariosLivresDaFolha(filtro: FiltroDeHorarios | null) {
+  return useQuery({
+    queryKey: ["agenda", "horarios-livres", "novo", filtro],
+    enabled: filtro !== null,
+    queryFn: async () => {
+      const qs = new URLSearchParams({
+        event_type_id: filtro!.event_type_id,
+        de: filtro!.de,
+        ate: filtro!.ate,
+      });
+      if (filtro!.owner_user_id) qs.set("owner_user_id", filtro!.owner_user_id);
+      return (
+        await apiClient.get<{ data: { slots: Array<{ inicio: string; fim: string }> } }>(
+          `/api/v1/agenda/horarios-livres?${qs.toString()}`,
+        )
+      ).data;
+    },
+    retry: false,
+  });
+}
+
+/** A frase de um erro de API para mostrar na tela. */
+export function mensagemDoErro(err: unknown): string {
+  if (err instanceof ApiError) return err.message;
+  return "Não deu para consultar agora. Tente de novo.";
 }
 
 /** Depois de qualquer ação, as duas interfaces repintam. */

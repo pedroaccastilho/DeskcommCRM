@@ -10,8 +10,11 @@ import * as React from "react";
 import { useNovo } from "@/components/novo/Casca";
 import { useBuscaDePacientes } from "@/components/novo/dados";
 import { Avatar, Carregando, Vazio } from "@/components/novo/pecas";
+import { useT } from "@/lib/i18n/IdiomaProvider";
+import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 
 export function Pacientes() {
+  const t = useT();
   const { cargo } = useNovo();
   const [termo, setTermo] = React.useState("");
   const [busca, setBusca] = React.useState("");
@@ -52,7 +55,7 @@ export function Pacientes() {
         ) : (
           <ul className="n-cartao grid gap-0.5 p-2">
             {(lista.data ?? []).map((c) => {
-              const nome = c.display_name || c.name || c.phone_number || "Sem nome";
+              const nome = rotuloDoContato(c, t);
               return (
                 <li key={c.id}>
                   <Link
@@ -63,7 +66,7 @@ export function Pacientes() {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-bold">{nome}</span>
                       <span className="n-suave block truncate text-sm">
-                        {c.phone_number ?? "Sem telefone"}
+                        {c.phone_number ?? t("Sem telefone")}
                       </span>
                     </span>
                     <span className="n-fraco">›</span>

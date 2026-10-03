@@ -53,8 +53,13 @@ import {
   primeiroNome,
   useAgora,
 } from "@/components/novo/pecas";
+import { useT } from "@/lib/i18n/IdiomaProvider";
+import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
+import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 
 export function Hoje() {
+  const t = useT();
+  const tag = useTagDeIdioma();
   const { fuso, cargo, meuId, meuNome, soAsMinhas: soMinhas, role, eu } = useNovo();
   const org = useActiveOrg();
   const agora = useAgora();
@@ -115,8 +120,8 @@ export function Hoje() {
       {/* Saudação */}
       <header className="n-entra flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="n-suave text-sm font-semibold capitalize">
-            {dataLonga(agora.toISOString(), fuso)}
+          <p className="n-suave n-inicial text-sm font-semibold">
+            {dataLonga(agora.toISOString(), fuso, tag)}
           </p>
           <h1 className="n-titulo mt-1 text-[40px] leading-[1.05] sm:text-[52px]">
             {saudacao(Number(hora(agora.toISOString(), fuso).slice(0, 2)))},{" "}
@@ -124,12 +129,12 @@ export function Hoje() {
           </h1>
           <p className="n-suave mt-2 text-[15px]">
             {grade.isLoading
-              ? "Carregando o dia…"
+              ? t("Carregando o dia…")
               : arrumado.total === 0
                 ? soMinhas
-                  ? "Você não tem sessões hoje."
-                  : "Nenhuma sessão marcada para hoje."
-                : `${arrumado.total} ${arrumado.total === 1 ? "sessão" : "sessões"} ${soMinhas ? "na sua agenda" : "na clínica"} hoje, ${arrumado.realizadas} ${arrumado.realizadas === 1 ? "realizada" : "realizadas"}.`}
+                  ? t("Você não tem sessões hoje.")
+                  : t("Nenhuma sessão marcada para hoje.")
+                : `${arrumado.total} ${arrumado.total === 1 ? t("sessão") : t("sessões")} ${soMinhas ? t("na sua agenda") : t("na clínica")} ${t("hoje")}, ${arrumado.realizadas} ${arrumado.realizadas === 1 ? t("realizada") : t("realizadas")}.`}
           </p>
         </div>
         {role !== "viewer" && (
@@ -156,7 +161,7 @@ export function Hoje() {
             aria-pressed={filtroProf === null}
             onClick={() => setFiltroProf(null)}
           >
-            Toda a clínica
+            {t("Toda a clínica")}
           </button>
           {profissionais.map((p) => (
             <button
@@ -176,7 +181,9 @@ export function Hoje() {
       {/* Linha do dia */}
       <LinhaDoDia sessoes={visiveis} agora={agora} fuso={fuso} aoAbrir={abrir} />
 
-      <div className={`mt-8 grid gap-8 ${lateral ? "lg:grid-cols-[minmax(0,1fr)_340px]" : ""}`}>
+      <div
+        className={`mt-8 grid grid-cols-[minmax(0,1fr)] gap-8 ${lateral ? "lg:grid-cols-[minmax(0,1fr)_340px]" : ""}`}
+      >
         <div className="grid content-start gap-8">
           {grade.isLoading ? (
             <Carregando />
@@ -258,7 +265,7 @@ export function Hoje() {
                 itens={(pendencias.data ?? []).slice(0, 6).map((p) => ({
                   id: p.appointment_id,
                   nome: p.paciente,
-                  detalhe: `${dataLonga(p.inicio, fuso).split(",")[0]} às ${hora(p.inicio, fuso)}`,
+                  detalhe: `${dataLonga(p.inicio, fuso, tag).split(",")[0]} às ${hora(p.inicio, fuso)}`,
                   alerta: p.atrasada,
                   acao: () =>
                     setEscrever({
@@ -285,7 +292,7 @@ export function Hoje() {
                   </span>
                   <span className="flex-1">
                     <span className="block font-bold">Conversas esperando</span>
-                    <span className="n-suave text-sm">No WhatsApp da clínica</span>
+                    <span className="n-suave text-sm">{t("No WhatsApp da clínica")}</span>
                   </span>
                   <span className="n-fraco">›</span>
                 </Link>
@@ -293,7 +300,7 @@ export function Hoje() {
                   titulo="Oferecer renovação"
                   vazio="Ninguém com o pacote no fim."
                   itens={(renovar.data ?? []).slice(0, 5).map((p) => {
-                    const nome = p.paciente.display_name || p.paciente.name || "Paciente";
+                    const nome = rotuloDoContato(p.paciente, t);
                     return {
                       id: p.id,
                       nome,
@@ -308,7 +315,7 @@ export function Hoje() {
                     titulo="Multas em aberto"
                     vazio=""
                     itens={(multas.data ?? []).slice(0, 5).map((m) => {
-                      const nome = m.contacts?.display_name || m.contacts?.name || "Paciente";
+                      const nome = rotuloDoContato(m.contacts, t);
                       return {
                         id: m.id,
                         nome,
@@ -365,6 +372,7 @@ function Proxima({
   nomeDoProfissional: string | null;
   aoAbrir: () => void;
 }) {
+  const t = useT();
   const { fuso, soAsMinhas } = useNovo();
   const nome = sessao.paciente?.nome ?? sessao.titulo;
   const selo = seloDa(sessao, agora);
@@ -381,26 +389,31 @@ function Proxima({
         aria-hidden
       />
       <span className="relative flex flex-wrap items-center gap-2 text-sm font-semibold opacity-80">
-        Próximo · {quantoFalta(new Date(sessao.inicio), agora)}
+        {t("Próximo")} · {quantoFalta(new Date(sessao.inicio), agora)}
         <span className={`n-selo ${selo.classe} !bg-white/10 !text-white`}>{selo.rotulo}</span>
       </span>
-      <span className="relative mt-4 flex items-end gap-5">
+      <span className="relative mt-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:gap-5">
         <span className="n-titulo n-numero text-[64px] leading-[0.9] sm:text-[80px]">
           {hora(sessao.inicio, fuso)}
         </span>
-        <span className="min-w-0 pb-1">
+        <span className="min-w-0 flex-1 pb-1">
           <span className="n-titulo block truncate text-[26px] leading-tight sm:text-[32px]">
             {nome}
           </span>
-          <span className="flex items-center gap-2 text-sm opacity-80">
+          <span className="flex min-w-0 items-center gap-2 text-sm opacity-80">
             <PontoDaModalidade modalidade={sessao.modalidade} />
-            {sessao.tipo?.nome ?? sessao.titulo}
-            {!soAsMinhas && nomeDoProfissional ? ` · com ${nomeDoProfissional}` : ""}
+            <span className="truncate">
+              {sessao.tipo?.nome ?? sessao.titulo}
+              {!soAsMinhas && nomeDoProfissional ? ` · com ${nomeDoProfissional}` : ""}
+            </span>
           </span>
         </span>
       </span>
       <span className="relative mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--n-papel)] px-5 py-2.5 text-sm font-bold text-[var(--n-tinta)] transition-transform group-hover:translate-x-1">
-        {momentoDa(sessao, agora) === "sem_confirmacao" ? "Confirmar ou lembrar" : "Ver detalhes"} →
+        {momentoDa(sessao, agora) === "sem_confirmacao"
+          ? t("Confirmar ou lembrar")
+          : t("Ver detalhes")}{" "}
+        →
       </span>
     </button>
   );

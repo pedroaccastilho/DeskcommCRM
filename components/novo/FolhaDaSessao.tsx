@@ -15,7 +15,6 @@ import { toast } from "sonner";
 
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { useActiveOrg } from "@/hooks/auth/AuthProvider";
-import { useHorariosLivres } from "@/hooks/agenda/useHorariosLivres";
 import { instanteDe, partesNoFuso } from "@/lib/agenda/fuso";
 import { apiClient } from "@/lib/api/client";
 import type { PoliticaDaAgenda, SessaoDaGrade } from "@/lib/clinica/agenda";
@@ -25,9 +24,11 @@ import { formatCents, moedaServidaOu } from "@/lib/money";
 import { momentoDa } from "@/lib/novo/hoje";
 
 import { useNovo } from "./Casca";
-import { useRecarregar } from "./dados";
+import { mensagemDoErro, useHorariosLivresDaFolha, useRecarregar } from "./dados";
 import { FolhaDeEvolucao } from "./FolhaDeEvolucao";
 import { Avatar, Folha, PontoDaModalidade, dataLonga, hora, primeiroNome } from "./pecas";
+import { useT } from "@/lib/i18n/IdiomaProvider";
+import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 
 type Passo = "inicio" | "remarcar" | "cancelar" | "whatsapp";
 
@@ -63,6 +64,8 @@ export function FolhaDaSessao({
   nomeDoProfissional: string | null;
   aoFechar: () => void;
 }) {
+  const t = useT();
+  const tag = useTagDeIdioma();
   const { fuso, role, eu } = useNovo();
   const [passo, setPasso] = React.useState<Passo>("inicio");
   const [evolucao, setEvolucao] = React.useState(false);
@@ -125,7 +128,9 @@ export function FolhaDaSessao({
                 <p className="n-titulo n-numero text-[34px] leading-none">
                   {hora(sessao.inicio, fuso)}
                 </p>
-                <p className="n-fraco mt-1 text-xs">até {hora(sessao.fim, fuso)}</p>
+                <p className="n-fraco mt-1 text-xs">
+                  {t("até")} {hora(sessao.fim, fuso)}
+                </p>
               </div>
               <div className="h-12 w-px bg-[var(--n-linha)]" />
               <div className="min-w-0 flex-1">
@@ -135,8 +140,8 @@ export function FolhaDaSessao({
                     (sessao.modalidade ? ROTULO_DA_MODALIDADE[sessao.modalidade] : sessao.titulo)}
                 </p>
                 <p className="n-suave mt-0.5 truncate text-sm">
-                  {nomeDoProfissional ? `com ${nomeDoProfissional}` : "Sem profissional"} ·{" "}
-                  {dataLonga(sessao.inicio, fuso)}
+                  {nomeDoProfissional ? `${t("com")} ${nomeDoProfissional}` : t("Sem profissional")}{" "}
+                  · {dataLonga(sessao.inicio, fuso, tag)}
                 </p>
               </div>
             </div>
@@ -153,7 +158,7 @@ export function FolhaDaSessao({
                     disabled={desfecho.isPending}
                     onClick={() => desfecho.mutate("confirmed")}
                   >
-                    Confirmar presença
+                    {t("Confirmar presença")}
                   </button>
                 )}
                 {(momento === "agora" || momento === "para_fechar") && (
@@ -232,7 +237,7 @@ export function FolhaDaSessao({
                   <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--n-acao-suave)] text-[var(--n-acao)]">
                     ✎
                   </span>
-                  <span className="flex-1 font-semibold">Escrever a evolução</span>
+                  <span className="flex-1 font-semibold">{t("Escrever a evolução")}</span>
                   <span className="n-fraco">›</span>
                 </button>
               )}
@@ -242,7 +247,7 @@ export function FolhaDaSessao({
                   className="n-linha-clicavel px-2 py-2.5 text-sm font-semibold text-[var(--n-alerta)]"
                   onClick={() => setPasso("cancelar")}
                 >
-                  Cancelar a sessão
+                  {t("Cancelar a sessão")}
                 </button>
               )}
             </div>
@@ -307,6 +312,8 @@ function PassoRemarcar({
   aoVoltar: () => void;
   aoConcluir: () => void;
 }) {
+  const t = useT();
+  const tag = useTagDeIdioma();
   const { fuso } = useNovo();
   const recarregar = useRecarregar();
   const dias = React.useMemo(() => {
@@ -336,7 +343,7 @@ function PassoRemarcar({
       ).toISOString(),
     };
   }, [sessao.tipo, sessao.profissional_user_id, dia, fuso]);
-  const livres = useHorariosLivres(filtro);
+  const livres = useHorariosLivresDaFolha(filtro);
   const [agora] = React.useState(() => Date.now());
   const slots = (livres.data?.slots ?? []).filter((s) => new Date(s.inicio).getTime() > agora);
 
@@ -344,7 +351,7 @@ function PassoRemarcar({
     mutationFn: async () =>
       apiClient.patch("/api/v1/agenda/agendamentos", { id: sessao.id, starts_at: slot }),
     onSuccess: () => {
-      toast.success(`Remarcado para ${dataLonga(slot!, fuso)}, ${hora(slot!, fuso)}.`);
+      toast.success(`Remarcado para ${dataLonga(slot!, fuso, tag)}, ${hora(slot!, fuso)}.`);
       recarregar();
       aoConcluir();
     },
@@ -356,7 +363,7 @@ function PassoRemarcar({
     if (i === 1) return { cima: "Amanhã", baixo: String(d.dia) };
     const data = new Date(Date.UTC(d.ano, d.mes - 1, d.dia, 12));
     return {
-      cima: new Intl.DateTimeFormat("pt-BR", { weekday: "short", timeZone: "UTC" })
+      cima: new Intl.DateTimeFormat(tag, { weekday: "short", timeZone: "UTC" })
         .format(data)
         .replace(".", ""),
       baixo: String(d.dia),
@@ -367,8 +374,9 @@ function PassoRemarcar({
     <div className="grid gap-5">
       {!sessao.tipo ? (
         <p className="n-suave text-sm">
-          Esse horário não tem tipo de atendimento, então não dá para buscar horários livres por
-          aqui.
+          {t(
+            "Esse horário não tem tipo de atendimento, então não dá para buscar horários livres por aqui.",
+          )}
         </p>
       ) : (
         <>
@@ -390,18 +398,25 @@ function PassoRemarcar({
                       : "bg-[var(--n-papel)]"
                   }`}
                 >
-                  <span className="capitalize opacity-75">{r.cima}</span>
+                  <span className="n-inicial opacity-75">{r.cima}</span>
                   <span className="n-titulo n-numero text-xl">{r.baixo}</span>
                 </button>
               );
             })}
           </div>
           <div>
-            <p className="n-rotulo">Horários livres</p>
+            <p className="n-rotulo">{t("Horários livres")}</p>
             {livres.isLoading ? (
               <p className="n-fraco text-sm">Procurando…</p>
+            ) : livres.isError ? (
+              <p
+                className="rounded-2xl bg-[var(--n-aviso-suave)] p-3 text-sm text-[var(--n-aviso)]"
+                role="status"
+              >
+                {mensagemDoErro(livres.error)}
+              </p>
             ) : slots.length === 0 ? (
-              <p className="n-suave text-sm">Nenhum horário livre neste dia. Tente outro.</p>
+              <p className="n-suave text-sm">{t("Nenhum horário livre neste dia. Tente outro.")}</p>
             ) : (
               <div className="grid grid-cols-4 gap-2" data-testid="novo-horarios-livres">
                 {slots.map((s) => (
@@ -432,7 +447,7 @@ function PassoRemarcar({
           disabled={!slot || remarcar.isPending}
           onClick={() => remarcar.mutate()}
         >
-          {slot ? `Remarcar para ${hora(slot, fuso)}` : "Escolha um horário"}
+          {slot ? `${t("Remarcar para")} ${hora(slot, fuso)}` : t("Escolha um horário")}
         </button>
       </div>
     </div>
@@ -452,6 +467,7 @@ function PassoCancelar({
   aoVoltar: () => void;
   aoConcluir: () => void;
 }) {
+  const t = useT();
   const moeda = moedaServidaOu(useActiveOrg()?.currency);
   const recarregar = useRecarregar();
   const [pelaClinica, setPelaClinica] = React.useState(false);
@@ -486,7 +502,7 @@ function PassoCancelar({
   return (
     <div className="grid gap-5">
       <div>
-        <p className="n-rotulo">Quem pediu?</p>
+        <p className="n-rotulo">{t("Quem pediu?")}</p>
         <div className="grid grid-cols-2 gap-2">
           {[false, true].map((clinica) => (
             <button
@@ -496,7 +512,7 @@ function PassoCancelar({
               onClick={() => setPelaClinica(clinica)}
               className={`n-botao ${pelaClinica === clinica ? "n-botao-escuro" : "n-botao-suave"}`}
             >
-              {clinica ? "A clínica" : "O paciente"}
+              {clinica ? t("A clínica") : t("O paciente")}
             </button>
           ))}
         </div>
@@ -514,15 +530,17 @@ function PassoCancelar({
                 : `${previa.percentual}%`}
             </p>
             <p className="mt-1">
-              Faltam menos de {politica.antecedencia_cancelamento_horas} horas para a sessão. A
-              multa é cobrada no próximo pagamento e pode ser isentada depois.
+              {t("Faltam menos de")} {politica.antecedencia_cancelamento_horas}{" "}
+              {t(
+                "horas para a sessão. A multa é cobrada no próximo pagamento e pode ser isentada depois.",
+              )}
             </p>
           </>
         ) : (
           <p className="font-semibold">
             {pelaClinica
-              ? "A clínica desmarcou: sem custo para o paciente."
-              : "Dentro do prazo: sem multa."}
+              ? t("A clínica desmarcou: sem custo para o paciente.")
+              : t("Dentro do prazo: sem multa.")}
           </p>
         )}
       </div>
@@ -532,7 +550,7 @@ function PassoCancelar({
           className="n-campo"
           value={motivo}
           onChange={(e) => setMotivo(e.target.value)}
-          placeholder="Ex.: paciente com febre, pediu para remarcar na semana que vem"
+          placeholder={t("Ex.: paciente com febre, pediu para remarcar na semana que vem")}
         />
       </label>
       <div className="grid grid-cols-[auto_1fr] gap-2">
@@ -543,7 +561,7 @@ function PassoCancelar({
           disabled={motivo.trim().length < 3 || cancelar.isPending}
           onClick={() => cancelar.mutate()}
         >
-          Cancelar a sessão
+          {t("Cancelar a sessão")}
         </button>
       </div>
     </div>
@@ -561,6 +579,7 @@ function PassoWhatsApp({
   aoVoltar: () => void;
   aoConcluir: () => void;
 }) {
+  const t = useT();
   const { fuso } = useNovo();
   const nome = primeiroNome(sessao.paciente?.nome ?? "");
   const h = hora(sessao.inicio, fuso);
@@ -618,7 +637,9 @@ function PassoWhatsApp({
         onChange={(e) => setTexto(e.target.value)}
         aria-label="Mensagem"
       />
-      <p className="n-fraco text-xs">Sai pelo número da clínica e fica na conversa do paciente.</p>
+      <p className="n-fraco text-xs">
+        {t("Sai pelo número da clínica e fica na conversa do paciente.")}
+      </p>
       <div className="grid grid-cols-[auto_1fr] gap-2">
         <Voltar aoVoltar={aoVoltar} />
         <button
