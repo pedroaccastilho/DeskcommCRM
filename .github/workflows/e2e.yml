@@ -1136,6 +1136,9 @@ jobs:
       # `clinica-pacotes` entrou em 2026-10-03 (fork TOQ): o administrador
       # cadastra pacote no catálogo, a venda exige o aceite, "Compareceu" gasta
       # o saldo e a multa usa o valor da sessão no pacote. Instala a clínica.
+      # `clinica-origem-na-tela` entrou em 2026-10-03 (fork TOQ): a recepção
+      # registra a origem na ficha e no "Novo contato", e a gerência lê o
+      # relatório por origem e por médico. Instala a clínica.
       SPECS_PARTE_5: >-
         extensoes-da-instalacao.spec.ts
         admin-credencial-google.spec.ts
@@ -1165,6 +1168,7 @@ jobs:
         clinica-regras.spec.ts
         clinica-pacotes.spec.ts
         clinica-origens.spec.ts
+        clinica-origem-na-tela.spec.ts
         clinica-prontuario.spec.ts
         clinica-cancelar-com-multa.spec.ts
         clinica-pacotes-na-ficha.spec.ts
