@@ -1162,6 +1162,7 @@ jobs:
         clinica-pacotes.spec.ts
         clinica-prontuario.spec.ts
         clinica-cancelar-com-multa.spec.ts
+        clinica-pacotes-na-ficha.spec.ts
         clinica-agenda-cores.spec.ts
         clinica-ficha-resumo.spec.ts
 
