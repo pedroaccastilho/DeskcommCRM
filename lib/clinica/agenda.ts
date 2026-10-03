@@ -33,8 +33,9 @@ export const POLITICA_PADRAO: Readonly<PoliticaDaAgenda> = Object.freeze({
 
 /**
  * As REGRAS DA CLÍNICA inteiras (migration 9003): a política da agenda e os parâmetros de pacote
- * e de acompanhamento. Os de pacote e acompanhamento ficam guardados para quando essas partes
- * existirem; hoje só a política da agenda é aplicada.
+ * e de acompanhamento. Os de pacote valem desde a 9004 (venda, congelamento e renovação, em
+ * `lib/clinica/pacotes-servidor.ts`), menos as reposições; os de acompanhamento ficam guardados
+ * para quando os alertas existirem.
  */
 export interface RegrasDaClinica extends PoliticaDaAgenda {
   pacote_sessoes_padrao: number;

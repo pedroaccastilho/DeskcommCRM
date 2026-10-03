@@ -1128,6 +1128,10 @@ jobs:
       # multa, modalidade e preço em Configurações › Regras da clínica; o gerente
       # não vê a porta e o "Somente leitura" não lê multa. Fica nesta parte porque
       # instala o módulo clínica, como as outras duas.
+      #
+      # `clinica-pacotes` entrou em 2026-10-03 (fork TOQ): o administrador
+      # cadastra pacote no catálogo, a venda exige o aceite, "Compareceu" gasta
+      # o saldo e a multa usa o valor da sessão no pacote. Instala a clínica.
       SPECS_PARTE_5: >-
         extensoes-da-instalacao.spec.ts
         admin-credencial-google.spec.ts
@@ -1155,6 +1159,7 @@ jobs:
         contadores-do-menu.spec.ts
         honorarios-instalar-e-pagar.spec.ts
         clinica-regras.spec.ts
+        clinica-pacotes.spec.ts
         clinica-prontuario.spec.ts
         clinica-cancelar-com-multa.spec.ts
         clinica-agenda-cores.spec.ts
