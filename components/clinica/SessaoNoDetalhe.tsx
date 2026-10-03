@@ -5,18 +5,28 @@
  *
  * O núcleo desenha o painel; daqui saem as três coisas que a clínica acrescenta, e só quando o
  * compromisso é sessão da clínica (o tipo dele tem modalidade): o aviso da multa antes de cancelar,
- * a trava da falta durante a tolerância de atraso e a multa que o cancelamento gerou.
+ * a trava da falta durante a tolerância de atraso e a multa que o cancelamento gerou. E, para não
+ * sair da Agenda, as janelas rápidas da sessão: remarcar, WhatsApp, marcar a próxima e o
+ * prontuário do paciente.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import * as React from "react";
 
+import {
+  JanelaProximaSessao,
+  JanelaRemarcar,
+  JanelaWhatsApp,
+} from "@/components/clinica/JanelasDaSessao";
 import { useClinicaEu } from "@/components/clinica/ProntuarioDoPaciente";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { Button } from "@/components/ui/button";
+import { usePessoasDaAgenda } from "@/hooks/agenda/usePessoasDaAgenda";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
 import { apiClient } from "@/lib/api/client";
 import type { PoliticaDaAgenda, SessaoDaGrade } from "@/lib/clinica/agenda";
+import { DIAS_ATE_A_PROXIMA_SUGERIDA } from "@/lib/clinica/meu-dia";
 import type { AvisoDoCancelamento } from "@/lib/clinica/sessao-no-detalhe";
 import { formatarMoeda } from "@/lib/propostas/moeda";
 
@@ -257,6 +267,90 @@ export function MultaDaSessao({
             {t("Isentar multa")}
           </Button>
         )
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * As janelas rápidas da sessão dentro do painel da Agenda, as mesmas do Balcão e do Meu dia.
+ * Remarcar só aparece com a sessão em aberto; o prontuário, para quem é profissional de saúde.
+ */
+export function AcoesDaSessao({
+  sessao,
+  fuso,
+  podeEditar,
+}: {
+  sessao: SessaoDaGrade;
+  fuso: string;
+  podeEditar: boolean;
+}) {
+  const t = useT();
+  const { data: eu } = useClinicaEu();
+  const pessoas = usePessoasDaAgenda();
+  const [janela, setJanela] = React.useState<"remarcar" | "whatsapp" | "proxima" | null>(null);
+  const aberta = sessao.status === "pending" || sessao.status === "confirmed";
+  const profissional = pessoas.data?.find((p) => p.id === sessao.profissional_user_id);
+  const paciente = sessao.paciente;
+
+  return (
+    <div className="flex flex-wrap gap-2" data-testid="acoes-da-sessao">
+      {podeEditar && aberta && sessao.tipo ? (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setJanela("remarcar")}
+          data-testid="agenda-remarcar"
+        >
+          {t("Remarcar")}
+        </Button>
+      ) : null}
+      {paciente?.telefone ? (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setJanela("whatsapp")}
+          data-testid="agenda-whatsapp"
+        >
+          {t("WhatsApp")}
+        </Button>
+      ) : null}
+      {podeEditar && paciente && sessao.tipo ? (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setJanela("proxima")}
+          data-testid="agenda-marcar-proxima"
+        >
+          {t("Marcar a próxima sessão")}
+        </Button>
+      ) : null}
+      {paciente && eu?.profissional ? (
+        <Button asChild size="sm" variant="ghost">
+          <Link href={`/app/contacts/${paciente.id}?aba=prontuario`}>{t("Prontuário")}</Link>
+        </Button>
+      ) : null}
+
+      {janela === "remarcar" ? (
+        <JanelaRemarcar sessao={sessao} fuso={fuso} aberta aoFechar={() => setJanela(null)} />
+      ) : null}
+      {janela === "whatsapp" ? (
+        <JanelaWhatsApp
+          sessao={sessao}
+          fuso={fuso}
+          nomeDoProfissional={profissional?.nome ?? null}
+          aberta
+          aoFechar={() => setJanela(null)}
+        />
+      ) : null}
+      {janela === "proxima" ? (
+        <JanelaProximaSessao
+          sessao={sessao}
+          fuso={fuso}
+          aberta
+          diasAteASugerida={DIAS_ATE_A_PROXIMA_SUGERIDA}
+          aoFechar={() => setJanela(null)}
+        />
       ) : null}
     </div>
   );
