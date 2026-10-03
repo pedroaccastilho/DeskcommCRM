@@ -27,8 +27,7 @@ import { lerCreds, loginComoAdmin, loginComoDono } from "./helpers/login-admin";
 import { afirmarDonoDoServidor } from "./utils/precondicao";
 
 const ESPERA = 30_000;
-const EVIDENCIA =
-  process.env.E2E_EVIDENCIA ?? path.join(process.cwd(), "evidence/clinica-balcao");
+const EVIDENCIA = process.env.E2E_EVIDENCIA ?? path.join(process.cwd(), "evidence/clinica-balcao");
 
 const env = carregarEnvLocal();
 const URL_SUPABASE = env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -61,7 +60,12 @@ async function orgDoUsuario(userId: string): Promise<string> {
 async function novoContato(orgId: string, nome: string, telefone: string): Promise<string> {
   const { data, error } = await admin
     .from("contacts")
-    .insert({ organization_id: orgId, name: nome, phone_number: telefone, source: "manual" } as never)
+    .insert({
+      organization_id: orgId,
+      name: nome,
+      phone_number: telefone,
+      source: "manual",
+    } as never)
     .select("id")
     .single();
   if (error || !data) throw new Error(`contacts insert: ${error?.message}`);
@@ -113,7 +117,11 @@ test.describe("Balcão da recepção com o módulo clínica", () => {
     const tipoId = (tipo as { id: string }).id;
     const { error: erroEtiqueta } = await admin
       .from("clinica_tipos_atendimento")
-      .insert({ organization_id: orgId, event_type_id: tipoId, modalidade: "fisioterapia" } as never);
+      .insert({
+        organization_id: orgId,
+        event_type_id: tipoId,
+        modalidade: "fisioterapia",
+      } as never);
     if (erroEtiqueta) throw new Error(`clinica_tipos_atendimento insert: ${erroEtiqueta.message}`);
 
     const contatos: string[] = [];
@@ -127,7 +135,9 @@ test.describe("Balcão da recepção com o módulo clínica", () => {
       let n = 0;
       for (const [chave, p] of Object.entries(pacientes)) {
         n += 1;
-        const contato = await novoContato(orgId, p.nome, `55119900${sufixo.slice(-2)}${n}0${n}`.slice(0, 13));
+        // E.164 só com dígitos: o sufixo é base 36 e não serve aqui.
+        const telefone = `+551199${String(Date.now()).slice(-6)}${n}`;
+        const contato = await novoContato(orgId, p.nome, telefone);
         contatos.push(contato);
         const comeca = new Date(Date.now() + p.minutos * 60_000);
         comeca.setSeconds(0, 0);
@@ -194,14 +204,18 @@ test.describe("Balcão da recepção com o módulo clínica", () => {
       await expect(janela.getByTestId("previa-da-multa")).toContainText("30%");
       await expect(janela.getByTestId("previa-da-multa")).toContainText("45,00");
       await page.screenshot({ path: path.join(EVIDENCIA, "cancelar-com-multa.png") });
-      await janela.getByTestId("motivo-do-cancelamento").fill("Avisou pelo WhatsApp que está doente");
+      await janela
+        .getByTestId("motivo-do-cancelamento")
+        .fill("Avisou pelo WhatsApp que está doente");
       await janela.getByTestId("confirmar-cancelar").click();
       await expect(page.getByText(/Multa de R\$\s?45,00 lançada/)).toBeVisible({ timeout: ESPERA });
       await expect(page.getByTestId(`fila-${ids.semConfirmacao}`)).toContainText("Cancelado", {
         timeout: ESPERA,
       });
       await page.getByTestId(`fila-${ids.semConfirmacao}`).click();
-      await expect(painel.getByTestId("multa-em-aberto")).toContainText("45,00", { timeout: ESPERA });
+      await expect(painel.getByTestId("multa-em-aberto")).toContainText("45,00", {
+        timeout: ESPERA,
+      });
 
       // A janela do WhatsApp abre com o lembrete pronto (a spec não envia: não há chip na CI).
       await page.getByTestId(`fila-${ids.dentroDaTolerancia}`).click();
