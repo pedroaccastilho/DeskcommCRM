@@ -299,13 +299,19 @@ function TrilhaDeAcessos({ contactId }: { contactId: string }) {
   );
 }
 
-function FormularioDeRegistro({
+/**
+ * O formulário de registro. Fica exportado para o "Meu dia" do profissional, que abre a evolução
+ * já na modalidade da sessão e oferece repetir a conduta da última sessão (`paraRepetir`).
+ */
+export function FormularioDeRegistro({
   contactId,
   sessaoInicial,
   modalidades,
   adendoDe,
   aoCancelarAdendo,
   aoAssinar,
+  modalidadeInicial,
+  paraRepetir,
 }: {
   contactId: string;
   sessaoInicial?: string;
@@ -313,11 +319,16 @@ function FormularioDeRegistro({
   adendoDe: Registro | null;
   aoCancelarAdendo: () => void;
   aoAssinar: () => void;
+  modalidadeInicial?: Modalidade | null;
+  /** Valores da última sessão que o botão "Repetir a conduta" copia para o formulário. */
+  paraRepetir?: Record<string, string>;
 }) {
   const t = useT();
   const qc = useQueryClient();
   const [modalidadeEscolhida, setModalidade] = useState<Modalidade>(
-    modalidades[0] ?? "fisioterapia",
+    modalidadeInicial && modalidades.includes(modalidadeInicial)
+      ? modalidadeInicial
+      : (modalidades[0] ?? "fisioterapia"),
   );
   const [tipo, setTipo] = useState<TipoDeRegistro>("evolucao");
   const [conteudo, setConteudo] = useState<Record<string, string>>({});
@@ -329,6 +340,11 @@ function FormularioDeRegistro({
 
   const modalidade = adendoDe ? adendoDe.modalidade : modalidadeEscolhida;
   const campos = adendoDe ? [] : modeloDoRegistro(modalidade, tipo);
+  // Só o que o formulário atual tem, e ainda não está igual ao que seria copiado.
+  const repetiveis = Object.entries(paraRepetir ?? {}).filter(
+    ([chave, valor]) =>
+      campos.some((c) => c.chave === chave) && (conteudo[chave] ?? "").trim() !== valor.trim(),
+  );
 
   const assinar = useMutation({
     mutationFn: () => {
@@ -444,6 +460,27 @@ function FormularioDeRegistro({
           </div>
         ) : null}
 
+        {repetiveis.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-xs text-text-muted">
+            <span>{t("Mesmo tratamento da última sessão?")}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              data-testid="repetir-conduta"
+              onClick={() =>
+                setConteudo((v) => {
+                  const novo = { ...v };
+                  for (const [chave, valor] of repetiveis) novo[chave] = valor;
+                  return novo;
+                })
+              }
+            >
+              {t("Repetir a conduta")}
+            </Button>
+          </div>
+        ) : null}
+
         {campos.length > 0 ? (
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {campos.map((c) => (
@@ -474,13 +511,16 @@ function FormularioDeRegistro({
                     onChange={(e) => setConteudo((v) => ({ ...v, [c.chave]: e.target.value }))}
                     className={campo}
                   />
+                ) : c.tipo === "escala" ? (
+                  <EscalaDeZeroADez
+                    valor={conteudo[c.chave] ?? ""}
+                    classe={campo}
+                    aoMudar={(valor) => setConteudo((v) => ({ ...v, [c.chave]: valor }))}
+                  />
                 ) : (
                   <input
                     value={conteudo[c.chave] ?? ""}
                     inputMode={c.tipo === "texto" ? "text" : "decimal"}
-                    type={c.tipo === "escala" ? "number" : "text"}
-                    min={c.tipo === "escala" ? 0 : undefined}
-                    max={c.tipo === "escala" ? 10 : undefined}
                     onChange={(e) => setConteudo((v) => ({ ...v, [c.chave]: e.target.value }))}
                     className={campo}
                   />
@@ -519,5 +559,52 @@ function FormularioDeRegistro({
         </div>
       </form>
     </Card>
+  );
+}
+
+/**
+ * A escala de 0 a 10 (dor, esforço): um toque escolhe o número, sem teclado. O campo numérico
+ * continua ao lado para quem prefere digitar e para a leitura de tela.
+ */
+function EscalaDeZeroADez({
+  valor,
+  classe,
+  aoMudar,
+}: {
+  valor: string;
+  classe: string;
+  aoMudar: (valor: string) => void;
+}) {
+  const t = useT();
+  return (
+    <span className="flex flex-col gap-1.5">
+      <input
+        value={valor}
+        inputMode="decimal"
+        type="number"
+        min={0}
+        max={10}
+        onChange={(e) => aoMudar(e.target.value)}
+        className={classe}
+      />
+      <span role="radiogroup" aria-label={t("Escolher de 0 a 10")} className="flex flex-wrap gap-1">
+        {Array.from({ length: 11 }, (_, n) => String(n)).map((n) => (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={valor === n}
+            onClick={() => aoMudar(n)}
+            className={`h-8 w-8 rounded-md border text-sm tabular-nums transition-colors ${
+              valor === n
+                ? "border-accent bg-accent text-white"
+                : "border-border bg-surface hover:border-accent"
+            }`}
+          >
+            {n}
+          </button>
+        ))}
+      </span>
+    </span>
   );
 }
