@@ -206,6 +206,8 @@ test.describe("Meu dia do profissional com o módulo clínica", () => {
       await page.setViewportSize({ width: 390, height: 844 });
       await page.reload();
       await expect(page.getByTestId("meus-horarios")).toBeVisible({ timeout: ESPERA });
+      await expect(page.getByText("Carregando o dia…")).toHaveCount(0, { timeout: ESPERA });
+      await expect(page.getByTestId("evolucao-assinada")).toBeVisible({ timeout: ESPERA });
       const largura = await page.evaluate(() => document.documentElement.scrollWidth);
       expect(largura).toBeLessThanOrEqual(390);
       await page.screenshot({ path: path.join(EVIDENCIA, "meu-dia-celular.png"), fullPage: true });
