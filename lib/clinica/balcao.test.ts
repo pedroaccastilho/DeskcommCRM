@@ -26,6 +26,8 @@ function sessao(parcial: Partial<SessaoDaGrade>): SessaoDaGrade {
     paciente: { id: "ana", nome: "Ana Beatriz", telefone: "5511990000101" },
     falta_liberada_em: "2026-10-02T13:45:00.000Z",
     cancelamento_sem_multa_ate: "2026-10-01T13:30:00.000Z",
+    chegou_em: null,
+    atendimento_iniciado_em: null,
     ...parcial,
   };
 }

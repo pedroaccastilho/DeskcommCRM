@@ -1022,6 +1022,9 @@ export const AUDIT_ACTIONS = [
   "clinica.pacote_congelado",
   "clinica.pacote_prorrogado",
   "clinica.pacote_cancelado",
+  // Etapas do dia da sessão (fork TOQ, migration 9007): quem marcou chegada, início do
+  // atendimento ou desfez, e quando.
+  "clinica.sessao_etapa_marcada",
   // Chatbot de menu do WhatsApp (fork TOQ): quem ligou, desligou ou mudou o menu de uma conexão.
   "clinica.chatbot_menu_atualizado",
 ] as const;
