@@ -3,7 +3,7 @@
  *
  * O caminho, como na clínica:
  *   1. o fisioterapeuta assina a avaliação com 10 sessões, 2x por semana e a data da reavaliação;
- *   2. o prontuário mostra "Sessão 1 de 10", a etapa "Avaliado" e o retorno já marcado na agenda
+ *   2. a ficha, com o prontuário aberto, mostra "Sessão 1 de 10", a etapa "Avaliado" e o retorno já marcado na agenda
  *      de quem avaliou, no dia pedido;
  *   3. o retorno existe de verdade na agenda, com o tipo "Reavaliação" da modalidade;
  *   4. depois de uma sessão atendida, a ficha (aba Resumo, a que a recepção usa) mostra
@@ -193,7 +193,8 @@ test.describe("Plano de tratamento: da avaliação assinada ao retorno marcado",
       await expect(plano.getByTestId("plano-retorno")).toContainText("Retorno marcado", {
         timeout: ESPERA,
       });
-      await page.screenshot({ path: path.join(EVIDENCIA, "2-plano-no-prontuario.png") });
+      await plano.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(EVIDENCIA, "2-retorno-marcado.png") });
 
       // 3. O retorno está na agenda de quem avaliou, no dia pedido, com o tipo da modalidade.
       const { data: linha } = await admin

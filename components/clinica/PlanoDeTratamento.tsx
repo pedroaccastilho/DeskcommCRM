@@ -1,7 +1,9 @@
 "use client";
 
 /**
- * O PLANO DE TRATAMENTO NA FICHA E NO PRONTUÁRIO — o lado de tela da migration 9006.
+ * O PLANO DE TRATAMENTO NA FICHA DO PACIENTE — o lado de tela da migration 9006. Fica acima das
+ * abas, então aparece também com o prontuário aberto; telas novas (o "Meu dia", o Balcão) reusam
+ * `PlanoDeTratamento` e `usePlanosDoPaciente`.
  *
  * Um cartão por modalidade com plano ativo: "Sessão 6 de 10" com a barra de progresso, a
  * frequência, quem avaliou, a etapa (avaliado, em tratamento, alta) e o retorno de reavaliação

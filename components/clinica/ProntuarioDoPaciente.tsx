@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
-import { PlanoDeTratamento, chaveDosPlanos } from "@/components/clinica/PlanoDeTratamento";
+import { chaveDosPlanos } from "@/components/clinica/PlanoDeTratamento";
 import { useT } from "@/hooks/i18n/useT";
 import { useLocaleDeData, useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { dataDeParede } from "@/lib/agenda/fuso";
@@ -153,7 +153,6 @@ export function ProntuarioDoPaciente({
 
   return (
     <div className="flex flex-col gap-4">
-      <PlanoDeTratamento contactId={contactId} ativo />
       <FormularioDeRegistro
         contactId={contactId}
         sessaoInicial={sessaoInicial}
