@@ -1175,6 +1175,7 @@ jobs:
         clinica-agenda-cores.spec.ts
         clinica-ficha-resumo.spec.ts
         clinica-balcao.spec.ts
+        clinica-menu-por-cargo.spec.ts
         clinica-plano-de-tratamento.spec.ts
 
       # ─── PARTE 6 — nasceu em 2026-09-28, e o orçamento de 24 min a pediu ───

@@ -13252,6 +13252,23 @@ export const DICIONARIO: Traducoes = {
 
   },
 
+  // ─── Clínica: menu pronto por cargo (fork TOQ) ───
+  "Menu pronto por cargo": { es: "Menú listo por cargo" },
+  "Recepção": { es: "Recepción" },
+  "Profissional de saúde": { es: "Profesional de salud" },
+  "Educador físico": { es: "Educador físico" },
+  "Balcão, agenda, conversas, pacientes e tarefas. Abre no Balcão.": {
+    es: "Recepción, agenda, conversaciones, pacientes y tareas. Abre en Recepción.",
+  },
+  "Agenda, evoluções pendentes, pacientes e tarefas. Abre na Agenda.": {
+    es: "Agenda, evoluciones pendientes, pacientes y tareas. Abre en la Agenda.",
+  },
+  "Agenda, alunos e tarefas. Abre na Agenda.": {
+    es: "Agenda, alumnos y tareas. Abre en la Agenda.",
+  },
+  "O menu da pessoa fica só com o que ela usa no dia. Dá para ajustar área por área logo abaixo.": {
+    es: "El menú de la persona queda solo con lo que usa en el día. Se puede ajustar área por área justo abajo.",
+  },
   // ─── Clínica: Balcão da recepção e janelas rápidas da sessão (fork TOQ) ───
   "O módulo clínica não está instalado nesta organização.": { es: "El módulo clínica no está instalado en esta organización." },
   "Balcão": { es: "Recepción" },
