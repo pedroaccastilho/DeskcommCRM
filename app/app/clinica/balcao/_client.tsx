@@ -17,6 +17,7 @@ import {
   JanelaWhatsApp,
   useRecarregarBalcao,
 } from "@/components/clinica/JanelasDaSessao";
+import { PacotesParaRenovar } from "@/components/clinica/PacotesParaRenovar";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,11 +29,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useActiveOrg } from "@/hooks/auth/AuthProvider";
+import { useAgora } from "@/hooks/clinica/useAgora";
 import { usePessoasDaAgenda } from "@/hooks/agenda/usePessoasDaAgenda";
 import { useConversationCounts } from "@/hooks/inbox/useConversationCounts";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
-import { instanteDe } from "@/lib/agenda/fuso";
 import { apiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/types";
 import { POLITICA_PADRAO, type PoliticaDaAgenda, type SessaoDaGrade } from "@/lib/clinica/agenda";
@@ -47,6 +48,7 @@ import {
   type SituacaoNoBalcao,
 } from "@/lib/clinica/balcao";
 import { corDaModalidade } from "@/lib/clinica/cores-da-agenda";
+import { limitesDoDia } from "@/lib/clinica/dia-no-fuso";
 import { formatCents, moedaServidaOu } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
@@ -96,29 +98,6 @@ const ROTULO_DA_ACAO: Record<AcaoDoBalcao, string> = {
   cancelar: "Cancelar",
   ficha: "Abrir ficha",
 };
-
-/** Os limites do dia `AAAA-MM-DD` no fuso da organização. */
-function limitesDoDia(hoje: string, fuso: string): { de: string; ate: string } {
-  const [ano, mes, dia] = hoje.split("-").map(Number) as [number, number, number];
-  const amanha = new Date(Date.UTC(ano, mes - 1, dia + 1, 12));
-  return {
-    de: instanteDe({ ano, mes, dia }, fuso).toISOString(),
-    ate: instanteDe(
-      { ano: amanha.getUTCFullYear(), mes: amanha.getUTCMonth() + 1, dia: amanha.getUTCDate() },
-      fuso,
-    ).toISOString(),
-  };
-}
-
-/** O relógio da tela anda sozinho: a falta libera e o atraso aparece sem recarregar. */
-function useAgora(): Date {
-  const [agora, setAgora] = React.useState(() => new Date());
-  React.useEffect(() => {
-    const id = window.setInterval(() => setAgora(new Date()), 30_000);
-    return () => window.clearInterval(id);
-  }, []);
-  return agora;
-}
 
 export function Balcao({ fuso, hoje }: { fuso: string; hoje: string }) {
   const t = useT();
@@ -238,69 +217,73 @@ export function Balcao({ fuso, hoje }: { fuso: string; hoje: string }) {
       </div>
 
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-        <Card className="overflow-hidden p-0" data-testid="fila-do-dia">
-          {grade.isLoading ? (
-            <p className="p-4 text-sm text-text-muted">{t("Carregando o dia…")}</p>
-          ) : fila.length === 0 ? (
-            <p className="p-4 text-sm text-text-muted">
-              {filtro === "hoje"
-                ? t("Nenhum horário marcado para hoje.")
-                : t("Ninguém nesta situação agora.")}
-            </p>
-          ) : (
-            <ul>
-              {fila.map((s) => {
-                const quem = pessoa(s.profissional_user_id);
-                const encerrada =
-                  s.situacao === "realizado" ||
-                  s.situacao === "faltou" ||
-                  s.situacao === "cancelado";
-                return (
-                  <li key={s.id} className="border-b border-border last:border-b-0">
-                    <button
-                      type="button"
-                      onClick={() => setEscolhida(s.id)}
-                      aria-current={selecionada?.id === s.id}
-                      data-testid={`fila-${s.id}`}
-                      className={cn(
-                        "grid w-full grid-cols-[3.25rem_4px_minmax(0,1fr)] items-center gap-3 px-3 py-2.5 text-left transition-colors sm:grid-cols-[3.25rem_4px_minmax(0,1fr)_auto]",
-                        selecionada?.id === s.id ? "bg-accent-soft" : "hover:bg-surface-elevated",
-                        encerrada && "opacity-60",
-                      )}
-                    >
-                      <span className="text-right text-sm font-semibold tabular-nums">
-                        {hora(s.inicio)}
-                      </span>
-                      <span
-                        aria-hidden
-                        className="h-full min-h-9 rounded-full"
-                        style={{ backgroundColor: corDaModalidade(s.modalidade) }}
-                      />
-                      <span className="min-w-0">
-                        <span className="block truncate font-medium">
-                          {s.paciente?.nome ?? s.titulo}
-                        </span>
-                        <span className="block truncate text-xs text-text-muted">
-                          {quem
-                            ? t("{tipo} com {nome}")
-                                .replace("{tipo}", s.tipo?.nome ?? s.titulo)
-                                .replace("{nome}", quem.nome)
-                            : (s.tipo?.nome ?? s.titulo)}
-                        </span>
-                      </span>
-                      <Badge
-                        variant={SITUACAO[s.situacao].variante}
-                        className="col-start-3 justify-self-start sm:col-start-auto sm:justify-self-end"
+        {/* A fila do dia e, embaixo, quem está perto do fim do pacote. */}
+        <div className="grid gap-4">
+          <Card className="overflow-hidden p-0" data-testid="fila-do-dia">
+            {grade.isLoading ? (
+              <p className="p-4 text-sm text-text-muted">{t("Carregando o dia…")}</p>
+            ) : fila.length === 0 ? (
+              <p className="p-4 text-sm text-text-muted">
+                {filtro === "hoje"
+                  ? t("Nenhum horário marcado para hoje.")
+                  : t("Ninguém nesta situação agora.")}
+              </p>
+            ) : (
+              <ul>
+                {fila.map((s) => {
+                  const quem = pessoa(s.profissional_user_id);
+                  const encerrada =
+                    s.situacao === "realizado" ||
+                    s.situacao === "faltou" ||
+                    s.situacao === "cancelado";
+                  return (
+                    <li key={s.id} className="border-b border-border last:border-b-0">
+                      <button
+                        type="button"
+                        onClick={() => setEscolhida(s.id)}
+                        aria-current={selecionada?.id === s.id}
+                        data-testid={`fila-${s.id}`}
+                        className={cn(
+                          "grid w-full grid-cols-[3.25rem_4px_minmax(0,1fr)] items-center gap-3 px-3 py-2.5 text-left transition-colors sm:grid-cols-[3.25rem_4px_minmax(0,1fr)_auto]",
+                          selecionada?.id === s.id ? "bg-accent-soft" : "hover:bg-surface-elevated",
+                          encerrada && "opacity-60",
+                        )}
                       >
-                        {t(SITUACAO[s.situacao].rotulo)}
-                      </Badge>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Card>
+                        <span className="text-right text-sm font-semibold tabular-nums">
+                          {hora(s.inicio)}
+                        </span>
+                        <span
+                          aria-hidden
+                          className="h-full min-h-9 rounded-full"
+                          style={{ backgroundColor: corDaModalidade(s.modalidade) }}
+                        />
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium">
+                            {s.paciente?.nome ?? s.titulo}
+                          </span>
+                          <span className="block truncate text-xs text-text-muted">
+                            {quem
+                              ? t("{tipo} com {nome}")
+                                  .replace("{tipo}", s.tipo?.nome ?? s.titulo)
+                                  .replace("{nome}", quem.nome)
+                              : (s.tipo?.nome ?? s.titulo)}
+                          </span>
+                        </span>
+                        <Badge
+                          variant={SITUACAO[s.situacao].variante}
+                          className="col-start-3 justify-self-start sm:col-start-auto sm:justify-self-end"
+                        >
+                          {t(SITUACAO[s.situacao].rotulo)}
+                        </Badge>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+          <PacotesParaRenovar />
+        </div>
 
         {selecionada ? (
           <PainelDoPaciente

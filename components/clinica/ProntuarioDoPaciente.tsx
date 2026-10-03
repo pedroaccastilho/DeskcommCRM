@@ -9,13 +9,17 @@
  */
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
+import { chaveDosPlanos } from "@/components/clinica/PlanoDeTratamento";
 import { useT } from "@/hooks/i18n/useT";
-import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
+import { useLocaleDeData, useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
+import { dataDeParede } from "@/lib/agenda/fuso";
 import { apiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/types";
 import {
@@ -48,6 +52,15 @@ type Eu = {
   profissional: { modalidades: Modalidade[]; nome_profissional: string } | null;
   /** Administrador da clínica: vê quem abriu o prontuário, mesmo sem ser profissional. */
   ve_acessos?: boolean;
+};
+
+/** O que a assinatura de uma avaliação devolve sobre o retorno de reavaliação (migration 9006). */
+type RetornoDaAssinatura = {
+  situacao:
+    "marcado" | "marcado_outro_dia" | "sem_horario" | "sem_tipo" | "a_marcar" | "nao_pedido";
+  inicio: string | null;
+  fuso: string | null;
+  aviso: "enviado" | "nao_deu" | null;
 };
 
 type Acesso = { id: string; user_id: string | null; nome: string | null; acessado_em: string };
@@ -215,7 +228,7 @@ export function ProntuarioDoPaciente({
                         <dd className="mt-0.5 whitespace-pre-wrap">
                           {c.opcoes
                             ? t(valorParaMostrar(c, r.conteudo[c.chave]!))
-                            : String(r.conteudo[c.chave])}
+                            : valorParaMostrar(c, r.conteudo[c.chave]!)}
                         </dd>
                       </div>
                     ))}
@@ -299,13 +312,19 @@ function TrilhaDeAcessos({ contactId }: { contactId: string }) {
   );
 }
 
-function FormularioDeRegistro({
+/**
+ * O formulário de registro. Fica exportado para o "Meu dia" do profissional, que abre a evolução
+ * já na modalidade da sessão e oferece repetir a conduta da última sessão (`paraRepetir`).
+ */
+export function FormularioDeRegistro({
   contactId,
   sessaoInicial,
   modalidades,
   adendoDe,
   aoCancelarAdendo,
   aoAssinar,
+  modalidadeInicial,
+  paraRepetir,
 }: {
   contactId: string;
   sessaoInicial?: string;
@@ -313,11 +332,16 @@ function FormularioDeRegistro({
   adendoDe: Registro | null;
   aoCancelarAdendo: () => void;
   aoAssinar: () => void;
+  modalidadeInicial?: Modalidade | null;
+  /** Valores da última sessão que o botão "Repetir a conduta" copia para o formulário. */
+  paraRepetir?: Record<string, string>;
 }) {
   const t = useT();
   const qc = useQueryClient();
   const [modalidadeEscolhida, setModalidade] = useState<Modalidade>(
-    modalidades[0] ?? "fisioterapia",
+    modalidadeInicial && modalidades.includes(modalidadeInicial)
+      ? modalidadeInicial
+      : (modalidades[0] ?? "fisioterapia"),
   );
   const [tipo, setTipo] = useState<TipoDeRegistro>("evolucao");
   const [conteudo, setConteudo] = useState<Record<string, string>>({});
@@ -325,10 +349,44 @@ function FormularioDeRegistro({
   const [sessao, setSessao] = useState<string | null>(sessaoInicial ?? null);
   const tagDoIdioma = useTagDeIdioma();
   const pendencias = usePendencias(Boolean(sessao));
+  const localeDaData = useLocaleDeData();
+
+  /** O retorno marcado ao assinar a avaliação, dito na hora para quem assinou. */
+  const avisarDoRetorno = (r: RetornoDaAssinatura | null) => {
+    if (!r) return;
+    if ((r.situacao === "marcado" || r.situacao === "marcado_outro_dia") && r.inicio) {
+      const quando = format(
+        dataDeParede(new Date(r.inicio), r.fuso ?? "UTC"),
+        t("EEEE, d 'de' MMMM, HH:mm"),
+        { locale: localeDaData },
+      );
+      toast.success(t("Retorno de reavaliação marcado: {quando}.").replace("{quando}", quando), {
+        description:
+          r.situacao === "marcado_outro_dia"
+            ? t(
+                "O dia pedido estava cheio; ficou no horário livre mais próximo. A recepção foi avisada.",
+              )
+            : r.aviso === "enviado"
+              ? t("Paciente avisado pelo WhatsApp.")
+              : t("A confirmação pelo WhatsApp não saiu; a recepção vai avisar o paciente."),
+      });
+      return;
+    }
+    if (r.situacao === "sem_horario" || r.situacao === "sem_tipo") {
+      toast.warning(
+        t("O retorno não pôde ser marcado sozinho. A recepção recebeu uma tarefa para marcar."),
+      );
+    }
+  };
   const sessaoVinculada = pendencias.data?.find((p) => p.appointment_id === sessao);
 
   const modalidade = adendoDe ? adendoDe.modalidade : modalidadeEscolhida;
   const campos = adendoDe ? [] : modeloDoRegistro(modalidade, tipo);
+  // Só o que o formulário atual tem, e ainda não está igual ao que seria copiado.
+  const repetiveis = Object.entries(paraRepetir ?? {}).filter(
+    ([chave, valor]) =>
+      campos.some((c) => c.chave === chave) && (conteudo[chave] ?? "").trim() !== valor.trim(),
+  );
 
   const assinar = useMutation({
     mutationFn: () => {
@@ -339,23 +397,29 @@ function FormularioDeRegistro({
         preenchido[c.chave] =
           c.tipo === "escala" || c.tipo === "numero" ? Number(v.replace(",", ".")) : v;
       }
-      return apiClient.post("/api/v1/clinica/prontuario", {
-        contact_id: contactId,
-        modalidade,
-        tipo: adendoDe ? "adendo" : tipo,
-        appointment_id: adendoDe ? null : sessao,
-        adendo_de: adendoDe?.id ?? null,
-        conteudo: preenchido,
-        texto: texto.trim() || null,
-      });
+      return apiClient.post<{ data: { retorno?: RetornoDaAssinatura | null } }>(
+        "/api/v1/clinica/prontuario",
+        {
+          contact_id: contactId,
+          modalidade,
+          tipo: adendoDe ? "adendo" : tipo,
+          appointment_id: adendoDe ? null : sessao,
+          adendo_de: adendoDe?.id ?? null,
+          conteudo: preenchido,
+          texto: texto.trim() || null,
+        },
+      );
     },
-    onSuccess: () => {
+    onSuccess: (resposta) => {
+      avisarDoRetorno(resposta.data?.retorno ?? null);
       setConteudo({});
       setTexto("");
       setSessao(null);
       aoAssinar();
       void qc.invalidateQueries({ queryKey: ["clinica", "prontuario", contactId] });
       void qc.invalidateQueries({ queryKey: ["clinica", "pendencias"] });
+      void qc.invalidateQueries({ queryKey: chaveDosPlanos(contactId) });
+      void qc.invalidateQueries({ queryKey: ["agenda"] });
     },
     onError: showApiError,
   });
@@ -444,6 +508,27 @@ function FormularioDeRegistro({
           </div>
         ) : null}
 
+        {repetiveis.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-xs text-text-muted">
+            <span>{t("Mesmo tratamento da última sessão?")}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              data-testid="repetir-conduta"
+              onClick={() =>
+                setConteudo((v) => {
+                  const novo = { ...v };
+                  for (const [chave, valor] of repetiveis) novo[chave] = valor;
+                  return novo;
+                })
+              }
+            >
+              {t("Repetir a conduta")}
+            </Button>
+          </div>
+        ) : null}
+
         {campos.length > 0 ? (
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {campos.map((c) => (
@@ -466,6 +551,14 @@ function FormularioDeRegistro({
                       </option>
                     ))}
                   </select>
+                ) : c.tipo === "data" ? (
+                  <input
+                    type="date"
+                    value={conteudo[c.chave] ?? ""}
+                    data-testid={`registro-campo-${c.chave}`}
+                    onChange={(e) => setConteudo((v) => ({ ...v, [c.chave]: e.target.value }))}
+                    className={campo}
+                  />
                 ) : c.tipo === "texto_longo" ? (
                   <textarea
                     rows={3}
@@ -474,13 +567,16 @@ function FormularioDeRegistro({
                     onChange={(e) => setConteudo((v) => ({ ...v, [c.chave]: e.target.value }))}
                     className={campo}
                   />
+                ) : c.tipo === "escala" ? (
+                  <EscalaDeZeroADez
+                    valor={conteudo[c.chave] ?? ""}
+                    classe={campo}
+                    aoMudar={(valor) => setConteudo((v) => ({ ...v, [c.chave]: valor }))}
+                  />
                 ) : (
                   <input
                     value={conteudo[c.chave] ?? ""}
                     inputMode={c.tipo === "texto" ? "text" : "decimal"}
-                    type={c.tipo === "escala" ? "number" : "text"}
-                    min={c.tipo === "escala" ? 0 : undefined}
-                    max={c.tipo === "escala" ? 10 : undefined}
                     onChange={(e) => setConteudo((v) => ({ ...v, [c.chave]: e.target.value }))}
                     className={campo}
                   />
@@ -519,5 +615,52 @@ function FormularioDeRegistro({
         </div>
       </form>
     </Card>
+  );
+}
+
+/**
+ * A escala de 0 a 10 (dor, esforço): um toque escolhe o número, sem teclado. O campo numérico
+ * continua ao lado para quem prefere digitar e para a leitura de tela.
+ */
+function EscalaDeZeroADez({
+  valor,
+  classe,
+  aoMudar,
+}: {
+  valor: string;
+  classe: string;
+  aoMudar: (valor: string) => void;
+}) {
+  const t = useT();
+  return (
+    <span className="flex flex-col gap-1.5">
+      <input
+        value={valor}
+        inputMode="decimal"
+        type="number"
+        min={0}
+        max={10}
+        onChange={(e) => aoMudar(e.target.value)}
+        className={classe}
+      />
+      <span role="radiogroup" aria-label={t("Escolher de 0 a 10")} className="flex flex-wrap gap-1">
+        {Array.from({ length: 11 }, (_, n) => String(n)).map((n) => (
+          <button
+            key={n}
+            type="button"
+            role="radio"
+            aria-checked={valor === n}
+            onClick={() => aoMudar(n)}
+            className={`h-8 w-8 rounded-md border text-sm tabular-nums transition-colors ${
+              valor === n
+                ? "border-accent bg-accent text-white"
+                : "border-border bg-surface hover:border-accent"
+            }`}
+          >
+            {n}
+          </button>
+        ))}
+      </span>
+    </span>
   );
 }

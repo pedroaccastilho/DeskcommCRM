@@ -13252,6 +13252,65 @@ export const DICIONARIO: Traducoes = {
 
   },
 
+  // ─── Clínica: próximo passo depois de assinar (fork TOQ) ───
+  "Marcar": { es: "Agendar" },
+  "Próxima sessão de {nome}": { es: "Próxima sesión de {nome}" },
+  "Mesmo tipo de atendimento e mesmo profissional. Escolha o dia e um horário livre.": {
+    es: "Mismo tipo de atención y mismo profesional. Elige el día y un horario libre.",
+  },
+  "Este horário não tem tipo de atendimento. Marque pela Agenda.": {
+    es: "Este horario no tiene tipo de atención. Agéndalo desde la Agenda.",
+  },
+  "A evolução desta sessão está assinada.": { es: "La evolución de esta sesión está firmada." },
+  "Qual o próximo passo?": { es: "¿Cuál es el próximo paso?" },
+  "Próxima sessão já marcada: {quando}.": { es: "Próxima sesión ya agendada: {quando}." },
+  "Este paciente ainda não tem a próxima sessão marcada.": {
+    es: "Este paciente todavía no tiene la próxima sesión agendada.",
+  },
+  "Marcar outra sessão": { es: "Agendar otra sesión" },
+  "Marcar a próxima sessão": { es: "Agendar la próxima sesión" },
+  "Próximo paciente: {nome}, às {hora}": { es: "Próximo paciente: {nome}, a las {hora}" },
+  // ─── Clínica: Meu dia do profissional (fork TOQ) ───
+  "Meu dia": { es: "Mi día" },
+  "Seus horários de hoje e o paciente da vez, com a evolução ao lado.": {
+    es: "Tus horarios de hoy y el paciente de turno, con la evolución al lado.",
+  },
+  "Minha agenda": { es: "Mi agenda" },
+  "Nenhum horário seu marcado para hoje.": { es: "No tienes horarios agendados para hoy." },
+  "Quando houver horário seu hoje, o paciente da vez aparece aqui.": {
+    es: "Cuando tengas un horario hoy, el paciente de turno aparece aquí.",
+  },
+  "1 evolução de outro dia para registrar": { es: "1 evolución de otro día por registrar" },
+  "evoluções de outros dias para registrar": { es: "evoluciones de otros días por registrar" },
+  "Presença registrada.": { es: "Asistencia registrada." },
+  "Prontuário completo": { es: "Historia clínica completa" },
+  "Este horário não tem paciente vinculado.": { es: "Este horario no tiene paciente vinculado." },
+  "Última sessão": { es: "Última sesión" },
+  "Primeira sessão deste paciente nesta modalidade.": {
+    es: "Primera sesión de este paciente en esta modalidad.",
+  },
+  "A evolução desta sessão já está assinada.": { es: "La evolución de esta sesión ya está firmada." },
+  "Evolução assinada.": { es: "Evolución firmada." },
+  "Mesmo tratamento da última sessão?": { es: "¿Mismo tratamiento de la última sesión?" },
+  "Repetir a conduta": { es: "Repetir la conducta" },
+  "Escolher de 0 a 10": { es: "Elegir de 0 a 10" },
+  // ─── Clínica: menu pronto por cargo (fork TOQ) ───
+  "Menu pronto por cargo": { es: "Menú listo por cargo" },
+  "Recepção": { es: "Recepción" },
+  "Profissional de saúde": { es: "Profesional de salud" },
+  "Educador físico": { es: "Educador físico" },
+  "Balcão, agenda, conversas, pacientes e tarefas. Abre no Balcão.": {
+    es: "Recepción, agenda, conversaciones, pacientes y tareas. Abre en Recepción.",
+  },
+  "Meu dia, agenda, evoluções pendentes, pacientes e tarefas. Abre no Meu dia.": {
+    es: "Mi día, agenda, evoluciones pendientes, pacientes y tareas. Abre en Mi día.",
+  },
+  "Meu dia, agenda, alunos e tarefas. Abre no Meu dia.": {
+    es: "Mi día, agenda, alumnos y tareas. Abre en Mi día.",
+  },
+  "O menu da pessoa fica só com o que ela usa no dia. Dá para ajustar área por área logo abaixo.": {
+    es: "El menú de la persona queda solo con lo que usa en el día. Se puede ajustar área por área justo abajo.",
+  },
   // ─── Clínica: Balcão da recepção e janelas rápidas da sessão (fork TOQ) ───
   "O módulo clínica não está instalado nesta organização.": { es: "El módulo clínica no está instalado en esta organización." },
   "Balcão": { es: "Recepción" },
@@ -13856,6 +13915,12 @@ export const DICIONARIO: Traducoes = {
   "{n} aguardando confirmação": { es: "{n} por confirmar" },
   "{n} falta": { es: "{n} ausencia" },
   "{n} faltas": { es: "{n} ausencias" },
+  // clínica: a lista de renovação dos pacotes, para a recepção
+  "Oferecer renovação": { es: "Ofrecer renovación" },
+  "{n} paciente está perto do fim do pacote.": { es: "{n} paciente está cerca del fin del paquete." },
+  "{n} pacientes estão perto do fim do pacote.": { es: "{n} pacientes están cerca del fin del paquete." },
+  "{pacote}: resta {n} de {total} sessões. Vale até {data}.": { es: "{pacote}: queda {n} de {total} sesiones. Vale hasta el {data}." },
+  "{pacote}: restam {n} de {total} sessões. Vale até {data}.": { es: "{pacote}: quedan {n} de {total} sesiones. Vale hasta el {data}." },
   // clínica: os pacotes de sessões na ficha do paciente
   "d 'de' MMMM 'de' yyyy": { es: "d 'de' MMMM 'de' yyyy" },
   "Congelar": { es: "Congelar" },
@@ -13947,6 +14012,34 @@ export const DICIONARIO: Traducoes = {
   "Saturação (%)": { es: "Saturación (%)" },
   "Temperatura (°C)": { es: "Temperatura (°C)" },
   "Procedimento realizado": { es: "Procedimiento realizado" },
+  // clínica: plano de tratamento e retorno de reavaliação (fork TOQ, migration 9006)
+  "Data da reavaliação": { es: "Fecha de la reevaluación" },
+  "Plano de tratamento": { es: "Plan de tratamiento" },
+  "Avaliado": { es: "Evaluado" },
+  "Em tratamento": { es: "En tratamiento" },
+  "Sessão {n} de {total}": { es: "Sesión {n} de {total}" },
+  "Sessões feitas": { es: "Sesiones realizadas" },
+  "{n} sessão feita": { es: "{n} sesión realizada" },
+  "{n} sessões feitas": { es: "{n} sesiones realizadas" },
+  "passou do previsto: hora de reavaliar": { es: "superó lo previsto: momento de reevaluar" },
+  "{n}x por semana": { es: "{n}x por semana" },
+  "Avaliado por {nome} em {dia}": { es: "Evaluado por {nome} el {dia}" },
+  "Alta com {n} de {total} sessões": { es: "Alta con {n} de {total} sesiones" },
+  "Reavaliação sem data definida.": { es: "Reevaluación sin fecha definida." },
+  "Retorno marcado:": { es: "Retorno agendado:" },
+  "O dia pedido ({dia}) estava cheio; o sistema reservou o horário livre mais próximo.": { es: "El día pedido ({dia}) estaba lleno; el sistema reservó el horario libre más cercano." },
+  "Paciente avisado pelo WhatsApp.": { es: "Paciente avisado por WhatsApp." },
+  "A confirmação pelo WhatsApp não saiu. Avise o paciente.": { es: "La confirmación por WhatsApp no salió. Avise al paciente." },
+  "O retorno de reavaliação foi cancelado. Marque outro na agenda.": { es: "El retorno de reevaluación fue cancelado. Agende otro en la agenda." },
+  "Reavaliação pedida para {dia}. Falta ligar um tipo de agendamento a esta modalidade; a recepção marca à mão.": { es: "Reevaluación pedida para el {dia}. Falta vincular un tipo de cita a esta modalidad; la recepción la agenda a mano." },
+  "Reavaliação pedida para {dia}. Marcando o retorno…": { es: "Reevaluación pedida para el {dia}. Agendando el retorno…" },
+  "Reavaliação pedida para {dia}. Não havia horário livre; a recepção precisa marcar.": { es: "Reevaluación pedida para el {dia}. No había horario libre; la recepción debe agendarla." },
+  "Retorno de reavaliação marcado: {quando}.": { es: "Retorno de reevaluación agendado: {quando}." },
+  "O dia pedido estava cheio; ficou no horário livre mais próximo. A recepção foi avisada.": { es: "El día pedido estaba lleno; quedó en el horario libre más cercano. La recepción fue avisada." },
+  "A confirmação pelo WhatsApp não saiu; a recepção vai avisar o paciente.": { es: "La confirmación por WhatsApp no salió; la recepción avisará al paciente." },
+  "O retorno não pôde ser marcado sozinho. A recepção recebeu uma tarefa para marcar.": { es: "El retorno no se pudo agendar automáticamente. La recepción recibió una tarea para agendarlo." },
+  "Seu retorno de reavaliação com {profissional} ficou marcado para {quando}.": { es: "Tu retorno de reevaluación con {profissional} quedó agendado para {quando}." },
+  "Se precisar mudar, é só responder esta mensagem.": { es: "Si necesitas cambiarlo, solo responde este mensaje." },
   // clínica: regras da clínica, só do administrador (fork TOQ, migration 9003)
   "Regras da clínica": { es: "Reglas de la clínica" },
   "Multa, tolerância, modalidades, preços, pacotes e alertas da clínica. Só administradores.": { es: "Multa, tolerancia, modalidades, precios, paquetes y alertas de la clínica. Solo administradores." },

@@ -197,6 +197,17 @@ export const NAV_CATALOG = [
     modulo: "clinica",
   },
   {
+    // Módulo opcional clínica (fork TOQ): a tela do profissional de saúde. Fora do menu lateral
+    // de quem tem o menu completo (a dobra tem 15 portas); entra pelo menu pronto do cargo.
+    href: "/app/clinica/meu-dia",
+    label: "Meu dia",
+    description: "Seus horários de hoje e o paciente da vez, com a evolução ao lado.",
+    icon: "ClipboardText",
+    group: "atendimento",
+    minRole: "viewer",
+    modulo: "clinica",
+  },
+  {
     // Módulo opcional clínica (fork TOQ): o laço de volta da agenda. Sessão atendida sem
     // registro no prontuário fica listada aqui até alguém assinar a evolução.
     href: "/app/clinica/pendencias",
