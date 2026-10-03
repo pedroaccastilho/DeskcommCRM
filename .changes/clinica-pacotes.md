@@ -1,0 +1,6 @@
+---
+impacto: capacidade_nova
+secao: adicionado
+titulo: Pacotes de sessões na clínica
+---
+No módulo "clínica", a clínica passa a vender e controlar pacotes de sessões, como o de 10 sessões que vale 60 dias. O administrador cadastra os pacotes à venda em Configurações › Regras da clínica, com nome, modalidade, sessões, validade e um valor que pode ficar em branco enquanto a clínica não define os preços. A venda registra o aceite da política de cancelamento com os termos do momento, e um clique duplo não vende dois pacotes. A agenda mexe no saldo sozinha: a sessão marcada como "Compareceu" e a falta sem aviso gastam uma sessão do pacote que vence primeiro, e a sessão que volta a ficar agendada, é remarcada ou é cancelada devolve a sessão. O cancelamento em cima da hora de quem tem pacote cobra a multa sobre o valor da sessão no pacote. A recepção congela o pacote uma vez, até o máximo das Regras, e a gerência prorroga ou cancela com motivo, com o reembolso sugerido pelas sessões restantes ao preço avulso. A recepção tem uma lista dos pacotes perto do fim para oferecer a renovação. O perfil Somente leitura não vê pacotes nem valores. A tela de venda e o saldo na ficha do paciente chegam numa versão seguinte; até lá, o que muda na tela é o catálogo e o bloco "Pacotes" das Regras, que passa a valer.

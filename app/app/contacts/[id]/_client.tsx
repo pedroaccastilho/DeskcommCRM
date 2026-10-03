@@ -42,6 +42,7 @@ import { phoneForDisplay } from "@/lib/channels/phone-variants";
 import { DialButton } from "@/components/voice/DialButton";
 import { ProntuarioDoPaciente, useClinicaEu } from "@/components/clinica/ProntuarioDoPaciente";
 import { ResumoDoPaciente } from "@/components/clinica/ResumoDoPaciente";
+import { PacotesDoPaciente } from "@/components/clinica/PacotesDoPaciente";
 
 interface Props {
   contactId: string;
@@ -236,6 +237,18 @@ export function ContactDetailClient({ contactId, abaInicial, sessaoInicial }: Pr
       <ResumoDoPaciente contactId={contactId} ativo={temProntuario && !contact.is_anonymized} />
 
       <ConversaNoDossie conversa={contact.conversa} />
+
+      {/* Módulo clínica: o saldo dos pacotes e a venda, da Recepção para cima. */}
+      <PacotesDoPaciente
+        contactId={contactId}
+        ativo={
+          temProntuario &&
+          !contact.is_anonymized &&
+          Boolean(activeOrg && ROLE_RANK[activeOrg.role] >= ROLE_RANK.agent)
+        }
+        gerencia={Boolean(activeOrg && ROLE_RANK[activeOrg.role] >= ROLE_RANK.manager)}
+        podeMudar={user.support?.access_mode !== "support_readonly"}
+      />
 
       {/* ANTES das abas, e não dentro de uma delas: é o único conteúdo desta
           tela que PEDE uma ação. Enterrado numa aba, viraria pendência que só

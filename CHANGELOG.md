@@ -8,6 +8,26 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.71.0] — 2026-10-02
+
+### Adicionado
+
+- **Agenda da clínica com política de faltas, multa e histórico** No módulo "clínica", cada tipo de agendamento pode receber uma modalidade (fisioterapia, pilates, medicina, enfermagem) e o preço da sessão. Nas sessões desses tipos, a falta só pode ser registrada depois da tolerância de atraso (15 minutos por padrão), o cancelamento com menos de 24 horas gera multa de 30% do valor da sessão, e remarcações, cancelamentos, faltas e confirmações ficam num histórico com quem fez. Antecedência, percentual e tolerância são configuráveis pelo administrador, a recepção pode isentar uma multa com motivo, e a clínica pode cancelar sem gerar multa. As regras valem igual na tela e no atendimento pelo WhatsApp. Novas rotas devolvem a agenda por profissional e modalidade e a lista de quem ainda não confirmou.
+
+- **Na Agenda da clínica, a visão Equipe mostra o dia com uma coluna por profissional** Com o módulo clínica instalado, a Agenda ganha a visão Equipe, ao lado de Dia, Semana e Mês. Ela mostra o dia com uma coluna para cada profissional, com o nome, as modalidades e quantos atendimentos a pessoa tem. Quem não é profissional só ganha coluna quando tem compromisso no dia. Acima da grade aparecem os números do dia: atendimentos, quantos aguardam confirmação, faltas e quanto de cada modalidade. Os horários livres para marcar aparecem só na coluna de quem atende o tipo escolhido.
+
+- **Na sessão da clínica, o painel avisa a multa antes de cancelar e trava a falta durante a tolerância** Com o módulo clínica instalado, o painel de uma sessão da clínica na Agenda avisa até quando dá para cancelar sem multa. Em cima da hora, ele avisa o percentual da multa antes do cancelamento e deixa marcar que foi a clínica que desmarcou, o que não gera multa. Depois do cancelamento, o mesmo painel mostra a multa com o valor e a situação, e a recepção pode isentá-la escrevendo o motivo. O botão de falta fica travado até acabar a tolerância de atraso, e o painel diz a partir de que horas a falta pode ser registrada.
+
+- **Na clínica, a ficha do paciente abre com a próxima sessão, a reavaliação e a equipe** Com o módulo clínica instalado, a ficha de um contato que tem sessões na Agenda passa a abrir com um resumo: as modalidades em que ele é atendido, a equipe que o acompanha e três cartões, com a próxima sessão (e se ela já foi confirmada), a reavaliação marcada e quantas sessões e faltas houve nos últimos 60 dias. A próxima sessão tem um atalho para abri-la na Agenda. Contatos sem sessão continuam com a ficha de sempre, e o resumo não mostra nada do prontuário.
+
+- **Tela "Regras da clínica", só para administradores** No módulo "clínica", a nova tela Configurações › Regras da clínica reúne os valores do negócio que a clínica muda sem programador. São eles: a antecedência do cancelamento sem multa, o percentual da multa, a tolerância de atraso, a modalidade e o preço de cada tipo de atendimento, o tamanho e a validade do pacote, as reposições por mês, o congelamento, o aviso de renovação e os limites de faltas e de inatividade que geram alerta. A tela marca o que já está em uso e o que fica guardado até os pacotes e os alertas existirem. Só o perfil Administrador vê a tela e altera as regras e as modalidades. O Gerente não encontra a porta, a Recepção continua vendo e isentando as multas que cobra, e o perfil Somente leitura não vê a lista de multas. O preço da sessão é o mesmo "Preço padrão" de Configurações › Tipos de agendamento, que a comanda já usa, e quem tinha preço gravado na clínica o encontra lá. A agenda da clínica, que falhava ao carregar por pedir uma coluna de cor inexistente, volta a abrir.
+
+### Alterado
+
+- **Na Agenda, a situação do compromisso aparece no formato do bloco** Na grade da Agenda, o compromisso que aguarda confirmação aparece com borda tracejada, e o que terminou em falta aparece hachurado e com o título riscado. O confirmado continua com o bloco cheio. A visão de mês segue a mesma regra, e o leitor de tela também anuncia a situação. Assim dá para ler a semana sem abrir cada horário.
+
+- **Numa clínica com uma organização só, o seletor de organização sai do topo** Com o módulo clínica instalado e alguém ativo na equipe de saúde, o administrador da instalação que participa de uma organização só deixa de ver o seletor de organização no topo. O seletor tinha um item só e levava ao cadastro de outras organizações. O cadastro de organizações continua no modo administrador, pelo menu do usuário. Quem participa de mais de uma organização, e o acompanhamento de suporte, continuam com o seletor como antes.
+
 ## [1.70.0] — 2026-10-01
 
 ### Adicionado
@@ -9762,7 +9782,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.70.0...HEAD
+[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.71.0...HEAD
+[1.71.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.70.0...v1.71.0
 [1.70.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.69.0...v1.70.0
 [1.69.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.68.0...v1.69.0
 [1.68.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.67.0...v1.68.0

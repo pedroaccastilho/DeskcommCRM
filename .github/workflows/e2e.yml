@@ -1132,6 +1132,10 @@ jobs:
       # `clinica-balcao` entrou em 2026-10-02 (fork TOQ): a recepção confirma,
       # registra a falta depois da tolerância e cancela vendo a multa, pelo
       # Balcão. Semeia tipo, pacientes e sessões próprios e apaga tudo no fim.
+      #
+      # `clinica-pacotes` entrou em 2026-10-03 (fork TOQ): o administrador
+      # cadastra pacote no catálogo, a venda exige o aceite, "Compareceu" gasta
+      # o saldo e a multa usa o valor da sessão no pacote. Instala a clínica.
       SPECS_PARTE_5: >-
         extensoes-da-instalacao.spec.ts
         admin-credencial-google.spec.ts
@@ -1159,7 +1163,10 @@ jobs:
         contadores-do-menu.spec.ts
         honorarios-instalar-e-pagar.spec.ts
         clinica-regras.spec.ts
+        clinica-pacotes.spec.ts
         clinica-prontuario.spec.ts
+        clinica-cancelar-com-multa.spec.ts
+        clinica-pacotes-na-ficha.spec.ts
         clinica-agenda-cores.spec.ts
         clinica-ficha-resumo.spec.ts
         clinica-balcao.spec.ts

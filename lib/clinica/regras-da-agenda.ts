@@ -36,6 +36,8 @@ import {
   type QuemCancelou,
 } from "./agenda";
 import { moduloClinicaNaoInstalado } from "./api";
+import { consumoDaTransicao, type MotivoDoConsumo } from "./pacotes";
+import { lancarSessaoNoPacote, valorDaSessaoPeloPacote } from "./pacotes-servidor";
 
 type SB = SupabaseClient;
 
@@ -160,10 +162,12 @@ export interface MudancaNaAgenda {
 }
 
 /**
- * DEPOIS da gravação: histórico da sessão e, no cancelamento em cima da hora, a multa.
+ * DEPOIS da gravação: histórico da sessão, a multa do cancelamento em cima da hora e o saldo do
+ * pacote (migration 9004).
  *
- * Escreve com o client de serviço (as duas tabelas não têm policy de escrita para a sessão), e
- * por isso todo insert leva a organização do contexto autenticado, nunca do corpo.
+ * Escreve com o client de serviço (as tabelas não têm policy de escrita para a sessão), e
+ * por isso todo insert leva a organização do contexto autenticado, nunca do corpo. Cada parte
+ * falha sozinha para o log: um histórico que não gravou não impede a sessão de sair do pacote.
  */
 export async function depoisDaMudancaNaClinica(
   db: SB,
@@ -172,12 +176,40 @@ export async function depoisDaMudancaNaClinica(
   agora: Date = new Date(),
 ): Promise<void> {
   const acao = acaoDoHistorico(mudanca.transicao);
-  if (!acao) return;
-  try {
-    const eventTypeId = mudanca.eventTypeId;
-    const tipo = await tipoDaClinica(db, ctx.organization_id, eventTypeId);
-    if (!tipo || !eventTypeId) return;
+  const consumo = consumoDaTransicao(mudanca.transicao);
+  if (!acao && consumo === undefined) return;
 
+  let tipo: TipoDaClinica | null;
+  try {
+    tipo = await tipoDaClinica(db, ctx.organization_id, mudanca.eventTypeId);
+  } catch (err) {
+    logger.error("[clinica] modalidade do tipo não pôde ser lida", {
+      organization_id: ctx.organization_id,
+      appointment_id: mudanca.appointmentId,
+      error: mensagemDoErro(err),
+    });
+    return;
+  }
+  if (!tipo || !mudanca.eventTypeId) return;
+
+  if (acao) await historicoEMulta(db, ctx, mudanca, acao, tipo, mudanca.eventTypeId, agora);
+  if (consumo !== undefined) await sessaoNoPacote(ctx, mudanca, tipo, consumo);
+}
+
+function mensagemDoErro(err: unknown): string {
+  return err instanceof Error ? err.message : String((err as { message?: string })?.message ?? err);
+}
+
+async function historicoEMulta(
+  db: SB,
+  ctx: HandlerCtx,
+  mudanca: MudancaNaAgenda,
+  acao: NonNullable<ReturnType<typeof acaoDoHistorico>>,
+  tipo: TipoDaClinica,
+  eventTypeId: string,
+  agora: Date,
+): Promise<void> {
+  try {
     const admin = createAdminClient();
     const porUserId = ctx.actor.type === "user" ? ctx.actor.id : null;
     const historico = await admin.from("clinica_agenda_historico").insert({
@@ -195,7 +227,17 @@ export async function depoisDaMudancaNaClinica(
     if (acao !== "cancelado" || !mudanca.contactId) return;
 
     const politica = await politicaDaOrganizacao(db, ctx.organization_id);
-    const preco = await precoDoTipo(db, ctx.organization_id, eventTypeId);
+    // Dentro do pacote, a multa é sobre o valor da sessão no pacote (total / sessões); fora
+    // dele, sobre o preço avulso do tipo. Lido com o client de serviço: quem cancelou pode ser a
+    // IA ou um perfil que não vê valor de pacote.
+    const preco =
+      (await valorDaSessaoPeloPacote(
+        admin,
+        ctx.organization_id,
+        mudanca.contactId,
+        tipo.modalidade,
+        mudanca.deInicio,
+      )) ?? (await precoDoTipo(db, ctx.organization_id, eventTypeId));
     const multa = multaDoCancelamento({
       inicio: mudanca.deInicio,
       canceladoEm: agora,
@@ -243,7 +285,46 @@ export async function depoisDaMudancaNaClinica(
       organization_id: ctx.organization_id,
       appointment_id: mudanca.appointmentId,
       transicao: mudanca.transicao,
-      error: err instanceof Error ? err.message : String((err as { message?: string })?.message ?? err),
+      error: mensagemDoErro(err),
+    });
+  }
+}
+
+/**
+ * Realizada e falta gastam uma sessão do pacote; o que deixa de contar (cancelada, remarcada,
+ * de volta para agendada) devolve. Sessão sem pacote válido é avulsa e não mexe em nada.
+ */
+async function sessaoNoPacote(
+  ctx: HandlerCtx,
+  mudanca: MudancaNaAgenda,
+  tipo: TipoDaClinica,
+  consumo: MotivoDoConsumo | null,
+): Promise<void> {
+  try {
+    const lancamento = await lancarSessaoNoPacote(
+      createAdminClient(),
+      ctx.organization_id,
+      mudanca.appointmentId,
+      tipo.modalidade,
+      consumo,
+    );
+    if (!lancamento || lancamento.acao === "ja_lancada") return;
+    await audit({
+      action:
+        lancamento.acao === "lancada" ? "clinica.pacote_sessao_lancada" : "clinica.pacote_sessao_estornada",
+      actorUserId: ctx.actor.type === "user" ? ctx.actor.id : null,
+      organizationId: ctx.organization_id,
+      resourceType: "clinica_pacote",
+      resourceId: lancamento.pacote_id,
+      requestId: ctx.requestId,
+      metadata: { appointment_id: mudanca.appointmentId, motivo: consumo, saldo: lancamento.saldo },
+    });
+  } catch (err) {
+    logger.error("[clinica] sessão não lançada no pacote", {
+      organization_id: ctx.organization_id,
+      appointment_id: mudanca.appointmentId,
+      transicao: mudanca.transicao,
+      error: mensagemDoErro(err),
     });
   }
 }
