@@ -1012,6 +1012,9 @@ export const AUDIT_ACTIONS = [
   "clinica.tipo_atendimento_atualizado",
   "clinica.multa_registrada",
   "clinica.multa_isenta",
+  // Plano de tratamento (migration 9006): o retorno de reavaliação que o sistema marcou sozinho
+  // na agenda do avaliador, e se o paciente foi avisado.
+  "clinica.retorno_marcado",
 ] as const;
 
 /** Um código de auditoria. Derivado de `AUDIT_ACTIONS` — não redigite a lista. */

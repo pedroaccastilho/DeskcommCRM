@@ -1128,6 +1128,11 @@ jobs:
       # multa, modalidade e preço em Configurações › Regras da clínica; o gerente
       # não vê a porta e o "Somente leitura" não lê multa. Fica nesta parte porque
       # instala o módulo clínica, como as outras duas.
+      #
+      # `clinica-plano-de-tratamento` entrou em 2026-10-03 (fork TOQ): a avaliação
+      # assinada cria o plano, marca o retorno na agenda de quem avaliou e a ficha
+      # conta "Sessão 2 de 10". Semeia tipo, jornada e sessão pelo service role e
+      # devolve a jornada anterior do administrador no fim.
       SPECS_PARTE_5: >-
         extensoes-da-instalacao.spec.ts
         admin-credencial-google.spec.ts
@@ -1159,6 +1164,7 @@ jobs:
         clinica-cancelar-com-multa.spec.ts
         clinica-agenda-cores.spec.ts
         clinica-ficha-resumo.spec.ts
+        clinica-plano-de-tratamento.spec.ts
 
       # ─── PARTE 6 — nasceu em 2026-09-28, e o orçamento de 24 min a pediu ───
       #
