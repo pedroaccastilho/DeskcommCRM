@@ -1,0 +1,308 @@
+"use client";
+
+/**
+ * A CASCA da interface nova (`/novo`): o trilho escuro à esquerda no computador, a barra de abas
+ * embaixo no celular, e o contexto que toda tela da interface nova lê (cargo, fuso, quem sou).
+ *
+ * O menu tem no máximo quatro portas, conforme o cargo (`lib/novo/cargo.ts`). Tudo o que não é
+ * do dia a dia da clínica fica de fora; o Administrador ganha a porta "Ajustes", que abre as
+ * configurações na interface atual.
+ */
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import * as React from "react";
+
+import { useAuth } from "@/hooks/auth/AuthProvider";
+import type { Role } from "@/lib/auth/types";
+import {
+  ROTULO_DO_CARGO,
+  atende,
+  cargoDe,
+  cargosParaVer,
+  menuDoCargo,
+  modalidadesDaVisao,
+  veConfiguracoes,
+  type Cargo,
+  type ItemDoMenu,
+} from "@/lib/novo/cargo";
+import { CalendarBlank, Gear, Sun, UsersThree, WhatsappLogo } from "@/lib/ui/icons";
+
+import { useEu, type Eu } from "./dados";
+import { Avatar } from "./pecas";
+
+interface Contexto {
+  fuso: string;
+  cargo: Cargo;
+  cargoReal: Cargo;
+  cargos: Cargo[];
+  trocarCargo: (c: Cargo) => void;
+  role: Role;
+  meuId: string;
+  meuNome: string;
+  eu: Eu | undefined;
+  /** Modalidades que a tela mostra (`null` = todas). */
+  modalidades: readonly string[] | null;
+  /** A interface nova mostra só as sessões de quem está logado? */
+  soAsMinhas: boolean;
+}
+
+const Ctx = React.createContext<Contexto | null>(null);
+
+export function useNovo(): Contexto {
+  const c = React.useContext(Ctx);
+  if (!c) throw new Error("useNovo fora da casca da interface nova");
+  return c;
+}
+
+const CHAVE_DA_VISAO = "novo:ver-como";
+
+/** A visão escolhida no menu ("ver a tela de"), guardada no navegador de quem escolheu. */
+const ouvintesDaVisao = new Set<() => void>();
+function assinarVisao(ouvinte: () => void): () => void {
+  ouvintesDaVisao.add(ouvinte);
+  return () => ouvintesDaVisao.delete(ouvinte);
+}
+function lerVisao(): Cargo | null {
+  try {
+    return window.localStorage.getItem(CHAVE_DA_VISAO) as Cargo | null;
+  } catch {
+    return null; // navegação privada: fica no cargo real
+  }
+}
+function gravarVisao(c: Cargo): void {
+  try {
+    window.localStorage.setItem(CHAVE_DA_VISAO, c);
+  } catch {
+    /* idem */
+  }
+  for (const o of ouvintesDaVisao) o();
+}
+
+const ICONE: Record<
+  ItemDoMenu["icone"] | "ajustes",
+  React.ComponentType<{ size?: number; weight?: "regular" | "fill" | "bold" }>
+> = {
+  hoje: Sun,
+  agenda: CalendarBlank,
+  pacientes: UsersThree,
+  conversas: WhatsappLogo,
+  ajustes: Gear,
+};
+
+export function Casca({
+  fuso,
+  marca,
+  clinicaInstalada,
+  children,
+}: {
+  fuso: string;
+  marca: { nome: string; logoUrl: string | null };
+  clinicaInstalada: boolean;
+  children: React.ReactNode;
+}) {
+  const { user, activeOrg } = useAuth();
+  const role: Role = activeOrg?.role ?? "viewer";
+  const eu = useEu();
+  const profissional = eu.data?.profissional ?? null;
+  const cargoReal = cargoDe(role, profissional);
+  const cargos = cargosParaVer(role, cargoReal);
+
+  const escolhido = React.useSyncExternalStore(assinarVisao, lerVisao, () => null);
+  const cargo = escolhido && cargos.includes(escolhido) ? escolhido : cargoReal;
+  const trocarCargo = gravarVisao;
+
+  const meuNome =
+    profissional?.nome_profissional || user.full_name || user.email.split("@")[0] || "";
+  const contexto: Contexto = {
+    fuso,
+    cargo,
+    cargoReal,
+    cargos,
+    trocarCargo,
+    role,
+    meuId: user.id,
+    meuNome,
+    eu: eu.data,
+    modalidades: modalidadesDaVisao(cargo, profissional),
+    soAsMinhas: atende(cargo),
+  };
+
+  const pathname = usePathname() ?? "/novo";
+  const menu = menuDoCargo(cargo);
+  const ativo = (href: string) =>
+    href === "/novo" ? pathname === "/novo" : pathname === href || pathname.startsWith(`${href}/`);
+
+  return (
+    <Ctx.Provider value={contexto}>
+      <nav className="n-trilho" aria-label="Menu principal">
+        <Link href="/novo" className="mb-3 !w-auto !p-0" aria-label={marca.nome}>
+          <Monograma marca={marca} />
+        </Link>
+        {menu.map((item) => {
+          const Icone = ICONE[item.icone];
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="n-porta"
+              aria-current={ativo(item.href) ? "page" : undefined}
+            >
+              <Icone size={22} weight={ativo(item.href) ? "fill" : "regular"} />
+              {item.rotulo}
+            </Link>
+          );
+        })}
+        <div className="mt-auto flex flex-col items-center gap-1">
+          {veConfiguracoes(role) && (
+            <a
+              href="/app/settings"
+              className="n-porta"
+              title="Configurações (abre na versão atual)"
+            >
+              <Gear size={22} />
+              Ajustes
+            </a>
+          )}
+          <MenuDaPessoa />
+        </div>
+      </nav>
+
+      <main className="n-palco">
+        {clinicaInstalada ? (
+          children
+        ) : (
+          <div className="n-conteudo">
+            <div className="n-cartao p-8 text-center">
+              <h1 className="n-titulo text-3xl">Falta instalar o módulo clínica</h1>
+              <p className="n-suave mx-auto mt-3 max-w-md">
+                A interface nova mostra a agenda, os pacientes e o prontuário da clínica. Peça ao
+                administrador para instalar o módulo em Configurações da instalação › Módulos.
+              </p>
+              <a href="/app" className="n-botao n-botao-escuro mt-6">
+                Voltar para a versão atual
+              </a>
+            </div>
+          </div>
+        )}
+      </main>
+
+      <nav className="n-abas" aria-label="Menu principal">
+        {menu.map((item) => {
+          const Icone = ICONE[item.icone];
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="n-porta"
+              aria-current={ativo(item.href) ? "page" : undefined}
+            >
+              <Icone size={22} weight={ativo(item.href) ? "fill" : "regular"} />
+              {item.rotulo}
+            </Link>
+          );
+        })}
+        <MenuDaPessoa compacto />
+      </nav>
+    </Ctx.Provider>
+  );
+}
+
+function Monograma({ marca }: { marca: { nome: string; logoUrl: string | null } }) {
+  if (marca.logoUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- logo vem do storage da instalação
+      <img
+        src={marca.logoUrl}
+        alt={marca.nome}
+        className="h-12 w-12 rounded-2xl bg-[var(--n-papel)] object-contain p-1.5"
+      />
+    );
+  }
+  return (
+    <span className="n-titulo grid h-12 w-12 place-items-center rounded-2xl bg-[var(--n-papel)] text-xl text-[var(--n-tinta)]">
+      {marca.nome.slice(0, 1)}
+    </span>
+  );
+}
+
+/** O avatar abre o menu da pessoa: ver como outro cargo, voltar para a versão atual, sair. */
+function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
+  const { signOut } = useAuth();
+  const { meuNome, cargo, cargos, trocarCargo, role } = useNovo();
+  const [aberto, setAberto] = React.useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!aberto) return;
+    const fora = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false);
+    };
+    document.addEventListener("mousedown", fora);
+    return () => document.removeEventListener("mousedown", fora);
+  }, [aberto]);
+
+  return (
+    <div ref={ref} className="relative flex flex-1 md:flex-none">
+      <button
+        type="button"
+        onClick={() => setAberto((a) => !a)}
+        aria-expanded={aberto}
+        aria-haspopup="menu"
+        className="n-porta w-full"
+        data-testid="novo-menu-da-pessoa"
+      >
+        <Avatar nome={meuNome} tamanho={compacto ? 24 : 32} claro />
+        {compacto ? "Você" : ROTULO_DO_CARGO[cargo].split(" ")[0]}
+      </button>
+      {aberto && (
+        <div
+          role="menu"
+          className={`n-cartao absolute z-50 w-72 p-3 text-[var(--n-tinta)] ${
+            compacto ? "right-0 bottom-[calc(100%+14px)]" : "bottom-0 left-[calc(100%+18px)]"
+          }`}
+        >
+          <p className="px-2 pt-1 text-sm font-semibold">{meuNome}</p>
+          <p className="n-fraco px-2 pb-2 text-xs">{ROTULO_DO_CARGO[cargo]}</p>
+          {cargos.length > 1 && (
+            <div className="border-t border-[var(--n-linha)] py-2">
+              <p className="n-fraco px-2 pb-1 text-xs font-semibold">Ver a tela de</p>
+              {cargos.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={c === cargo}
+                  onClick={() => {
+                    trocarCargo(c);
+                    setAberto(false);
+                  }}
+                  className="n-linha-clicavel items-center justify-between px-2 py-2 text-sm"
+                >
+                  {ROTULO_DO_CARGO[c]}
+                  {c === cargo && <span className="n-selo n-selo-ok">agora</span>}
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="border-t border-[var(--n-linha)] pt-2">
+            {veConfiguracoes(role) && (
+              <a href="/app/settings" className="n-linha-clicavel px-2 py-2 text-sm">
+                Configurações
+              </a>
+            )}
+            <a href="/app" className="n-linha-clicavel px-2 py-2 text-sm" data-testid="novo-voltar">
+              Voltar para a versão atual
+            </a>
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              className="n-linha-clicavel px-2 py-2 text-sm text-[var(--n-alerta)]"
+            >
+              Sair
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

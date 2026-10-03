@@ -7,12 +7,22 @@ describe("cargo na interface nova", () => {
     expect(cargoDe("agent", null)).toBe("recepcao");
     expect(cargoDe("admin", null)).toBe("gestao");
     expect(cargoDe("manager", null)).toBe("gestao");
-    expect(cargoDe("agent", { conselho: "CREFITO", modalidades: ["fisioterapia"], ativo: true })).toBe("saude");
-    expect(cargoDe("agent", { conselho: "CREF", modalidades: ["pilates"], ativo: true })).toBe("educador");
-    expect(cargoDe("admin", { conselho: "CRM", modalidades: ["medicina"], ativo: false })).toBe("gestao");
+    expect(
+      cargoDe("agent", { conselho: "CREFITO", modalidades: ["fisioterapia"], ativo: true }),
+    ).toBe("saude");
+    expect(cargoDe("agent", { conselho: "CREF", modalidades: ["pilates"], ativo: true })).toBe(
+      "educador",
+    );
+    expect(cargoDe("admin", { conselho: "CRM", modalidades: ["medicina"], ativo: false })).toBe(
+      "gestao",
+    );
     // Administrador vê tudo mesmo quando também atende.
-    expect(cargoDe("admin", { conselho: "CREFITO", modalidades: ["fisioterapia"], ativo: true })).toBe("gestao");
-    expect(cargoDe("manager", { conselho: "CREFITO", modalidades: ["fisioterapia"], ativo: true })).toBe("saude");
+    expect(
+      cargoDe("admin", { conselho: "CREFITO", modalidades: ["fisioterapia"], ativo: true }),
+    ).toBe("gestao");
+    expect(
+      cargoDe("manager", { conselho: "CREFITO", modalidades: ["fisioterapia"], ativo: true }),
+    ).toBe("saude");
   });
 
   it("só gestão experimenta outros cargos", () => {
@@ -22,9 +32,22 @@ describe("cargo na interface nova", () => {
   });
 
   it("o menu tem no máximo quatro portas e quem atende não vê o WhatsApp da clínica", () => {
-    expect(menuDoCargo("recepcao").map((i) => i.rotulo)).toEqual(["Hoje", "Agenda", "Pacientes", "WhatsApp"]);
-    expect(menuDoCargo("saude").map((i) => i.rotulo)).toEqual(["Meu dia", "Minha agenda", "Meus pacientes"]);
-    expect(menuDoCargo("educador").map((i) => i.rotulo)).toEqual(["Meu dia", "Minha agenda", "Alunos"]);
+    expect(menuDoCargo("recepcao").map((i) => i.rotulo)).toEqual([
+      "Hoje",
+      "Agenda",
+      "Pacientes",
+      "WhatsApp",
+    ]);
+    expect(menuDoCargo("saude").map((i) => i.rotulo)).toEqual([
+      "Meu dia",
+      "Minha agenda",
+      "Meus pacientes",
+    ]);
+    expect(menuDoCargo("educador").map((i) => i.rotulo)).toEqual([
+      "Meu dia",
+      "Minha agenda",
+      "Alunos",
+    ]);
   });
 });
 

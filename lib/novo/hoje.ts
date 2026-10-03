@@ -94,7 +94,10 @@ export function quantoFalta(inicio: Date, agora: Date): string {
   const min = Math.round((inicio.getTime() - agora.getTime()) / 60_000);
   if (Math.abs(min) < 1) return "agora";
   const abs = Math.abs(min);
-  const texto = abs < 60 ? `${abs} min` : `${Math.floor(abs / 60)}h${abs % 60 ? ` ${String(abs % 60).padStart(2, "0")}` : ""}`;
+  const texto =
+    abs < 60
+      ? `${abs} min`
+      : `${Math.floor(abs / 60)}h${abs % 60 ? ` ${String(abs % 60).padStart(2, "0")}` : ""}`;
   return min > 0 ? `em ${texto}` : `há ${texto}`;
 }
 

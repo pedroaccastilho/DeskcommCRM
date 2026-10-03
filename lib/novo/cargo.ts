@@ -94,6 +94,8 @@ export function menuDoCargo(cargo: Cargo): ItemDoMenu[] {
       rotulo: cargo === "educador" ? "Alunos" : quemAtende ? "Meus pacientes" : "Pacientes",
       icone: "pacientes",
     },
-    ...(quemAtende ? [] : [{ href: "/app/inbox", rotulo: "WhatsApp", icone: "conversas" as const }]),
+    ...(quemAtende
+      ? []
+      : [{ href: "/app/inbox", rotulo: "WhatsApp", icone: "conversas" as const }]),
   ];
 }
