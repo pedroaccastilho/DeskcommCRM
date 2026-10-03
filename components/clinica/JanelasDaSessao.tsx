@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * AS JANELAS RÁPIDAS DE UMA SESSÃO — remarcar, cancelar e mandar WhatsApp sem sair da tela.
+ * AS JANELAS RÁPIDAS DE UMA SESSÃO — remarcar, marcar a próxima, cancelar e mandar WhatsApp sem
+ * sair da tela.
  *
  * Módulo clínica (fork TOQ). Nasceram no Balcão da recepção e servem a qualquer tela que mostre
  * uma sessão da grade da clínica (`SessaoDaGrade`). Quem usa não é técnico: cada janela faz uma
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useHorariosLivres } from "@/hooks/agenda/useHorariosLivres";
+import { useMarcarAgendamento } from "@/hooks/agenda/useMarcarAgendamento";
 import { useRemarcarAgendamento } from "@/hooks/agenda/useRemarcarAgendamento";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { useT } from "@/hooks/i18n/useT";
@@ -59,40 +61,56 @@ export function useRecarregarBalcao() {
   }, [qc]);
 }
 
-// ─── Remarcar ────────────────────────────────────────────────────────────────
+// ─── Escolher dia e horário ──────────────────────────────────────────────────
 
-/** Os próximos dias, a partir do dia da sessão ou de hoje, o que vier depois. */
-function proximosDias(
-  fuso: string,
-  quantos: number,
-): Array<{ ano: number; mes: number; dia: number }> {
+type Dia = { ano: number; mes: number; dia: number };
+
+/** `quantos` dias seguidos, a partir de hoje mais `aPartirDe`. */
+function proximosDias(fuso: string, quantos: number, aPartirDe = 0): Dia[] {
   const hoje = partesNoFuso(new Date(), fuso);
-  const dias: Array<{ ano: number; mes: number; dia: number }> = [];
+  const dias: Dia[] = [];
   for (let i = 0; i < quantos; i += 1) {
-    const d = new Date(Date.UTC(hoje.ano, hoje.mes - 1, hoje.dia + i, 12));
+    const d = new Date(Date.UTC(hoje.ano, hoje.mes - 1, hoje.dia + aPartirDe + i, 12));
     dias.push({ ano: d.getUTCFullYear(), mes: d.getUTCMonth() + 1, dia: d.getUTCDate() });
   }
   return dias;
 }
 
-export function JanelaRemarcar({
+/**
+ * A fileira de dias e os horários livres do profissional naquele dia, para o tipo da sessão. É a
+ * mesma escolha em remarcar e em marcar a próxima; só muda de onde a fileira começa.
+ */
+function EscolhaDeHorario({
   sessao,
   fuso,
   aberta,
-  aoFechar,
+  aPartirDe,
+  diaInicial,
+  slot,
+  aoEscolher,
 }: {
   sessao: SessaoDaGrade;
   fuso: string;
   aberta: boolean;
-  aoFechar: () => void;
+  /** Primeiro dia da fileira, em dias depois de hoje. */
+  aPartirDe: number;
+  /** Dia já escolhido quando a janela abre, contado na fileira. */
+  diaInicial: number;
+  slot: string | null;
+  aoEscolher: (slot: string | null) => void;
 }) {
   const t = useT();
   const tag = useTagDeIdioma();
-  const recarregar = useRecarregarBalcao();
-  const remarcar = useRemarcarAgendamento();
-  const dias = React.useMemo(() => proximosDias(fuso, 14), [fuso]);
-  const [diaEscolhido, setDiaEscolhido] = React.useState(0);
-  const [slot, setSlot] = React.useState<string | null>(null);
+  const dias = React.useMemo(() => proximosDias(fuso, 21, aPartirDe), [fuso, aPartirDe]);
+  const [diaEscolhido, setDiaEscolhido] = React.useState(diaInicial);
+  const fileira = React.useRef<HTMLDivElement>(null);
+
+  // O dia sugerido pode estar fora da vista no celular: a fileira rola até ele ao abrir.
+  React.useEffect(() => {
+    fileira.current
+      ?.querySelector<HTMLElement>('[aria-pressed="true"]')
+      ?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, []);
 
   const dia = dias[diaEscolhido]!;
   const filtro = React.useMemo(() => {
@@ -115,9 +133,9 @@ export function JanelaRemarcar({
   const [agora] = React.useState(() => Date.now());
   const slots = (livres.data?.slots ?? []).filter((s) => new Date(s.inicio).getTime() > agora);
 
-  const nomeDoDia = (d: { ano: number; mes: number; dia: number }, i: number) => {
-    if (i === 0) return t("Hoje");
-    if (i === 1) return t("Amanhã");
+  const nomeDoDia = (d: Dia, i: number) => {
+    if (aPartirDe + i === 0) return t("Hoje");
+    if (aPartirDe + i === 1) return t("Amanhã");
     return new Intl.DateTimeFormat(tag, {
       weekday: "short",
       day: "numeric",
@@ -125,6 +143,80 @@ export function JanelaRemarcar({
       timeZone: "UTC",
     }).format(new Date(Date.UTC(d.ano, d.mes - 1, d.dia, 12)));
   };
+
+  return (
+    <div className="grid gap-4">
+      <div
+        ref={fileira}
+        className="flex gap-2 overflow-x-auto pb-1"
+        role="group"
+        aria-label={t("Dia")}
+      >
+        {dias.map((d, i) => (
+          <Button
+            key={`${d.ano}-${d.mes}-${d.dia}`}
+            type="button"
+            size="sm"
+            variant={i === diaEscolhido ? "primary" : "outline"}
+            aria-pressed={i === diaEscolhido}
+            onClick={() => {
+              setDiaEscolhido(i);
+              aoEscolher(null);
+            }}
+            className="shrink-0"
+          >
+            {nomeDoDia(d, i)}
+          </Button>
+        ))}
+      </div>
+      <div className="min-h-16" aria-live="polite">
+        {livres.isLoading ? (
+          <p className="text-sm text-text-muted">{t("Procurando horários livres…")}</p>
+        ) : livres.data && !livres.data.publicou_horarios ? (
+          <p className="text-sm text-text-muted">
+            {t("Este profissional ainda não publicou os horários de atendimento.")}
+          </p>
+        ) : slots.length === 0 ? (
+          <p className="text-sm text-text-muted">{t("Nenhum horário livre neste dia.")}</p>
+        ) : (
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t("Horários livres")}>
+            {slots.map((s) => (
+              <Button
+                key={s.inicio}
+                type="button"
+                size="sm"
+                variant={slot === s.inicio ? "primary" : "outline"}
+                aria-pressed={slot === s.inicio}
+                onClick={() => aoEscolher(s.inicio)}
+                className="tabular-nums"
+              >
+                {horaNoFuso(s.inicio, fuso, tag)}
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Remarcar ────────────────────────────────────────────────────────────────
+
+export function JanelaRemarcar({
+  sessao,
+  fuso,
+  aberta,
+  aoFechar,
+}: {
+  sessao: SessaoDaGrade;
+  fuso: string;
+  aberta: boolean;
+  aoFechar: () => void;
+}) {
+  const t = useT();
+  const recarregar = useRecarregarBalcao();
+  const remarcar = useRemarcarAgendamento();
+  const [slot, setSlot] = React.useState<string | null>(null);
 
   async function confirmar() {
     if (!slot) return;
@@ -148,57 +240,15 @@ export function JanelaRemarcar({
             {t("Este horário não tem tipo de atendimento. Remarque pela Agenda.")}
           </p>
         ) : (
-          <div className="grid gap-4">
-            <div className="flex gap-2 overflow-x-auto pb-1" role="group" aria-label={t("Dia")}>
-              {dias.map((d, i) => (
-                <Button
-                  key={`${d.ano}-${d.mes}-${d.dia}`}
-                  type="button"
-                  size="sm"
-                  variant={i === diaEscolhido ? "primary" : "outline"}
-                  aria-pressed={i === diaEscolhido}
-                  onClick={() => {
-                    setDiaEscolhido(i);
-                    setSlot(null);
-                  }}
-                  className="shrink-0"
-                >
-                  {nomeDoDia(d, i)}
-                </Button>
-              ))}
-            </div>
-            <div className="min-h-16" aria-live="polite">
-              {livres.isLoading ? (
-                <p className="text-sm text-text-muted">{t("Procurando horários livres…")}</p>
-              ) : livres.data && !livres.data.publicou_horarios ? (
-                <p className="text-sm text-text-muted">
-                  {t("Este profissional ainda não publicou os horários de atendimento.")}
-                </p>
-              ) : slots.length === 0 ? (
-                <p className="text-sm text-text-muted">{t("Nenhum horário livre neste dia.")}</p>
-              ) : (
-                <div
-                  className="flex flex-wrap gap-2"
-                  role="group"
-                  aria-label={t("Horários livres")}
-                >
-                  {slots.map((s) => (
-                    <Button
-                      key={s.inicio}
-                      type="button"
-                      size="sm"
-                      variant={slot === s.inicio ? "primary" : "outline"}
-                      aria-pressed={slot === s.inicio}
-                      onClick={() => setSlot(s.inicio)}
-                      className="tabular-nums"
-                    >
-                      {horaNoFuso(s.inicio, fuso, tag)}
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <EscolhaDeHorario
+            sessao={sessao}
+            fuso={fuso}
+            aberta={aberta}
+            aPartirDe={0}
+            diaInicial={0}
+            slot={slot}
+            aoEscolher={setSlot}
+          />
         )}
         <DialogFooter className="gap-2">
           <Button variant="ghost" onClick={aoFechar}>
@@ -210,6 +260,85 @@ export function JanelaRemarcar({
             data-testid="confirmar-remarcar"
           >
             {t("Remarcar")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Marcar a próxima ────────────────────────────────────────────────────────
+
+/**
+ * Marca a próxima sessão do mesmo paciente, com o mesmo profissional e o mesmo tipo, sem sair do
+ * atendimento. A fileira começa amanhã e já abre no dia `diasAteASugerida` (uma semana, por
+ * padrão), que é como a clínica costuma manter o tratamento.
+ */
+export function JanelaProximaSessao({
+  sessao,
+  fuso,
+  aberta,
+  diasAteASugerida,
+  aoFechar,
+}: {
+  sessao: SessaoDaGrade;
+  fuso: string;
+  aberta: boolean;
+  diasAteASugerida: number;
+  aoFechar: () => void;
+}) {
+  const t = useT();
+  const recarregar = useRecarregarBalcao();
+  const marcar = useMarcarAgendamento();
+  const [slot, setSlot] = React.useState<string | null>(null);
+
+  async function confirmar() {
+    if (!slot || !sessao.tipo) return;
+    await marcar.mutateAsync({
+      event_type_id: sessao.tipo.id,
+      starts_at: slot,
+      ...(sessao.profissional_user_id ? { owner_user_id: sessao.profissional_user_id } : {}),
+      ...(sessao.paciente ? { contact_id: sessao.paciente.id } : {}),
+    });
+    recarregar();
+    aoFechar();
+  }
+
+  const paciente = sessao.paciente ? primeiroNome(sessao.paciente.nome) : sessao.titulo;
+  return (
+    <Dialog open={aberta} onOpenChange={(o) => (!o ? aoFechar() : undefined)}>
+      <DialogContent className="max-w-lg" data-testid="janela-proxima-sessao">
+        <DialogHeader>
+          <DialogTitle>{t("Próxima sessão de {nome}").replace("{nome}", paciente)}</DialogTitle>
+          <DialogDescription>
+            {t("Mesmo tipo de atendimento e mesmo profissional. Escolha o dia e um horário livre.")}
+          </DialogDescription>
+        </DialogHeader>
+        {!sessao.tipo ? (
+          <p className="text-sm text-text-muted">
+            {t("Este horário não tem tipo de atendimento. Marque pela Agenda.")}
+          </p>
+        ) : (
+          <EscolhaDeHorario
+            sessao={sessao}
+            fuso={fuso}
+            aberta={aberta}
+            aPartirDe={1}
+            diaInicial={Math.max(0, diasAteASugerida - 1)}
+            slot={slot}
+            aoEscolher={setSlot}
+          />
+        )}
+        <DialogFooter className="gap-2">
+          <Button variant="ghost" onClick={aoFechar}>
+            {t("Voltar")}
+          </Button>
+          <Button
+            onClick={() => void confirmar().catch(() => undefined)}
+            disabled={!slot || marcar.isPending}
+            data-testid="confirmar-proxima-sessao"
+          >
+            {t("Marcar")}
           </Button>
         </DialogFooter>
       </DialogContent>

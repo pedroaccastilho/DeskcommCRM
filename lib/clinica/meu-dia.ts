@@ -93,3 +93,56 @@ export function valoresParaRepetir(registro: RegistroAnterior | null): Record<st
   }
   return fora;
 }
+
+// ─── Próximo passo, depois de assinar ────────────────────────────────────────
+
+/** O mínimo de um compromisso da agenda (`GET /api/v1/agenda/agendamentos`) para esta conta. */
+export interface CompromissoFuturo {
+  id: string;
+  iniciaEm: string;
+  situacao: string;
+}
+
+/**
+ * A próxima sessão do paciente que já está marcada: a primeira depois de agora que não foi
+ * cancelada, fora a de hoje que acabou de ser atendida. `null` quando ainda não há nenhuma, que é
+ * exatamente quando o profissional precisa marcar.
+ */
+export function proximaJaMarcada(
+  compromissos: readonly CompromissoFuturo[],
+  sessaoAtualId: string,
+  agora: Date,
+): CompromissoFuturo | null {
+  return (
+    compromissos
+      .filter(
+        (c) =>
+          c.id !== sessaoAtualId &&
+          c.situacao !== "cancelled" &&
+          new Date(c.iniciaEm).getTime() > agora.getTime(),
+      )
+      .sort((a, b) => a.iniciaEm.localeCompare(b.iniciaEm))[0] ?? null
+  );
+}
+
+/** O próximo horário ainda aberto do dia, depois do que está na tela. */
+export function proximoDoDia(
+  sessoes: readonly SessaoDoMeuDia[],
+  atualId: string,
+): SessaoDoMeuDia | null {
+  const i = sessoes.findIndex((s) => s.id === atualId);
+  if (i < 0) return null;
+  return (
+    sessoes
+      .slice(i + 1)
+      .find(
+        (s) => s.situacao !== "realizado" && s.situacao !== "faltou" && s.situacao !== "cancelado",
+      ) ?? null
+  );
+}
+
+/**
+ * Quantos dias depois de hoje a janela de marcar abre por padrão: uma semana, o mesmo dia da
+ * semana de hoje, que é como a clínica costuma manter o tratamento.
+ */
+export const DIAS_ATE_A_PROXIMA_SUGERIDA = 7;
