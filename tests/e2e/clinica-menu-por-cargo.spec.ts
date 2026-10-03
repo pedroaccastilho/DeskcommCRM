@@ -121,6 +121,7 @@ test.describe("Menu pronto por cargo com o módulo clínica", () => {
       await expect(nav(membro).getByRole("link", { name: "Agenda", exact: true })).toBeVisible();
       await expect(nav(membro).getByRole("link", { name: "Balcão", exact: true })).toBeVisible();
       await expect(nav(membro).getByRole("link", { name: "Radar", exact: true })).toHaveCount(0);
+      await expect(membro.getByText("Carregando o dia…")).toHaveCount(0, { timeout: ESPERA });
       await membro.screenshot({ path: path.join(EVIDENCIA, "recepcao-no-balcao.png") });
     } finally {
       await membroContexto.close();
