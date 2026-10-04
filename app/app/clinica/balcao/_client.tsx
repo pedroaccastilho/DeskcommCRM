@@ -17,6 +17,7 @@ import {
   JanelaWhatsApp,
   useRecarregarBalcao,
 } from "@/components/clinica/JanelasDaSessao";
+import { PacoteDaSessao } from "@/components/clinica/PacotesDoPaciente";
 import { PacotesParaRenovar } from "@/components/clinica/PacotesParaRenovar";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { Badge } from "@/components/ui/badge";
@@ -432,6 +433,10 @@ function PainelDoPaciente({
           {t(SITUACAO[situacao].rotulo)}
         </Badge>
       </div>
+
+      {sessao.paciente ? (
+        <PacoteDaSessao contactId={sessao.paciente.id} modalidade={sessao.modalidade} podeVender />
+      ) : null}
 
       {situacao === "atrasado" && !faltaLiberada(sessao, agora) ? (
         <p
