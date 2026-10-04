@@ -8,6 +8,22 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.73.0] — 2026-10-04
+
+### Adicionado
+
+- **Na Agenda, a sessão da clínica remarca, manda WhatsApp e marca a próxima sem sair do painel** Com o módulo clínica instalado, o painel que abre ao tocar numa sessão da Agenda ganha as mesmas janelas rápidas do Balcão e do Meu dia: remarcar para um horário livre, mandar WhatsApp com as respostas prontas, marcar a próxima sessão do paciente e, para quem é profissional de saúde, abrir o prontuário. Tudo abre por cima do painel e volta para ele.
+
+- **Com o módulo clínica, uma interface nova e mais simples em /novo, lado a lado com a atual** Com o módulo clínica instalado, o endereço `/novo` abre uma segunda interface sobre o mesmo login e os mesmos dados, para comparar com a atual. Ela mostra só o dia a dia da clínica: Hoje (ou Meu dia, para quem atende), Agenda e Pacientes, e o WhatsApp para a recepção. Cada pessoa vê a tela do seu cargo: o Administrador vê tudo e pode abrir a tela da recepção ou do profissional pelo menu, e o profissional vê a própria agenda e a equipe da sua área. Confirmar, registrar realizado ou falta, remarcar, cancelar com a multa já calculada, mandar WhatsApp, agendar e escrever a evolução abrem numa folha só, sem trocar de tela. A interface atual não muda, e o menu da pessoa tem o caminho de volta.
+
+- **Origem do paciente na clínica** No módulo "clínica", cada paciente passa a ter registrado por onde chegou: WhatsApp, Instagram (influenciador ou anúncio pago), indicação de outro paciente, encaminhamento médico ou outra origem. O administrador mantém a lista de origens em Configurações › Regras da clínica; ela já vem preenchida, aceita origens novas e uma origem só sai da lista desligada, nunca apagada. Quem chega pelo WhatsApp entra como "WhatsApp" sem ninguém precisar registrar, e a recepção pode corrigir. Encaminhamento pede o nome do médico, Instagram pede o influenciador ou o anúncio, e indicação pede o paciente que indicou. Um relatório por período mostra, para cada origem e para cada médico ou influenciador, quantos pacientes novos chegaram, quantos compraram pacote e quanto esses pacotes somam; só gerente e administrador o veem. O campo de origem na ficha do paciente e a tela do relatório chegam numa versão seguinte; até lá, o que muda na tela é a lista de origens nas Regras da clínica.
+
+- **No Balcão e no Meu dia, cada sessão mostra o saldo do pacote e vende ou renova sem sair da tela** Com o módulo clínica instalado, o painel do paciente no Balcão e o modo atendimento do Meu dia mostram o pacote que a sessão vai gastar ("Restam 4 de 10 sessões no pacote. Vale até 12 de novembro."), ou avisam que a sessão é avulsa. Quando não há pacote, ou quando está na hora de renovar, um botão abre a venda já com a modalidade da sessão escolhida, com o aceite da política de cancelamento. Marcar que o paciente compareceu atualiza o saldo na hora.
+
+- **Clínica: plano de tratamento na ficha e retorno de reavaliação marcado sozinho** Ao assinar a avaliação, o profissional informa o número de sessões, a frequência e a data da reavaliação. A ficha e o prontuário do paciente passam a mostrar o plano para toda a equipe, sem conteúdo clínico: "Sessão 6 de 10", a barra de progresso, quem avaliou e a etapa (avaliado, em tratamento, alta). O retorno de reavaliação é marcado na hora na agenda de quem avaliou; se o dia pedido estiver cheio, o sistema reserva o horário livre mais próximo e avisa a recepção. O paciente recebe a confirmação pelo WhatsApp, respeitando a janela de envio do canal. Quando o retorno ou o aviso não saem, uma tarefa aparece para a recepção. A alta assinada no prontuário encerra o plano. Requer o módulo clínica; a tabela nova nasce na próxima atualização, sem passo manual.
+
+- **No Meu dia, depois de assinar a evolução, o profissional marca a próxima sessão sem sair da tela** Com o módulo clínica instalado, assinar a evolução no Meu dia abre o próximo passo. O profissional vê se o paciente já tem a próxima sessão marcada e, se não tiver, marca numa janela com os próprios horários livres, no mesmo tipo de atendimento, já sugerida para daqui a uma semana. Um toque chama o próximo paciente do dia. A janela de remarcar do Balcão passou a mostrar três semanas em vez de duas.
+
 ## [1.72.0] — 2026-10-03
 
 ### Adicionado
@@ -9800,7 +9816,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.72.0...HEAD
+[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.73.0...HEAD
+[1.73.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.72.0...v1.73.0
 [1.72.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.71.0...v1.72.0
 [1.71.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.70.0...v1.71.0
 [1.70.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.69.0...v1.70.0

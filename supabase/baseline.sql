@@ -45070,7 +45070,7 @@ $m$;
 
 -- ---- a provisionadora dos pacotes ----
 -- A definição em vigor está no bloco da migration 9007, mais abaixo: ela repete o corpo da 9004
--- e chama a provisionadora das etapas da sessão no fim. Só a última definição fica no arquivo
+-- e chama as provisionadoras das origens e das etapas da sessão no fim. Só a última definição fica no arquivo
 -- (cerca `baseline-nao-constroi-o-que-derruba`).
 
 -- ---- lançar uma sessão no pacote (ou tirar dele) ----
@@ -45512,6 +45512,222 @@ $f$;
 
 revoke execute on function public.fn_clinica_provisionar_agenda() from public, anon, authenticated;
 grant execute on function public.fn_clinica_provisionar_agenda() to service_role;
+
+-- ---- clínica: origem do paciente (migration 9005, fork TOQ) ----
+--
+-- Espelho exato da migration. Cria só FUNÇÕES; as tabelas nascem quando o módulo é instalado
+-- (e, onde já está, na reaplicação de fn_reaplicar_modulos_instalados mais abaixo). Entra ANTES
+-- da VARREDURA anon, que proíbe create function depois dela.
+--
+-- 9005 — Clínica: origem do paciente (por onde ele chegou) e o relatório por canal.
+--
+-- Faixa 9xxx do fork TOQ. Lei: docs/adr/0002-tabelas-de-modulo-num-banco-so.md.
+-- Regras: `/mnt/project-files/produto/regras-de-negocio.md` §2 (registrar a origem sempre) e o
+-- item 8 do backlog. A TOQ capta pelo WhatsApp, pelo Instagram (influenciador ou anúncio pago),
+-- por indicação (de qual paciente) e por encaminhamento médico (de qual médico).
+--
+-- ── O que muda ──────────────────────────────────────────────────────────────────────────────
+-- 1. `clinica_origens` — a lista de origens da clínica, configurável pelo administrador. Cada uma
+--    tem um TIPO fixo, que diz o que a recepção precisa contar: Instagram e encaminhamento pedem
+--    o detalhe (qual influenciador ou anúncio, qual médico), indicação pede o paciente que
+--    indicou. O tipo é vocabulário do módulo; o nome é da clínica ("Anúncio pago", "@fulana").
+--    A lista padrão nasce na primeira leitura (`lib/clinica/origens-servidor.ts`), não aqui: a
+--    provisionadora só cria o schema.
+-- 2. `clinica_pacientes_origem` — a origem de cada paciente, uma linha por contato, gravada pela
+--    recepção. REFERENCIA `contacts` em vez de pôr coluna no núcleo (D4).
+--
+-- ── "WhatsApp" sozinho, sem gatilho ─────────────────────────────────────────────────────────
+-- O núcleo já grava `contacts.source = 'whatsapp'` quando o contato nasce de uma mensagem. Sem
+-- linha da recepção, a origem do paciente é CALCULADA a partir disso (DIRC "calcular"): a origem
+-- do tipo `whatsapp` da clínica, marcada como automática. A recepção pode corrigir a qualquer
+-- momento (o paciente veio do Instagram e chamou no WhatsApp), e a linha dela vence.
+--
+-- ── O relatório ─────────────────────────────────────────────────────────────────────────────
+-- `fn_clinica_relatorio_origens(org, de, ate)` agrupa os contatos NOVOS do período (criados entre
+-- `de` e `ate`, só pessoas, sem os mesclados) por origem e detalhe, e conta quantos compraram
+-- pacote e quanto os pacotes deles somam. Só o servidor chama (service_role), com a organização
+-- da sessão.
+--
+-- ── Por que recriar a provisionadora dos pacotes ────────────────────────────────────────────
+-- A nova `fn_clinica_provisionar_origens()` é chamada no fim de `fn_clinica_provisionar_pacotes()`
+-- (9004), recriada aqui com o mesmo corpo e uma linha a mais. `fn_clinica_provisionar()` e
+-- `fn_clinica_provisionar_agenda()` não mudam.
+--
+-- ── Destino (DoD 18): extensão ──────────────────────────────────────────────────────────────
+-- Só tabelas e funções do módulo. Sem o módulo, `contacts.source` segue como sempre.
+
+-- ---- a provisionadora das origens ----
+create or replace function public.fn_clinica_provisionar_origens()
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $f$
+begin
+  -- ── a lista de origens da clínica ─────────────────────────────────────────
+  create table if not exists public.clinica_origens (
+    id uuid primary key default gen_random_uuid(),
+    organization_id uuid not null references public.organizations(id) on delete cascade,
+    nome text not null check (length(btrim(nome)) between 2 and 60),
+    tipo text not null
+      check (tipo in ('whatsapp', 'instagram', 'indicacao', 'encaminhamento', 'outro')),
+    ativo boolean not null default true,
+    ordem int not null default 100 check (ordem between 0 and 1000),
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    constraint clinica_origens_nome_unico unique (organization_id, nome)
+  );
+
+  -- ── a origem de cada paciente ─────────────────────────────────────────────
+  create table if not exists public.clinica_pacientes_origem (
+    id uuid primary key default gen_random_uuid(),
+    organization_id uuid not null references public.organizations(id) on delete cascade,
+    -- `cascade`: a origem é um atributo do contato; sem ele, não há o que guardar.
+    contact_id uuid not null references public.contacts(id) on delete cascade,
+    -- `restrict`: origem em uso não some; tirar da lista é desligar (`ativo = false`).
+    origem_id uuid not null references public.clinica_origens(id) on delete restrict,
+    -- Qual influenciador ou anúncio, qual médico. Obrigatório para esses tipos (a rota cobra).
+    detalhe text check (detalhe is null or length(btrim(detalhe)) between 1 and 200),
+    -- O paciente que indicou. `set null`: apagar quem indicou não apaga a origem de quem veio.
+    indicado_por_contact_id uuid references public.contacts(id) on delete set null,
+    registrado_por_user_id uuid references auth.users(id) on delete set null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    constraint clinica_pacientes_origem_um_por_paciente unique (organization_id, contact_id),
+    constraint clinica_pacientes_origem_nao_se_indica check (
+      indicado_por_contact_id is null or indicado_por_contact_id <> contact_id
+    )
+  );
+
+  create index if not exists clinica_pacientes_origem_origem_idx
+    on public.clinica_pacientes_origem (organization_id, origem_id);
+  create index if not exists clinica_pacientes_origem_indicou_idx
+    on public.clinica_pacientes_origem (organization_id, indicado_por_contact_id)
+    where indicado_por_contact_id is not null;
+
+  -- ── RLS ───────────────────────────────────────────────────────────────────
+  -- A origem não é dado clínico nem financeiro: todo membro lê (a agenda e a ficha mostram).
+  -- A lista só o administrador altera. A origem do paciente só o servidor grava, depois de
+  -- conferir o papel (recepção para cima) e que o paciente e quem indicou são desta clínica.
+  alter table public.clinica_origens enable row level security;
+  drop policy if exists clinica_origens_select on public.clinica_origens;
+  create policy clinica_origens_select
+    on public.clinica_origens
+    for select using (organization_id in (select public.fn_user_org_ids()));
+  drop policy if exists clinica_origens_insert on public.clinica_origens;
+  create policy clinica_origens_insert
+    on public.clinica_origens
+    for insert with check (organization_id in (select public.fn_user_org_ids())
+                           and public.fn_role_at_least(organization_id, 'admin'));
+  drop policy if exists clinica_origens_update on public.clinica_origens;
+  create policy clinica_origens_update
+    on public.clinica_origens
+    for update using (organization_id in (select public.fn_user_org_ids())
+                      and public.fn_role_at_least(organization_id, 'admin'))
+    with check (organization_id in (select public.fn_user_org_ids())
+                and public.fn_role_at_least(organization_id, 'admin'));
+  revoke all on public.clinica_origens from anon;
+
+  alter table public.clinica_pacientes_origem enable row level security;
+  drop policy if exists clinica_pacientes_origem_select on public.clinica_pacientes_origem;
+  create policy clinica_pacientes_origem_select
+    on public.clinica_pacientes_origem
+    for select using (organization_id in (select public.fn_user_org_ids()));
+  revoke all on public.clinica_pacientes_origem from anon;
+
+  comment on table public.clinica_origens is
+    'Origens de paciente da clínica (WhatsApp, Instagram, indicação, encaminhamento médico, outras). O tipo diz que detalhe a recepção registra. Só o administrador altera; tirar da lista é desligar.';
+  comment on table public.clinica_pacientes_origem is
+    'Por onde o paciente chegou, registrado pela recepção, com o detalhe (influenciador, anúncio, médico) ou quem indicou. Sem linha, a origem é calculada de contacts.source (whatsapp). Só o servidor escreve.';
+end;
+$f$;
+
+revoke execute on function public.fn_clinica_provisionar_origens() from public, anon, authenticated;
+grant execute on function public.fn_clinica_provisionar_origens() to service_role;
+
+-- ---- o relatório por origem ----
+-- Contatos NOVOS do período (só pessoas, sem mesclados), agrupados pela origem efetiva: a da
+-- recepção ou, sem ela, a do tipo `whatsapp` quando o núcleo registrou o contato pelo WhatsApp.
+-- `origem_id` NULL = sem origem registrada. Conta os que compraram pacote (qualquer data depois
+-- de chegar) e a soma do valor desses pacotes, sem os cancelados.
+create or replace function public.fn_clinica_relatorio_origens(
+  p_org uuid,
+  p_de timestamptz,
+  p_ate timestamptz
+)
+returns table (
+  origem_id uuid,
+  detalhe text,
+  automatica boolean,
+  novos int,
+  com_pacote int,
+  pacotes int,
+  pacotes_valor_cents bigint
+)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $f$
+#variable_conflict use_column
+begin
+  return query
+  with novos as (
+    select c.id, c.source
+      from public.contacts c
+     where c.organization_id = p_org
+       and c.created_at >= p_de
+       and c.created_at < p_ate
+       and c.kind = 'person'
+       and c.is_merged_into is null
+  ),
+  whatsapp as (
+    select o.id
+      from public.clinica_origens o
+     where o.organization_id = p_org and o.tipo = 'whatsapp'
+     order by o.ativo desc, o.ordem, o.created_at
+     limit 1
+  ),
+  efetiva as (
+    select n.id as contact_id,
+           coalesce(po.origem_id, case when n.source = 'whatsapp' then (select w.id from whatsapp w) end)
+             as origem_id,
+           case when po.id is null then null else nullif(btrim(po.detalhe), '') end as detalhe,
+           (po.id is null and n.source = 'whatsapp') as automatica
+      from novos n
+      left join public.clinica_pacientes_origem po
+        on po.organization_id = p_org and po.contact_id = n.id
+  ),
+  vendas as (
+    select p.contact_id, count(*)::int as qtd, coalesce(sum(p.valor_cents), 0)::bigint as valor
+      from public.clinica_pacotes p
+     where p.organization_id = p_org
+       and p.status <> 'cancelado'
+       and p.contact_id in (select e.contact_id from efetiva e)
+     group by p.contact_id
+  )
+  select e.origem_id,
+         e.detalhe,
+         e.automatica,
+         count(*)::int,
+         count(v.contact_id)::int,
+         coalesce(sum(v.qtd), 0)::int,
+         coalesce(sum(v.valor), 0)::bigint
+    from efetiva e
+    left join vendas v on v.contact_id = e.contact_id
+   group by e.origem_id, e.detalhe, e.automatica;
+end;
+$f$;
+
+revoke execute on function public.fn_clinica_relatorio_origens(uuid, timestamptz, timestamptz)
+  from public, anon, authenticated;
+grant execute on function public.fn_clinica_relatorio_origens(uuid, timestamptz, timestamptz)
+  to service_role;
+
+-- ---- a provisionadora dos pacotes passa a chamar a das origens (9005) ----
+-- A definição em vigor está no bloco da migration 9007, mais abaixo: ela repete o corpo da 9004,
+-- chama a provisionadora das origens e depois a das etapas da sessão. Só a última definição fica
+-- no arquivo (cerca `baseline-nao-constroi-o-que-derruba`).
 
 -- ---- clínica: o plano de tratamento e o retorno de reavaliação (migration 9006, fork TOQ) ----
 -- Cria a auxiliar do plano e recria a provisionadora do módulo com uma linha a mais (só a última

@@ -14237,6 +14237,18 @@ export const DICIONARIO: Traducoes = {
   "realizadas": { es: "realizadas" },
   "sessão": { es: "sesión" },
   "vale até": { es: "vale hasta" },
+  // Origem do paciente (fork TOQ, migration 9005)
+  "Origens dos pacientes": { es: "Orígenes de los pacientes" },
+  "A recepção escolhe uma destas no cadastro do paciente. Quem chega pelo WhatsApp entra como WhatsApp sozinho, e a recepção pode corrigir.":
+    {
+      es: "La recepción elige una de estas en el registro del paciente. Quien llega por WhatsApp entra como WhatsApp automáticamente, y la recepción puede corregirlo.",
+    },
+  "Não foi possível carregar as origens.": { es: "No fue posible cargar los orígenes." },
+  "Nova origem": { es: "Nuevo origen" },
+  "Ex.: Panfleto na academia": { es: "Ej.: Folleto en el gimnasio" },
+  Instagram: { es: "Instagram" },
+  "Indicação de paciente": { es: "Recomendación de paciente" },
+  "Encaminhamento médico": { es: "Derivación médica" },
 };
 
 /**

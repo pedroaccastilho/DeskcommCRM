@@ -1022,6 +1022,10 @@ export const AUDIT_ACTIONS = [
   "clinica.pacote_congelado",
   "clinica.pacote_prorrogado",
   "clinica.pacote_cancelado",
+  // Origem do paciente (fork TOQ, migration 9005): a lista de origens e o registro da recepção.
+  "clinica.origem_cadastrada",
+  "clinica.origem_alterada",
+  "clinica.paciente_origem_registrada",
   // Etapas do dia da sessão (fork TOQ, migration 9007): quem marcou chegada, início do
   // atendimento ou desfez, e quando.
   "clinica.sessao_etapa_marcada",
