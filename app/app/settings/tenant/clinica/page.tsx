@@ -29,6 +29,14 @@ export default async function Page() {
           {t("Só quem está cadastrado e ativo aqui lê e assina o prontuário dos pacientes.")}
         </p>
       </div>
+      <p className="bg-surface-subtle rounded-md border border-border p-3 text-sm">
+        {t(
+          "O cadastro da equipe agora fica em Equipe, na interface nova: lá você escolhe os perfis de cada pessoa (Médico, Fisioterapeuta, Gerente, Financeiro…) e o registro no conselho vai junto.",
+        )}{" "}
+        <a href="/novo/equipe" className="font-semibold underline">
+          {t("Abrir a Equipe")}
+        </a>
+      </p>
       <ProfissionaisDaClinica podeEditar={ROLE_RANK[org.role] >= ROLE_RANK.admin} />
     </div>
   );
