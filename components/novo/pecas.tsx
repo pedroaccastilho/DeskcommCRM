@@ -49,7 +49,7 @@ export function Avatar({
         width: tamanho,
         height: tamanho,
         fontSize: Math.round(tamanho * 0.38),
-        background: claro ? "var(--n-papel)" : tomDo(nome),
+        background: claro ? "var(--n-trilho-tinta)" : tomDo(nome),
       }}
     >
       {iniciais(nome)}
