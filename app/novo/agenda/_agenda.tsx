@@ -129,7 +129,7 @@ export function Agenda() {
                 onClick={() => setDia(d)}
                 className={`flex flex-col items-center rounded-2xl py-2 text-xs font-semibold transition-colors ${
                   ativo
-                    ? "bg-[var(--n-tinta)] text-[var(--n-papel)]"
+                    ? "bg-[var(--n-forte)] text-[var(--n-forte-tinta)]"
                     : d === hoje
                       ? "bg-[var(--n-acao-suave)] text-[var(--n-acao)]"
                       : "bg-[var(--n-cartao)]"
