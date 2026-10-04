@@ -1244,12 +1244,17 @@ jobs:
       # conta "Sessão 2 de 10". Semeia tipo, jornada e sessão pelo service role e
       # devolve a jornada anterior do administrador no fim.
       #
+      # `clinica-origem-na-tela` entrou em 2026-10-03 (fork TOQ): a recepção
+      # registra a origem na ficha e no "Novo contato", e a gerência lê o
+      # relatório por origem e por médico. Instala a clínica.
+      #
       # PREVISÃO, não medida: a PARTE_5 volta para baixo do orçamento e esta
       # fica bem abaixo dele; o e2e do PR que a criou mede.
       SPECS_PARTE_7: >-
         clinica-regras.spec.ts
         clinica-pacotes.spec.ts
         clinica-origens.spec.ts
+        clinica-origem-na-tela.spec.ts
         clinica-prontuario.spec.ts
         clinica-cancelar-com-multa.spec.ts
         clinica-pacotes-na-ficha.spec.ts
