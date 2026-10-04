@@ -1,8 +1,12 @@
 /**
  * Pedaços comuns às rotas do módulo clínica (ADR-0002, migration 9001).
  *
- * Antes de o módulo ser instalado as tabelas não existem e o Postgres devolve 42P01; as rotas
- * traduzem isso numa mensagem clara, nunca num 500 cru (mesmo padrão de honorários).
+ * Antes de o módulo ser instalado as tabelas não existem; as rotas traduzem isso numa mensagem
+ * clara, nunca num 500 cru (mesmo padrão de honorários). Quem responde depende do caminho: o
+ * Postgres devolve 42P01 numa função SQL que lê a tabela, e o PostgREST, numa leitura pelo client
+ * (`.from("clinica_…")`), devolve PGRST205 ("Could not find the table … in the schema cache") sem
+ * chegar ao Postgres. Só o 42P01 era reconhecido, e `/api/v1/clinica/eu` respondia 500 em toda
+ * instalação sem o módulo — o que a lista de contatos passou a perguntar com o campo de origem.
  */
 import { fail } from "@/lib/api/wrappers";
 
@@ -11,7 +15,7 @@ export const MODULO_CLINICA_NAO_INSTALADO =
   "instalar em Configurações da instalação › Módulos.";
 
 export function moduloClinicaNaoInstalado(error: { code?: string } | null): boolean {
-  return error?.code === "42P01";
+  return error?.code === "42P01" || error?.code === "PGRST205";
 }
 
 /** Os erros com nome que os gatilhos do prontuário levantam, em linguagem de quem usa. */
