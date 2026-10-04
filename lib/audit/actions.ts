@@ -636,6 +636,11 @@ export const AUDIT_ACTIONS = [
   // prova (imutável, assinado); a auditoria guarda só o fato, nunca o conteúdo.
   "clinica.profissional_cadastrado",
   "clinica.profissional_alterado",
+  // Cargo no cadastro do usuário (fork TOQ, migration 9008): o administrador escolhe o cargo
+  // (papel, menu e cadastro de profissional juntos) e convida já com o cargo.
+  "clinica.cargo_definido",
+  "clinica.convite_com_cargo",
+  "clinica.cargo_do_convite_aplicado",
   "prontuario.registro_assinado",
   "prontuario.exportado",
   "fidelidade.ponto_dado",

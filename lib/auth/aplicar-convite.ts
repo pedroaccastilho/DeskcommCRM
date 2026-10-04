@@ -4,6 +4,7 @@ import { audit } from "@/lib/audit";
 import { cookieSecure } from "@/lib/supabase/cookie-secure";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { InvitePayload } from "@/lib/auth/invite-token";
+import { depoisDoAceite } from "@/lib/auth/convite-de-modulo";
 
 /**
  * O ATO de virar membro: grava o vínculo, audita e escolhe a organização ativa.
@@ -106,6 +107,14 @@ export async function aplicarConvite(params: {
     .eq("organization_id", payload.organization_id)
     .is("accepted_at", null)
     .is("revoked_at", null);
+
+  // O que um módulo guardou junto do convite (hoje, o cargo de saúde da clínica). Nunca lança.
+  await depoisDoAceite({
+    inviteId: payload.invite_id,
+    orgId: payload.organization_id,
+    userId,
+    requestId,
+  });
 
   // Sem isto a pessoa entra sem organização escolhida e o app não sabe qual
   // mostrar — o mesmo motivo pelo qual o botão de aceite sempre gravou aqui.

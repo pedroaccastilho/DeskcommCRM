@@ -1,6 +1,8 @@
 /** Validação (Zod) do que entra pelas rotas do módulo clínica. */
 import { z } from "zod";
 
+import { CARGOS, cargoDeSaudeDe, problemaNosCargos } from "@/lib/clinica/cargos";
+
 import {
   CONSELHOS,
   MODALIDADES,
@@ -50,3 +52,37 @@ export const criarRegistroSchema = z
       });
     }
   });
+
+/**
+ * Os cargos escolhidos no cadastro do usuário (migration 9008): um de gestão e um de saúde no
+ * máximo, ou só Recepção (`problemaNosCargos`). Com cargo de saúde, o registro do conselho vem
+ * junto: nome como consta no conselho, número e UF. O conselho e as modalidades saem do cargo
+ * (`lib/clinica/cargos.ts`), não do formulário.
+ */
+const registroDoConselho = {
+  nome_profissional: z.string().trim().min(2).max(200).optional(),
+  registro_numero: z.string().trim().min(1).max(30).optional(),
+  registro_uf: z.enum(UFS).optional(),
+};
+
+const listaDeCargos = z.array(z.enum(CARGOS)).superRefine((cargos, ctx) => {
+  const problema = problemaNosCargos(cargos);
+  if (problema) ctx.addIssue({ code: "custom", message: problema });
+});
+
+export const definirCargosSchema = z.object({ cargos: listaDeCargos, ...registroDoConselho });
+export type DefinirCargos = z.infer<typeof definirCargosSchema>;
+
+export const convidarComCargosSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().email(),
+    cargos: listaDeCargos,
+    ...registroDoConselho,
+  })
+  .refine(
+    (v) =>
+      !cargoDeSaudeDe(v.cargos) ||
+      Boolean(v.nome_profissional && v.registro_numero && v.registro_uf),
+    { message: "Para cargo de saúde, preencha o nome no conselho, o número e a UF do registro." },
+  );
+export type ConvidarComCargos = z.infer<typeof convidarComCargosSchema>;
