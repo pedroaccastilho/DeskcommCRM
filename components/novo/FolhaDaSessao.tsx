@@ -21,6 +21,7 @@ import type { PoliticaDaAgenda, SessaoDaGrade } from "@/lib/clinica/agenda";
 import { faltaLiberada, previaDaMulta } from "@/lib/clinica/balcao";
 import { ROTULO_DA_MODALIDADE } from "@/lib/clinica/vocabulario";
 import { formatCents, moedaServidaOu } from "@/lib/money";
+import { escreveEvolucao } from "@/lib/novo/cargo";
 import { momentoDa } from "@/lib/novo/hoje";
 
 import { useNovo } from "./Casca";
@@ -66,7 +67,7 @@ export function FolhaDaSessao({
 }) {
   const t = useT();
   const tag = useTagDeIdioma();
-  const { fuso, role, eu } = useNovo();
+  const { fuso, role, eu, cargo } = useNovo();
   const [passo, setPasso] = React.useState<Passo>("inicio");
   const [evolucao, setEvolucao] = React.useState(false);
   const recarregar = useRecarregar();
@@ -228,19 +229,21 @@ export function FolhaDaSessao({
                   <span className="n-fraco">›</span>
                 </Link>
               )}
-              {profissional && sessao.paciente && sessao.modalidade && (
-                <button
-                  type="button"
-                  className="n-linha-clicavel items-center gap-3 px-2 py-2.5"
-                  onClick={() => setEvolucao(true)}
-                >
-                  <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--n-acao-suave)] text-[var(--n-acao)]">
-                    ✎
-                  </span>
-                  <span className="flex-1 font-semibold">{t("Escrever a evolução")}</span>
-                  <span className="n-fraco">›</span>
-                </button>
-              )}
+              {escreveEvolucao(cargo, profissional, sessao.modalidade) &&
+                sessao.paciente &&
+                sessao.modalidade && (
+                  <button
+                    type="button"
+                    className="n-linha-clicavel items-center gap-3 px-2 py-2.5"
+                    onClick={() => setEvolucao(true)}
+                  >
+                    <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--n-acao-suave)] text-[var(--n-acao)]">
+                      ✎
+                    </span>
+                    <span className="flex-1 font-semibold">{t("Escrever a evolução")}</span>
+                    <span className="n-fraco">›</span>
+                  </button>
+                )}
               {aberta && recepcao && (
                 <button
                   type="button"
@@ -394,7 +397,7 @@ function PassoRemarcar({
                   }}
                   className={`flex min-w-[58px] flex-col items-center rounded-2xl px-2 py-2 text-xs font-semibold ${
                     i === indice
-                      ? "bg-[var(--n-tinta)] text-[var(--n-papel)]"
+                      ? "bg-[var(--n-forte)] text-[var(--n-forte-tinta)]"
                       : "bg-[var(--n-papel)]"
                   }`}
                 >

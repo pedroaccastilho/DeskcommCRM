@@ -60,7 +60,7 @@ import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 export function Hoje() {
   const t = useT();
   const tag = useTagDeIdioma();
-  const { fuso, cargo, meuId, meuNome, soAsMinhas: soMinhas, role, eu } = useNovo();
+  const { fuso, cargo, meuId, meuNome, soAsMinhas: soMinhas, role, veProntuario } = useNovo();
   const org = useActiveOrg();
   const agora = useAgora();
   const dia = diaLocalISO(agora, fuso);
@@ -69,7 +69,7 @@ export function Hoje() {
   const recepcao = !soMinhas && role !== "viewer";
   const renovar = usePacotesParaRenovar(recepcao);
   const multas = useMultasPendentes(recepcao);
-  const pendencias = usePendencias(Boolean(eu?.profissional));
+  const pendencias = usePendencias(veProntuario);
   const conversas = useConversationCounts(recepcao ? (org?.orgId ?? null) : null);
 
   const [filtroProf, setFiltroProf] = React.useState<string | null>(null);
@@ -113,7 +113,7 @@ export function Hoje() {
 
   const [verEncerradas, setVerEncerradas] = React.useState(false);
   const moeda = moedaServidaOu(org?.currency);
-  const lateral = recepcao || Boolean(eu?.profissional);
+  const lateral = recepcao || veProntuario;
 
   return (
     <div className="n-conteudo" data-testid="novo-hoje">
@@ -258,7 +258,7 @@ export function Hoje() {
 
         {lateral && (
           <aside className="grid content-start gap-5">
-            {eu?.profissional && (
+            {veProntuario && (
               <PainelLateral
                 titulo="Evoluções para escrever"
                 vazio="Nenhuma evolução pendente. Tudo em dia."
@@ -380,7 +380,7 @@ function Proxima({
     <button
       type="button"
       onClick={aoAbrir}
-      className="n-entra group relative overflow-hidden rounded-[28px] bg-[var(--n-tinta)] p-6 text-left text-[var(--n-papel)] shadow-[var(--n-sombra-alta)] sm:p-8"
+      className="n-entra group relative overflow-hidden rounded-[28px] bg-[var(--n-destaque)] p-6 text-left text-[var(--n-destaque-tinta)] shadow-[var(--n-sombra-alta)] sm:p-8"
       data-testid="novo-proxima"
     >
       <span
@@ -409,7 +409,7 @@ function Proxima({
           </span>
         </span>
       </span>
-      <span className="relative mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--n-papel)] px-5 py-2.5 text-sm font-bold text-[var(--n-tinta)] transition-transform group-hover:translate-x-1">
+      <span className="relative mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--n-destaque-tinta)] px-5 py-2.5 text-sm font-bold text-[var(--n-destaque)] transition-transform group-hover:translate-x-1">
         {momentoDa(sessao, agora) === "sem_confirmacao"
           ? t("Confirmar ou lembrar")
           : t("Ver detalhes")}{" "}

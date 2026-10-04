@@ -22,10 +22,12 @@ import {
   menuDoCargo,
   modalidadesDaVisao,
   veConfiguracoes,
+  veProntuario,
   type Cargo,
   type ItemDoMenu,
 } from "@/lib/novo/cargo";
-import { CalendarBlank, Gear, Sun, UsersThree, WhatsappLogo } from "@/lib/ui/icons";
+import { useTheme, type Theme } from "@/lib/theme";
+import { CalendarBlank, Gear, Moon, Sun, UsersThree, WhatsappLogo } from "@/lib/ui/icons";
 
 import { useEu, type Eu } from "./dados";
 import { Avatar } from "./pecas";
@@ -45,6 +47,8 @@ interface Contexto {
   modalidades: readonly string[] | null;
   /** A interface nova mostra só as sessões de quem está logado? */
   soAsMinhas: boolean;
+  /** Prontuário na tela (ler e escrever evolução): profissional ativo, fora da tela da recepção. */
+  veProntuario: boolean;
 }
 
 const Ctx = React.createContext<Contexto | null>(null);
@@ -127,6 +131,7 @@ export function Casca({
     eu: eu.data,
     modalidades: modalidadesDaVisao(cargo, profissional),
     soAsMinhas: atende(cargo),
+    veProntuario: veProntuario(cargo, profissional),
   };
 
   const pathname = usePathname() ?? "/novo";
@@ -155,6 +160,7 @@ export function Casca({
           );
         })}
         <div className="mt-auto flex flex-col items-center gap-1">
+          <BotaoDoTema />
           {veConfiguracoes(role) && (
             <a
               href="/app/settings"
@@ -217,12 +223,12 @@ function Monograma({ marca }: { marca: { nome: string; logoUrl: string | null } 
       <img
         src={marca.logoUrl}
         alt={marca.nome}
-        className="h-12 w-12 rounded-2xl bg-[var(--n-papel)] object-contain p-1.5"
+        className="h-12 w-12 rounded-2xl bg-[var(--n-trilho-tinta)] object-contain p-1.5"
       />
     );
   }
   return (
-    <span className="n-titulo grid h-12 w-12 place-items-center rounded-2xl bg-[var(--n-papel)] text-xl text-[var(--n-tinta)]">
+    <span className="n-titulo grid h-12 w-12 place-items-center rounded-2xl bg-[var(--n-trilho-tinta)] text-xl text-[var(--n-trilho-fundo)]">
       {marca.nome.slice(0, 1)}
     </span>
   );
@@ -288,6 +294,7 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
               ))}
             </div>
           )}
+          <EscolhaDoTema />
           <div className="border-t border-[var(--n-linha)] pt-2">
             {veConfiguracoes(role) && (
               <a href="/app/settings" className="n-linha-clicavel px-2 py-2 text-sm">
@@ -307,6 +314,58 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Um toque troca claro ↔ escuro. O tema é o MESMO da interface atual (`lib/theme`, gravado no
+ * navegador): quem escolhe escuro aqui encontra escuro lá também.
+ */
+function BotaoDoTema() {
+  const t = useT();
+  const { resolvedTheme, toggle } = useTheme();
+  const escuro = resolvedTheme === "dark";
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      className="n-porta"
+      aria-label={escuro ? t("Usar o tema claro") : t("Usar o tema escuro")}
+      data-testid="novo-trocar-tema"
+    >
+      {escuro ? <Sun size={22} /> : <Moon size={22} />}
+      {escuro ? t("Claro") : t("Escuro")}
+    </button>
+  );
+}
+
+const TEMAS: { valor: Theme; rotulo: string }[] = [
+  { valor: "light", rotulo: "Claro" },
+  { valor: "dark", rotulo: "Escuro" },
+  { valor: "system", rotulo: "Automático" },
+];
+
+/** No menu da pessoa (o único lugar no celular): claro, escuro ou o que o aparelho usar. */
+function EscolhaDoTema() {
+  const t = useT();
+  const { theme, setTheme } = useTheme();
+  return (
+    <div className="border-t border-[var(--n-linha)] py-2">
+      <p className="n-fraco px-2 pb-1.5 text-xs font-semibold">{t("Aparência")}</p>
+      <div className="flex gap-1.5 px-1">
+        {TEMAS.map((o) => (
+          <button
+            key={o.valor}
+            type="button"
+            className="n-chip flex-1 justify-center"
+            aria-pressed={theme === o.valor}
+            onClick={() => setTheme(o.valor)}
+          >
+            {t(o.rotulo)}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

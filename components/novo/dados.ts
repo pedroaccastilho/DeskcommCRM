@@ -15,6 +15,7 @@ import type { PoliticaDaAgenda, SessaoDaGrade } from "@/lib/clinica/agenda";
 import type { PacoteDaFicha } from "@/lib/clinica/pacotes-na-ficha";
 import type { Modalidade, TipoDeRegistro } from "@/lib/clinica/vocabulario";
 import type { CadastroDeProfissional } from "@/lib/novo/cargo";
+import type { OrigemDaClinica, TipoDeOrigem } from "@/lib/clinica/origens";
 import type { Contact } from "@/lib/types/contacts";
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 
@@ -250,6 +251,39 @@ export function useBuscaDePacientes(termo: string) {
       return (await apiClient.get<{ data: Contact[] }>(`/api/v1/contacts?${qs.toString()}`)).data;
     },
     placeholderData: (anterior) => anterior,
+    retry: false,
+  });
+}
+
+/** As origens da clínica (WhatsApp, Instagram, indicação...). Sem o módulo clínica, 409. */
+export function useOrigensDaClinica() {
+  return useQuery({
+    queryKey: ["clinica", "origens"],
+    queryFn: async () =>
+      (await apiClient.get<{ data: OrigemDaClinica[] }>("/api/v1/clinica/origens")).data,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+}
+
+export interface OrigemDoPacienteNaFicha {
+  origem: { id: string; nome: string; tipo: TipoDeOrigem } | null;
+  detalhe: string | null;
+  indicado_por: { id: string; nome: string } | null;
+  automatica: boolean;
+}
+
+/** Por onde o paciente chegou. `contactId` nulo = cadastro novo, nada a consultar. */
+export function useOrigemDoPaciente(contactId: string | null) {
+  return useQuery({
+    queryKey: ["clinica", "origem-do-paciente", contactId],
+    queryFn: async () =>
+      (
+        await apiClient.get<{ data: OrigemDoPacienteNaFicha }>(
+          `/api/v1/clinica/pacientes/${encodeURIComponent(contactId!)}/origem`,
+        )
+      ).data,
+    enabled: contactId !== null,
     retry: false,
   });
 }

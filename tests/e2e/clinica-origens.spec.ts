@@ -9,9 +9,9 @@
  * por origem e por médico, e quantos compraram pacote. "Somente leitura" lê a origem, mas não
  * registra nem vê o relatório.
  *
- * O campo de origem na ficha e a tela do relatório ainda não existem (são da frente de
- * interface): a spec registra e lê pelas mesmas rotas que essas telas vão chamar, com a sessão do
- * navegador. O que tem tela (a lista de origens) é dirigido pela tela.
+ * Esta spec prova as ROTAS, com a sessão do navegador; o campo de origem na ficha, no "Novo
+ * contato" e a tela do relatório são dirigidos pela tela em `clinica-origem-na-tela.spec.ts`. O
+ * que tem tela aqui (a lista de origens) é dirigido pela tela.
  *
  * ⚠️ Instalar é da INSTALAÇÃO e não se desfaz, como em `clinica-prontuario`.
  */

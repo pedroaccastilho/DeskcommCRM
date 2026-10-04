@@ -1,5 +1,6 @@
 /**
- * O MÓDULO CLÍNICA PARA QUEM ESTÁ LOGADO: está instalado? sou profissional de saúde aqui?
+ * O MÓDULO CLÍNICA PARA QUEM ESTÁ LOGADO: está instalado? sou profissional de saúde aqui? quais
+ * são os meus perfis (migration 9008)?
  *
  * É o que a ficha do paciente pergunta para decidir se mostra a aba "Prontuário" e se mostra o
  * formulário de registro. Não decide acesso: quem decide é a RLS (fn_clinica_e_profissional).
@@ -9,6 +10,7 @@ import { randomUUID } from "node:crypto";
 import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { moduloClinicaNaoInstalado } from "@/lib/clinica/api";
+import { cargosDoUsuario } from "@/lib/clinica/cargos";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -28,15 +30,34 @@ export async function GET(): Promise<Response> {
 
   if (error) {
     if (moduloClinicaNaoInstalado(error)) {
-      return ok({ instalado: false, profissional: null, ve_acessos: false }, { requestId });
+      return ok(
+        { instalado: false, profissional: null, ve_acessos: false, cargos: [] },
+        { requestId },
+      );
     }
     return fail("internal_error", error.message, 500, { requestId });
   }
+
+  // Os perfis de quem está logado (migration 9008): os gravados ou, sem nenhum, os calculados.
+  // Sem a 9008 a tabela não existe; aí valem os calculados.
+  const gravados = await supabase
+    .from("clinica_cargos_membro")
+    .select("cargo")
+    .eq("organization_id", authz.org.orgId)
+    .eq("user_id", authz.user.id);
+  if (gravados.error && !moduloClinicaNaoInstalado(gravados.error)) {
+    return fail("internal_error", gravados.error.message, 500, { requestId });
+  }
+  const cargos = cargosDoUsuario(
+    authz.org.role,
+    data,
+    (gravados.data ?? []).map((g) => g.cargo as string),
+  );
 
   // Sessão de suporte nunca lê prontuário (a RLS garante); a tela já não oferece o formulário.
   const profissional = data && data.ativo && !authz.user.support ? data : null;
   // A trilha de acessos é do administrador da clínica (RLS de `prontuario_acessos`), seja ele
   // profissional de saúde ou não. Sessão de suporte não vê.
   const ve_acessos = authz.org.role === "admin" && !authz.user.support;
-  return ok({ instalado: true, profissional, ve_acessos }, { requestId });
+  return ok({ instalado: true, profissional, ve_acessos, cargos }, { requestId });
 }

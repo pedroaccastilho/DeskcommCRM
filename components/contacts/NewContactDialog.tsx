@@ -20,6 +20,7 @@ import { normalizarTags } from "@/lib/contacts/tag-normalizada";
 import { contactCreateSchemaDoPais, type ContactCreate } from "@/lib/schemas/contacts";
 import type { Contact } from "@/lib/types/contacts";
 import { useCreateContact } from "@/hooks/contacts/useCreateContact";
+import { useOrigemNoCadastro } from "@/components/clinica/OrigemDoPaciente";
 
 interface FormShape {
   name?: string;
@@ -53,6 +54,8 @@ export function NewContactDialog({ open, onOpenChange, nomeInicial, onCriado }: 
   const perfil = perfilDoPais(useActiveOrg()?.country);
   const create = useCreateContact();
   const [serverError, setServerError] = useState<string | null>(null);
+  // Módulo clínica: por onde o paciente chegou. Sem o módulo, o campo não aparece.
+  const origem = useOrigemNoCadastro({ aoMudar: () => setServerError(null) });
 
   const form = useForm<FormShape>({
     defaultValues: { name: nomeInicial ?? "", email: "", phone_number: "", cpf: "", tagsRaw: "" },
@@ -79,11 +82,18 @@ export function NewContactDialog({ open, onOpenChange, nomeInicial, onCriado }: 
       setServerError(first?.message ?? t("Dados inválidos"));
       return;
     }
+    const recusaDaOrigem = origem.recusa();
+    if (recusaDaOrigem) {
+      setServerError(recusaDaOrigem);
+      return;
+    }
 
     try {
       const resposta = await create.mutateAsync(parsed.data as ContactCreate);
+      if (resposta?.data?.contact) await origem.gravar(resposta.data.contact.id);
       toast.success(t("Contato criado"));
       form.reset();
+      origem.limpar();
       onOpenChange(false);
       // `.data` é o envelope do `ok()`, e dentro dele mora `{ contact, action }`.
       // Entregar `resposta.data` aqui devolveria esse envelope como se fosse o
@@ -134,6 +144,7 @@ export function NewContactDialog({ open, onOpenChange, nomeInicial, onCriado }: 
             <Label htmlFor="tagsRaw">{t("Tags (separadas por vírgula)")}</Label>
             <Input id="tagsRaw" placeholder="vip, recompra" {...form.register("tagsRaw")} />
           </div>
+          {origem.campo}
           {serverError && (
             <p className="text-sm text-error-fg">{serverError}</p>
           )}

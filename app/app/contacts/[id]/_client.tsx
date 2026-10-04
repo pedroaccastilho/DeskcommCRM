@@ -43,6 +43,7 @@ import { DialButton } from "@/components/voice/DialButton";
 import { ProntuarioDoPaciente, useClinicaEu } from "@/components/clinica/ProntuarioDoPaciente";
 import { PlanoDeTratamento } from "@/components/clinica/PlanoDeTratamento";
 import { ResumoDoPaciente } from "@/components/clinica/ResumoDoPaciente";
+import { OrigemNaFicha } from "@/components/clinica/OrigemDoPaciente";
 import { PacotesDoPaciente } from "@/components/clinica/PacotesDoPaciente";
 
 interface Props {
@@ -182,6 +183,15 @@ export function ContactDetailClient({ contactId, abaInicial, sessaoInicial }: Pr
             {contact.is_blocked && <Badge variant="warning">{t("Bloqueado")}</Badge>}
             {contact.is_anonymized && <Badge variant="destructive">{t("Anonimizado")}</Badge>}
           </div>
+          {/* Módulo clínica: por onde o paciente chegou, e quem indicou. */}
+          <OrigemNaFicha
+            contactId={contactId}
+            ativo={temProntuario && !contact.is_anonymized}
+            podeMudar={
+              user.support?.access_mode !== "support_readonly" &&
+              Boolean(activeOrg && ROLE_RANK[activeOrg.role] >= ROLE_RANK.agent)
+            }
+          />
         </div>
         {!contact.is_anonymized && user.support?.access_mode !== "support_readonly" && (
           <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -317,7 +327,11 @@ export function ContactDetailClient({ contactId, abaInicial, sessaoInicial }: Pr
                 anúncio — mesmo com o `utm_source` da campanha gravado ao lado.
               */}
               <div>
-                <dt className="text-xs uppercase text-muted-foreground">{t("Origem")}</dt>
+                {/* Com o módulo clínica, "Origem" é a do paciente, no cabeçalho; aqui fica o canal
+                    técnico por onde o cadastro entrou, para as duas não se contradizerem. */}
+                <dt className="text-xs uppercase text-muted-foreground">
+                  {temProntuario ? t("Canal do cadastro") : t("Origem")}
+                </dt>
                 <dd className="mt-1">{origem.origem}</dd>
               </div>
               <NivelDaOrigem rotulo={t("Campanha")} valor={origem.campanha} />
