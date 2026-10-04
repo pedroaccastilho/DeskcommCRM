@@ -394,7 +394,7 @@ function PassoRemarcar({
                   }}
                   className={`flex min-w-[58px] flex-col items-center rounded-2xl px-2 py-2 text-xs font-semibold ${
                     i === indice
-                      ? "bg-[var(--n-tinta)] text-[var(--n-papel)]"
+                      ? "bg-[var(--n-forte)] text-[var(--n-forte-tinta)]"
                       : "bg-[var(--n-papel)]"
                   }`}
                 >

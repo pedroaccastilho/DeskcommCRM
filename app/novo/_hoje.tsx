@@ -380,7 +380,7 @@ function Proxima({
     <button
       type="button"
       onClick={aoAbrir}
-      className="n-entra group relative overflow-hidden rounded-[28px] bg-[var(--n-tinta)] p-6 text-left text-[var(--n-papel)] shadow-[var(--n-sombra-alta)] sm:p-8"
+      className="n-entra group relative overflow-hidden rounded-[28px] bg-[var(--n-destaque)] p-6 text-left text-[var(--n-destaque-tinta)] shadow-[var(--n-sombra-alta)] sm:p-8"
       data-testid="novo-proxima"
     >
       <span
@@ -409,7 +409,7 @@ function Proxima({
           </span>
         </span>
       </span>
-      <span className="relative mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--n-papel)] px-5 py-2.5 text-sm font-bold text-[var(--n-tinta)] transition-transform group-hover:translate-x-1">
+      <span className="relative mt-6 inline-flex items-center gap-2 rounded-full bg-[var(--n-destaque-tinta)] px-5 py-2.5 text-sm font-bold text-[var(--n-destaque)] transition-transform group-hover:translate-x-1">
         {momentoDa(sessao, agora) === "sem_confirmacao"
           ? t("Confirmar ou lembrar")
           : t("Ver detalhes")}{" "}
