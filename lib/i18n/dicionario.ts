@@ -14221,6 +14221,11 @@ export const DICIONARIO: Traducoes = {
   "Sem preço": { es: "Sin precio" },
   "À venda": { es: "A la venta" },
   // ─── INTERFACE NOVA DA CLÍNICA (/novo) ───
+  "Aparência": { es: "Apariencia" },
+  Claro: { es: "Claro" },
+  Escuro: { es: "Oscuro" },
+  "Usar o tema claro": { es: "Usar el tema claro" },
+  "Usar o tema escuro": { es: "Usar el tema oscuro" },
   "A interface nova mostra a agenda, os pacientes e o prontuário da clínica. Peça ao administrador para instalar o módulo em Configurações da instalação › Módulos.": { es: "La interfaz nueva muestra la agenda, los pacientes y la historia clínica. Pide al administrador que instale el módulo en Configuración de la instalación › Módulos." },
   "Abrir a ficha completa na versão atual": { es: "Abrir la ficha completa en la versión actual" },
   "Configurações (abre na versão atual)": { es: "Configuración (se abre en la versión actual)" },
