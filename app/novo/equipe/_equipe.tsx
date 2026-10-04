@@ -16,6 +16,7 @@ import { useNovo } from "@/components/novo/Casca";
 import { mensagemDoErro, useRecarregar } from "@/components/novo/dados";
 import { Avatar, Carregando, Folha, Secao, Vazio } from "@/components/novo/pecas";
 import { apiClient } from "@/lib/api/client";
+import { copyToClipboard } from "@/lib/clipboard";
 import {
   CARGOS,
   ROTULO_DO_CARGO_DO_USUARIO,
@@ -207,9 +208,10 @@ function BotaoCopiarLink({ link }: { link: string }) {
       type="button"
       className="n-botao n-botao-suave n-botao-pequeno"
       onClick={() => {
-        void navigator.clipboard?.writeText(link).then(
-          () => toast.success("Link copiado. Mande para a pessoa pelo WhatsApp."),
-          () => toast.error("Não deu para copiar. Copie o link manualmente."),
+        void copyToClipboard(link).then((copiou) =>
+          copiou
+            ? toast.success("Link copiado. Mande para a pessoa pelo WhatsApp.")
+            : toast.error("Não deu para copiar. Copie o link manualmente."),
         );
       }}
     >
