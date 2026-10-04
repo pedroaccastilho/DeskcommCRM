@@ -9,7 +9,6 @@
 import Link from "next/link";
 import * as React from "react";
 
-import { ApiError } from "@/lib/api/types";
 import {
   ROTULO_DA_MODALIDADE,
   ROTULO_DO_TIPO,
@@ -21,22 +20,18 @@ import { useNovo } from "@/components/novo/Casca";
 import {
   useGradeDoDia,
   usePaciente,
+  useOrigemDoPaciente,
   usePacotesDoPaciente,
   useProntuario,
   useSessoesDoPaciente,
+  type OrigemDoPacienteNaFicha,
   type RegistroDoProntuario,
 } from "@/components/novo/dados";
 import { FolhaAgendar } from "@/components/novo/FolhaAgendar";
 import { FolhaDeEvolucao } from "@/components/novo/FolhaDeEvolucao";
-import {
-  Avatar,
-  Carregando,
-  PontoDaModalidade,
-  Secao,
-  Vazio,
-  dataCurta,
-  hora,
-} from "@/components/novo/pecas";
+import { FolhaDoPaciente } from "@/components/novo/FolhaDoPaciente";
+import { CartaoDePacotes } from "@/components/novo/PacotesNaFicha";
+import { Avatar, Carregando, Secao, Vazio, dataCurta, hora } from "@/components/novo/pecas";
 import { diaLocalISO } from "@/lib/agenda/fuso";
 import { useT } from "@/lib/i18n/IdiomaProvider";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
@@ -63,6 +58,8 @@ export function Paciente({ contactId }: { contactId: string }) {
   const grade = useGradeDoDia(diaLocalISO(new Date(), fuso), fuso);
   const [agendar, setAgendar] = React.useState(false);
   const [escrever, setEscrever] = React.useState(false);
+  const [editar, setEditar] = React.useState(false);
+  const origem = useOrigemDoPaciente(contactId);
 
   if (paciente.isLoading) {
     return (
@@ -106,8 +103,19 @@ export function Paciente({ contactId }: { contactId: string }) {
             {nascimento !== null && <span>{nascimento} anos</span>}
             {c.email && <span>{c.email}</span>}
           </p>
+          <OrigemETags origem={origem.data ?? null} tags={c.tags ?? []} />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {role !== "viewer" && (
+            <button
+              type="button"
+              className="n-botao n-botao-suave"
+              onClick={() => setEditar(true)}
+              data-testid="novo-editar-paciente"
+            >
+              {t("Editar")}
+            </button>
+          )}
           {ehProfissional && (
             <button
               type="button"
@@ -249,60 +257,7 @@ export function Paciente({ contactId }: { contactId: string }) {
             )}
           </section>
 
-          {!(pacotes.error instanceof ApiError && pacotes.error.status === 403) && (
-            <section className="n-cartao p-5" data-testid="novo-pacotes">
-              <h2 className="mb-3 text-[15px] font-bold">Pacotes</h2>
-              {vigentes.length === 0 ? (
-                <p className="n-suave text-sm">
-                  {t("Nenhum pacote valendo. A venda fica na ficha da versão atual.")}
-                </p>
-              ) : (
-                <ul className="grid gap-4">
-                  {vigentes.map((p) => (
-                    <li key={p.id}>
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="flex items-center gap-2 text-sm font-bold">
-                          <PontoDaModalidade modalidade={p.modalidade} />
-                          {p.nome}
-                        </span>
-                        <span className="n-numero text-sm font-semibold">
-                          {p.sessoes_usadas}/{p.sessoes_total}
-                        </span>
-                      </div>
-                      <div
-                        className="mt-2 flex gap-1"
-                        aria-label={`${p.sessoes_usadas} de ${p.sessoes_total} sessões usadas`}
-                      >
-                        {Array.from({ length: p.sessoes_total }, (_, i) => (
-                          <span
-                            key={i}
-                            className="h-2.5 flex-1 rounded-full"
-                            style={{
-                              background:
-                                i < p.sessoes_usadas
-                                  ? `var(--agenda-modalidade-${p.modalidade})`
-                                  : "var(--n-papel-2)",
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <p
-                        className={`mt-1.5 text-xs ${p.precisa_renovar ? "font-bold text-[var(--n-aviso)]" : "n-suave"}`}
-                      >
-                        {p.precisa_renovar ? `${t("Hora de oferecer a renovação")} · ` : ""}
-                        {t("vale até")}{" "}
-                        {new Intl.DateTimeFormat(tag, {
-                          day: "numeric",
-                          month: "long",
-                          timeZone: "UTC",
-                        }).format(new Date(p.valido_ate))}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          )}
+          <CartaoDePacotes contactId={contactId} />
 
           <a
             href={`/app/contacts/${contactId}`}
@@ -319,6 +274,7 @@ export function Paciente({ contactId }: { contactId: string }) {
         profissionais={grade.data?.profissionais ?? []}
         pacienteInicial={{ id: contactId, nome }}
       />
+      <FolhaDoPaciente aberta={editar} aoFechar={() => setEditar(false)} paciente={c} />
       {escrever && (
         <FolhaDeEvolucao
           contactId={contactId}
@@ -329,6 +285,28 @@ export function Paciente({ contactId }: { contactId: string }) {
         />
       )}
     </div>
+  );
+}
+
+/** Por onde chegou e as etiquetas, numa linha de selos logo abaixo do nome. */
+function OrigemETags({ origem, tags }: { origem: OrigemDoPacienteNaFicha | null; tags: string[] }) {
+  const t = useT();
+  if (!origem?.origem && tags.length === 0) return null;
+  const complemento = origem?.indicado_por?.nome ?? origem?.detalhe ?? null;
+  return (
+    <p className="mt-2.5 flex flex-wrap gap-1.5" data-testid="novo-paciente-selos">
+      {origem?.origem && (
+        <span className="n-selo n-selo-neutro" title={t("Como chegou à clínica")}>
+          {t("Veio por")} {t(origem.origem.nome)}
+          {complemento ? ` · ${complemento}` : ""}
+        </span>
+      )}
+      {tags.map((tg) => (
+        <span key={tg} className="n-selo n-selo-neutro">
+          #{tg}
+        </span>
+      ))}
+    </p>
   );
 }
 
