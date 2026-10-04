@@ -866,6 +866,20 @@ export const NAV_CATALOG = [
     sidebar: true,
   },
   {
+    // Módulo opcional clínica (fork TOQ): a outra metade da conta de Meta Ads, para quem não
+    // anuncia só por lá. Por onde chegaram os pacientes novos (WhatsApp, Instagram, indicação,
+    // encaminhamento médico) e quantos compraram pacote, com o médico ou o influenciador por
+    // baixo. `manager`, como a rota: mostra valor vendido.
+    href: "/app/clinica/origens",
+    label: "Origem dos pacientes",
+    description: "De onde vieram os pacientes novos e quantos compraram pacote.",
+    icon: "Signpost",
+    group: "analise",
+    section: "Os números do período",
+    minRole: "manager",
+    modulo: "clinica",
+  },
+  {
     // Irmã de "Desempenho", não a mesma coisa: lá é DESFECHO (funil agora,
     // ganho/perdido por atendente); aqui é o TRABALHO que aconteceu no
     // período, com quem fez cada coisa. Um mês inteiro atendido pela IA e um
