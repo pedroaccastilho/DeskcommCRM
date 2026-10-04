@@ -348,8 +348,9 @@ function PainelDoPaciente({
   const [janela, setJanela] = React.useState<"remarcar" | "cancelar" | "whatsapp" | null>(null);
   const situacao = filaDoDia([sessao], agora, "hoje")[0]!.situacao;
   const acoes = acoesDoBalcao(sessao, agora);
-  // Até quatro botões à vista; com só um a mais, ele aparece em vez de esconder num "Mais".
-  const corte = acoes.length <= 4 ? 4 : 3;
+  // Até cinco à vista (a ficha é só um link discreto); com mais que isso, os três primeiros ficam
+  // à vista e o resto vai para "Mais". "Chegou" entrou na frente, e cancelar não pode sumir.
+  const corte = acoes.length <= 5 ? 5 : 3;
   const visiveis = acoes.slice(0, corte);
   const extras = acoes.slice(corte);
 
