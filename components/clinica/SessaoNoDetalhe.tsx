@@ -61,10 +61,24 @@ export function useSessaoDaClinica(
       return (await apiClient.get<{ data: Grade }>(`/api/v1/clinica/agenda?${busca}`)).data;
     },
   });
-  if (!ativo || !data) return null;
-  const sessao = data.sessoes.find((s) => s.id === compromisso.id);
-  if (!sessao?.modalidade) return null;
-  return { sessao, politica: data.politica };
+  // A grade é buscada pela janela do horário. Logo depois de remarcar, a janela antiga ainda é
+  // rebuscada (a invalidação chega antes do detalhe novo) e já não tem a sessão, que mudou de
+  // dia. Sem lembrar a última sessão achada, o painel perdia as ações por um instante e a janela
+  // aberta por cima (a próxima sessão) sumia no meio da escolha.
+  const [ultima, setUltima] = React.useState<{ id: string; valor: SessaoDaClinica } | null>(null);
+  const sessao = ativo ? data?.sessoes.find((s) => s.id === compromisso.id) : undefined;
+  const achada = data && sessao?.modalidade ? { sessao, politica: data.politica } : null;
+  if (
+    achada &&
+    (ultima?.id !== compromisso!.id ||
+      ultima.valor.sessao !== achada.sessao ||
+      ultima.valor.politica !== achada.politica)
+  ) {
+    setUltima({ id: compromisso!.id, valor: achada });
+  }
+  if (!ativo) return null;
+  if (achada) return achada;
+  return ultima?.id === compromisso.id ? ultima.valor : null;
 }
 
 function useDataHora(fuso: string) {
