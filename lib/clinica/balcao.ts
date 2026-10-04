@@ -18,19 +18,41 @@ import {
 
 /** Em que pé está cada horário do dia, do ponto de vista do balcão. */
 export type SituacaoNoBalcao =
-  "sem_confirmacao" | "confirmado" | "atrasado" | "realizado" | "faltou" | "cancelado";
+  | "sem_confirmacao"
+  | "confirmado"
+  | "atrasado"
+  | "na_recepcao"
+  | "em_atendimento"
+  | "realizado"
+  | "faltou"
+  | "cancelado";
 
 /** As ações que o balcão oferece. A ordem da lista que `acoesDoBalcao` devolve é a da tela. */
-export type AcaoDoBalcao = "confirmar" | "faltou" | "remarcar" | "whatsapp" | "cancelar" | "ficha";
+export type AcaoDoBalcao =
+  | "chegou"
+  | "confirmar"
+  | "faltou"
+  | "remarcar"
+  | "whatsapp"
+  | "cancelar"
+  | "desfazer_chegada"
+  | "ficha";
 
 /** Os filtros do topo do balcão. `hoje` é o dia inteiro. */
-export type FiltroDoBalcao = "hoje" | "sem_confirmacao" | "a_caminho" | "atrasado" | "encerrado";
+export type FiltroDoBalcao =
+  | "hoje"
+  | "sem_confirmacao"
+  | "a_caminho"
+  | "atrasado"
+  | "na_clinica"
+  | "encerrado";
 
 export const FILTROS_DO_BALCAO: readonly FiltroDoBalcao[] = [
   "hoje",
   "sem_confirmacao",
   "a_caminho",
   "atrasado",
+  "na_clinica",
   "encerrado",
 ];
 
@@ -47,6 +69,10 @@ export function situacaoNoBalcao(sessao: SessaoDaGrade, agora: Date): SituacaoNo
     default:
       break;
   }
+  // A recepção marcou a chegada, ou o profissional já começou: o paciente está na clínica e não
+  // pode aparecer como atrasado nem levar falta.
+  if (sessao.atendimento_iniciado_em) return "em_atendimento";
+  if (sessao.chegou_em) return "na_recepcao";
   // Passou do horário e ninguém registrou nada: é o caso que a recepção precisa ver primeiro,
   // porque ou o paciente está atrasado ou já pode levar falta.
   if (new Date(sessao.inicio).getTime() <= agora.getTime()) return "atrasado";
@@ -63,6 +89,8 @@ export function passaNoFiltro(situacao: SituacaoNoBalcao, filtro: FiltroDoBalcao
       return situacao === "confirmado";
     case "atrasado":
       return situacao === "atrasado";
+    case "na_clinica":
+      return situacao === "na_recepcao" || situacao === "em_atendimento";
     case "encerrado":
       return situacao === "realizado" || situacao === "faltou" || situacao === "cancelado";
   }
@@ -77,6 +105,7 @@ export function contagemPorFiltro(
     sem_confirmacao: 0,
     a_caminho: 0,
     atrasado: 0,
+    na_clinica: 0,
     encerrado: 0,
   };
   for (const s of sessoes) {
@@ -120,8 +149,11 @@ export function previaDaMulta(args: {
  * Por que a principal é esta:
  *  - sem confirmação → confirmar é o que tira o horário do limbo;
  *  - atrasado e já fora da tolerância → registrar a falta é o que a regra da clínica pede;
- *  - nos outros casos abertos, a pergunta mais comum no balcão é remarcar.
- * Horário encerrado só abre a ficha e a conversa: não há o que mudar nele.
+ *  - confirmado, ou atrasado ainda na tolerância → "Chegou", que é o que a recepção faz quando o
+ *    paciente entra pela porta (só sessão da clínica: é ela que guarda a chegada);
+ *  - sem a chegada para marcar, a pergunta mais comum no balcão é remarcar.
+ * Paciente que já está na clínica só abre a conversa e a ficha (e desfaz a chegada marcada por
+ * engano); horário encerrado, idem: não há o que mudar nele.
  */
 export function acoesDoBalcao(sessao: SessaoDaGrade, agora: Date): AcaoDoBalcao[] {
   const situacao = situacaoNoBalcao(sessao, agora);
@@ -135,8 +167,16 @@ export function acoesDoBalcao(sessao: SessaoDaGrade, agora: Date): AcaoDoBalcao[
     return acoes;
   }
 
+  if (situacao === "na_recepcao" || situacao === "em_atendimento") {
+    if (temTelefone) acoes.push("whatsapp");
+    if (temContato) acoes.push("ficha");
+    if (situacao === "na_recepcao") acoes.push("desfazer_chegada");
+    return acoes;
+  }
+
   if (situacao === "sem_confirmacao") acoes.push("confirmar");
   if (situacao === "atrasado" && faltaLiberada(sessao, agora)) acoes.push("faltou");
+  if (sessao.modalidade) acoes.push("chegou");
   acoes.push("remarcar");
   if (temTelefone) acoes.push("whatsapp");
   acoes.push("cancelar");

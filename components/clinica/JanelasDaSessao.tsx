@@ -63,6 +63,34 @@ export function useRecarregarBalcao() {
   }, [qc]);
 }
 
+// ─── Chegou / em atendimento ─────────────────────────────────────────────────
+
+export type EtapaDaSessao = "chegou" | "em_atendimento" | "desfazer";
+
+/**
+ * Marca a chegada do paciente (recepção) ou o início do atendimento (profissional). A regra mora
+ * na rota `POST /api/v1/clinica/agenda/{id}/etapa`; repetir não muda nada.
+ */
+export function useEtapaDaSessao(sessaoId: string) {
+  const t = useT();
+  const recarregar = useRecarregarBalcao();
+  return useMutation({
+    mutationFn: async (etapa: EtapaDaSessao) =>
+      apiClient.post(`/api/v1/clinica/agenda/${sessaoId}/etapa`, { etapa }),
+    onSuccess: (_r, etapa) => {
+      toast.success(
+        etapa === "chegou"
+          ? t("Chegada registrada.")
+          : etapa === "em_atendimento"
+            ? t("Atendimento iniciado.")
+            : t("Chegada desfeita."),
+      );
+      recarregar();
+    },
+    onError: (err) => showApiError(err),
+  });
+}
+
 // ─── Escolher dia e horário ──────────────────────────────────────────────────
 
 type Dia = { ano: number; mes: number; dia: number };
