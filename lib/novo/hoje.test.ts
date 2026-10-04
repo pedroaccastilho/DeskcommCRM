@@ -15,6 +15,8 @@ function sessao(p: Partial<SessaoDaGrade> & { inicio: string; fim: string }): Se
     paciente: null,
     falta_liberada_em: null,
     cancelamento_sem_multa_ate: null,
+    chegou_em: null,
+    atendimento_iniciado_em: null,
     ...p,
   };
 }

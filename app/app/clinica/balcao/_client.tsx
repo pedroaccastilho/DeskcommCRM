@@ -15,6 +15,7 @@ import {
   JanelaCancelar,
   JanelaRemarcar,
   JanelaWhatsApp,
+  useEtapaDaSessao,
   useRecarregarBalcao,
 } from "@/components/clinica/JanelasDaSessao";
 import { PacoteDaSessao } from "@/components/clinica/PacotesDoPaciente";
@@ -76,6 +77,7 @@ const ROTULO_DO_FILTRO: Record<FiltroDoBalcao, string> = {
   sem_confirmacao: "Sem confirmação",
   a_caminho: "A caminho",
   atrasado: "Passou do horário",
+  na_clinica: "Na clínica",
   encerrado: "Encerrados",
 };
 
@@ -86,17 +88,21 @@ const SITUACAO: Record<
   sem_confirmacao: { rotulo: "Sem confirmação", variante: "warning" },
   confirmado: { rotulo: "Confirmado", variante: "info" },
   atrasado: { rotulo: "Passou do horário", variante: "error" },
+  na_recepcao: { rotulo: "Na recepção", variante: "success" },
+  em_atendimento: { rotulo: "Em atendimento", variante: "success" },
   realizado: { rotulo: "Realizado", variante: "neutral" },
   faltou: { rotulo: "Faltou", variante: "error" },
   cancelado: { rotulo: "Cancelado", variante: "neutral" },
 };
 
 const ROTULO_DA_ACAO: Record<AcaoDoBalcao, string> = {
+  chegou: "Chegou",
   confirmar: "Confirmar presença",
   faltou: "Faltou",
   remarcar: "Remarcar",
   whatsapp: "WhatsApp",
   cancelar: "Cancelar",
+  desfazer_chegada: "Desfazer chegada",
   ficha: "Abrir ficha",
 };
 
@@ -357,8 +363,16 @@ function PainelDoPaciente({
     onError: (err) => showApiError(err),
   });
 
+  const etapa = useEtapaDaSessao(sessao.id);
+
   const executar = (acao: AcaoDoBalcao) => {
     switch (acao) {
+      case "chegou":
+        etapa.mutate("chegou");
+        return;
+      case "desfazer_chegada":
+        etapa.mutate("desfazer");
+        return;
       case "confirmar":
         registrar.mutate("confirmed");
         return;
@@ -389,7 +403,7 @@ function PainelDoPaciente({
         key={acao}
         variant={principal ? "primary" : "outline"}
         size={principal ? "lg" : "default"}
-        disabled={bloqueada || registrar.isPending}
+        disabled={bloqueada || registrar.isPending || etapa.isPending}
         onClick={() => executar(acao)}
         data-testid={`acao-${acao}`}
       >
@@ -436,6 +450,20 @@ function PainelDoPaciente({
 
       {sessao.paciente ? (
         <PacoteDaSessao contactId={sessao.paciente.id} modalidade={sessao.modalidade} podeVender />
+      ) : null}
+
+      {sessao.chegou_em ? (
+        <p className="text-sm" data-testid="hora-da-chegada">
+          {(sessao.atendimento_iniciado_em
+            ? t("Chegou às {chegada}. Em atendimento desde as {inicio}.")
+            : t("Chegou às {chegada}. Aguardando na recepção.")
+          )
+            .replace("{chegada}", hora(sessao.chegou_em))
+            .replace(
+              "{inicio}",
+              sessao.atendimento_iniciado_em ? hora(sessao.atendimento_iniciado_em) : "",
+            )}
+        </p>
       ) : null}
 
       {situacao === "atrasado" && !faltaLiberada(sessao, agora) ? (

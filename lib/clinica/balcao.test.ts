@@ -84,12 +84,42 @@ describe("acoesDoBalcao", () => {
       falta_liberada_em: "2026-10-02T12:45:00.000Z",
     });
     const acoes = acoesDoBalcao(s, AGORA);
-    expect(acoes[0]).toBe("remarcar");
+    // Ainda pode chegar: a chegada vem em destaque, e a falta fica guardada.
+    expect(acoes[0]).toBe("chegou");
     expect(acoes).toContain("faltou");
   });
 
-  it("confirmado e por vir, a principal é remarcar", () => {
-    expect(acoesDoBalcao(sessao({}), AGORA)).toEqual(["remarcar", "whatsapp", "cancelar", "ficha"]);
+  it("confirmado e por vir, a principal é marcar que chegou", () => {
+    expect(acoesDoBalcao(sessao({}), AGORA)).toEqual([
+      "chegou",
+      "remarcar",
+      "whatsapp",
+      "cancelar",
+      "ficha",
+    ]);
+  });
+
+  it("compromisso que não é da clínica não tem chegada: a principal volta a ser remarcar", () => {
+    expect(acoesDoBalcao(sessao({ modalidade: null }), AGORA)[0]).toBe("remarcar");
+  });
+
+  it("paciente na recepção não está atrasado e não leva falta; desfaz a chegada por engano", () => {
+    const s = sessao({
+      inicio: "2026-10-02T12:00:00.000Z",
+      falta_liberada_em: "2026-10-02T12:15:00.000Z",
+      chegou_em: "2026-10-02T11:55:00.000Z",
+    });
+    expect(situacaoNoBalcao(s, AGORA)).toBe("na_recepcao");
+    expect(acoesDoBalcao(s, AGORA)).toEqual(["whatsapp", "ficha", "desfazer_chegada"]);
+  });
+
+  it("em atendimento vence a chegada, e a recepção só conversa e abre a ficha", () => {
+    const s = sessao({
+      chegou_em: "2026-10-02T12:25:00.000Z",
+      atendimento_iniciado_em: "2026-10-02T12:31:00.000Z",
+    });
+    expect(situacaoNoBalcao(s, AGORA)).toBe("em_atendimento");
+    expect(acoesDoBalcao(s, AGORA)).toEqual(["whatsapp", "ficha"]);
   });
 
   it("horário encerrado só abre conversa e ficha", () => {
@@ -123,6 +153,7 @@ describe("filaDoDia e contagemPorFiltro", () => {
       sem_confirmacao: 1,
       a_caminho: 1,
       atrasado: 1,
+      na_clinica: 0,
       encerrado: 1,
     });
   });
