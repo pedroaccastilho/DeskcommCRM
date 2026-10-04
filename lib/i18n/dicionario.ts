@@ -11054,6 +11054,17 @@ export const DICIONARIO: Traducoes = {
   "O e-mail não está configurado. Mande este link para a pessoa pelo WhatsApp:": {
     es: "El correo no está configurado. Envía este enlace a la persona por WhatsApp:",
   },
+  "Veja o sistema do jeito que esta pessoa vê, para conferir. É só olhar: nada pode ser alterado nesse modo.":
+    {
+      es: "Mira el sistema tal como lo ve esta persona, para comprobarlo. Es solo mirar: nada se puede cambiar en este modo.",
+    },
+  "Entrar como": { es: "Entrar como" },
+  "Você está vendo como": { es: "Estás viendo como" },
+  "Só olhar: nada pode ser alterado. O conteúdo clínico só aparece se você também for profissional de saúde.":
+    {
+      es: "Solo mirar: nada se puede cambiar. El contenido clínico solo aparece si tú también eres profesional de salud.",
+    },
+  "Voltar para o administrador": { es: "Volver al administrador" },
   "Equipe de atendimento": { es: "Equipo de atención" },
   "Faz uma origem voltar a receber contatos, ou parar. Desligada, o formulário do seu site continua no ar e ninguém do outro lado é avisado.": {
     es: "Reactiva o detiene la recepción de contactos de una fuente. Si la desactivas, el formulario de tu sitio sigue en línea y nadie del otro lado recibe aviso.",

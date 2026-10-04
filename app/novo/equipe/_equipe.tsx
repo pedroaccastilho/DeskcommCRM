@@ -313,6 +313,7 @@ function registroPreenchido(r: Registro): Partial<Registro> {
 }
 
 function FolhaDosPerfis({ membro, aoFechar }: { membro: Membro; aoFechar: () => void }) {
+  const t = useT();
   const recarregar = useRecarregar();
   const [cargos, setCargos] = React.useState<CargoDoUsuario[]>(membro.cargos);
   const [registro, setRegistro] = React.useState<Registro>({
@@ -332,6 +333,13 @@ function FolhaDosPerfis({ membro, aoFechar }: { membro: Membro; aoFechar: () => 
       recarregar();
       aoFechar();
     },
+    onError: (err) => showApiError(err),
+  });
+  // "Entrar como": a tela inteira passa a ser a dessa pessoa, só para olhar (`lib/clinica/ver-como.ts`).
+  const entrarComo = useMutation({
+    mutationFn: async () =>
+      apiClient.post("/api/v1/clinica/ver-como", { user_id: membro.user_id }),
+    onSuccess: () => window.location.assign("/novo"),
     onError: (err) => showApiError(err),
   });
   return (
@@ -358,6 +366,24 @@ function FolhaDosPerfis({ membro, aoFechar }: { membro: Membro; aoFechar: () => 
       >
         {salvar.isPending ? "Salvando…" : "Salvar perfis"}
       </button>
+      {!membro.sou_eu && (
+        <div className="mt-6 border-t border-[var(--n-linha)] pt-4">
+          <p className="n-suave text-sm">
+            {t(
+              "Veja o sistema do jeito que esta pessoa vê, para conferir. É só olhar: nada pode ser alterado nesse modo.",
+            )}
+          </p>
+          <button
+            type="button"
+            className="n-botao n-botao-suave mt-3 w-full"
+            disabled={entrarComo.isPending}
+            onClick={() => entrarComo.mutate()}
+            data-testid="novo-entrar-como"
+          >
+            {`${t("Entrar como")} ${membro.nome.split(" ")[0]}`}
+          </button>
+        </div>
+      )}
     </Folha>
   );
 }

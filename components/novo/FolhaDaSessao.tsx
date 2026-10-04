@@ -67,7 +67,7 @@ export function FolhaDaSessao({
 }) {
   const t = useT();
   const tag = useTagDeIdioma();
-  const { fuso, role, eu, cargo } = useNovo();
+  const { fuso, role, eu, cargo, soOlhar } = useNovo();
   const [passo, setPasso] = React.useState<Passo>("inicio");
   const [evolucao, setEvolucao] = React.useState(false);
   const recarregar = useRecarregar();
@@ -229,7 +229,8 @@ export function FolhaDaSessao({
                   <span className="n-fraco">›</span>
                 </Link>
               )}
-              {escreveEvolucao(cargo, profissional, sessao.modalidade) &&
+              {!soOlhar &&
+                escreveEvolucao(cargo, profissional, sessao.modalidade) &&
                 sessao.paciente &&
                 sessao.modalidade && (
                   <button

@@ -15,6 +15,7 @@ import type { PoliticaDaAgenda, SessaoDaGrade } from "@/lib/clinica/agenda";
 import type { PacoteDaFicha } from "@/lib/clinica/pacotes-na-ficha";
 import type { Modalidade, TipoDeRegistro } from "@/lib/clinica/vocabulario";
 import type { CadastroDeProfissional } from "@/lib/novo/cargo";
+import type { Role } from "@/lib/auth/types";
 import type { Contact } from "@/lib/types/contacts";
 import { nomeDoContato } from "@/lib/contacts/rotulo-do-contato";
 
@@ -28,6 +29,12 @@ export interface Eu {
       })
     | null;
   ve_acessos: boolean;
+  /** Os perfis (migration 9008) de quem a tela mostra. */
+  cargos?: string[];
+  /** O papel de quem a tela mostra: o da pessoa vista, no "entrar como". */
+  papel?: Role;
+  /** O "entrar como" do administrador: de quem é a tela agora. */
+  vendo_como?: { user_id: string; nome: string; email: string | null } | null;
 }
 
 export function useEu() {

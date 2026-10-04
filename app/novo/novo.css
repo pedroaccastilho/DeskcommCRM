@@ -134,6 +134,14 @@
   padding-bottom: 96px;
 }
 
+/* A faixa do "entrar como": de quem é a tela agora, sempre à vista no topo. */
+.novo .n-ver-como {
+  background: var(--n-aviso-suave);
+  color: var(--n-tinta);
+  border-bottom: 1px solid var(--n-aviso);
+  backdrop-filter: blur(8px);
+}
+
 .novo .n-conteudo {
   max-width: 1180px;
   margin: 0 auto;
