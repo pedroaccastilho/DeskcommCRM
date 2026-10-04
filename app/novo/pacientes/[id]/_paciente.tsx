@@ -20,13 +20,16 @@ import { useNovo } from "@/components/novo/Casca";
 import {
   useGradeDoDia,
   usePaciente,
+  useOrigemDoPaciente,
   usePacotesDoPaciente,
   useProntuario,
   useSessoesDoPaciente,
+  type OrigemDoPacienteNaFicha,
   type RegistroDoProntuario,
 } from "@/components/novo/dados";
 import { FolhaAgendar } from "@/components/novo/FolhaAgendar";
 import { FolhaDeEvolucao } from "@/components/novo/FolhaDeEvolucao";
+import { FolhaDoPaciente } from "@/components/novo/FolhaDoPaciente";
 import { CartaoDePacotes } from "@/components/novo/PacotesNaFicha";
 import { CartaoDeAcessos, CartaoDoPlano } from "@/components/novo/PlanoEAcessos";
 import { Avatar, Carregando, Secao, Vazio, dataCurta, hora } from "@/components/novo/pecas";
@@ -56,6 +59,8 @@ export function Paciente({ contactId }: { contactId: string }) {
   const grade = useGradeDoDia(diaLocalISO(new Date(), fuso), fuso);
   const [agendar, setAgendar] = React.useState(false);
   const [escrever, setEscrever] = React.useState(false);
+  const [editar, setEditar] = React.useState(false);
+  const origem = useOrigemDoPaciente(contactId);
 
   if (paciente.isLoading) {
     return (
@@ -99,8 +104,19 @@ export function Paciente({ contactId }: { contactId: string }) {
             {nascimento !== null && <span>{nascimento} anos</span>}
             {c.email && <span>{c.email}</span>}
           </p>
+          <OrigemETags origem={origem.data ?? null} tags={c.tags ?? []} />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {role !== "viewer" && (
+            <button
+              type="button"
+              className="n-botao n-botao-suave"
+              onClick={() => setEditar(true)}
+              data-testid="novo-editar-paciente"
+            >
+              {t("Editar")}
+            </button>
+          )}
           {ehProfissional && (
             <button
               type="button"
@@ -277,6 +293,7 @@ export function Paciente({ contactId }: { contactId: string }) {
         profissionais={grade.data?.profissionais ?? []}
         pacienteInicial={{ id: contactId, nome }}
       />
+      <FolhaDoPaciente aberta={editar} aoFechar={() => setEditar(false)} paciente={c} />
       {escrever && (
         <FolhaDeEvolucao
           contactId={contactId}
@@ -287,6 +304,28 @@ export function Paciente({ contactId }: { contactId: string }) {
         />
       )}
     </div>
+  );
+}
+
+/** Por onde chegou e as etiquetas, numa linha de selos logo abaixo do nome. */
+function OrigemETags({ origem, tags }: { origem: OrigemDoPacienteNaFicha | null; tags: string[] }) {
+  const t = useT();
+  if (!origem?.origem && tags.length === 0) return null;
+  const complemento = origem?.indicado_por?.nome ?? origem?.detalhe ?? null;
+  return (
+    <p className="mt-2.5 flex flex-wrap gap-1.5" data-testid="novo-paciente-selos">
+      {origem?.origem && (
+        <span className="n-selo n-selo-neutro" title={t("Como chegou à clínica")}>
+          {t("Veio por")} {t(origem.origem.nome)}
+          {complemento ? ` · ${complemento}` : ""}
+        </span>
+      )}
+      {tags.map((tg) => (
+        <span key={tg} className="n-selo n-selo-neutro">
+          #{tg}
+        </span>
+      ))}
+    </p>
   );
 }
 
