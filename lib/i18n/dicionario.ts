@@ -17582,10 +17582,6 @@ export const DICIONARIO: Traducoes = {
   "Confira o telefone: DDD e número, como (11) 98888-7777.": {
     es: "Revisa el teléfono: código de área y número, como (11) 98888-7777.",
   },
-  "Informe qual médico encaminhou o paciente.": { es: "Indica qué médico derivó al paciente." },
-  "Informe qual influenciador ou anúncio trouxe o paciente.": {
-    es: "Indica qué influencer o anuncio trajo al paciente.",
-  },
   "Escolha o paciente que indicou.": { es: "Elige el paciente que lo recomendó." },
   "cadastrado.": { es: "registrado." },
   "Cadastro atualizado.": { es: "Registro actualizado." },
@@ -17597,11 +17593,9 @@ export const DICIONARIO: Traducoes = {
   "DDD e número, ex.: (11) 98888-7777": { es: "Código de área y número, ej.: (11) 98888-7777" },
   CPF: { es: "CPF" },
   "Já informado. Preencha só para trocar.": { es: "Ya informado. Complétalo solo para cambiarlo." },
-  "Como chegou à clínica": { es: "Cómo llegó a la clínica" },
   "Chegou pelo WhatsApp. Escolha outra origem se não foi isso.": {
     es: "Llegó por WhatsApp. Elige otro origen si no fue así.",
   },
-  "Quem indicou": { es: "Quién lo recomendó" },
   "Nome ou telefone de quem indicou": { es: "Nombre o teléfono de quien lo recomendó" },
   "Buscar quem indicou": { es: "Buscar quién lo recomendó" },
   "Separe com vírgula, ex.: pilates, coluna": { es: "Separa con coma, ej.: pilates, columna" },
@@ -17610,10 +17604,6 @@ export const DICIONARIO: Traducoes = {
   "Ninguém com esse nome. Busque pelo telefone com DDD.": {
     es: "Nadie con ese nombre. Busca por el teléfono con código de área.",
   },
-  "Qual influenciador ou anúncio?": { es: "¿Qué influencer o anuncio?" },
-  "Qual médico encaminhou?": { es: "¿Qué médico lo derivó?" },
-  "Instagram: influenciador": { es: "Instagram: influencer" },
-  "Instagram: anúncio pago": { es: "Instagram: anuncio pagado" },
 };
 
 /**
