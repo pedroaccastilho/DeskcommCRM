@@ -61,10 +61,19 @@ export function useSessaoDaClinica(
       return (await apiClient.get<{ data: Grade }>(`/api/v1/clinica/agenda?${busca}`)).data;
     },
   });
-  if (!ativo || !data) return null;
-  const sessao = data.sessoes.find((s) => s.id === compromisso.id);
-  if (!sessao?.modalidade) return null;
-  return { sessao, politica: data.politica };
+  // A ÚLTIMA sessão achada para este compromisso. Remarcar invalida a grade do horário ANTIGO, e
+  // ela volta sem a sessão (que saiu dali) antes de o painel saber o horário novo; o
+  // `keepPreviousData` acima guarda justamente essa grade vazia. Sem esta lembrança o painel perdia
+  // a sessão por um instante, as ações eram desmontadas e a janela aberta por cima ("marcar a
+  // próxima") fechava sozinha. Medido no trace do e2e `clinica-agenda-janelas`: clique às 31,6 s,
+  // grade antiga sem a sessão, grade nova só às 32,3 s.
+  const [ultima, setUltima] = React.useState<SessaoDaClinica | null>(null);
+  const sessao = ativo && data ? data.sessoes.find((s) => s.id === compromisso.id) : undefined;
+  const achada = sessao?.modalidade && data ? sessao : null;
+  if (achada && ultima?.sessao !== achada) setUltima({ sessao: achada, politica: data!.politica });
+  if (!ativo) return null;
+  if (achada) return { sessao: achada, politica: data!.politica };
+  return ultima && ultima.sessao.id === compromisso.id ? ultima : null;
 }
 
 function useDataHora(fuso: string) {
