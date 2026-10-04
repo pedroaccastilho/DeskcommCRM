@@ -5,17 +5,21 @@
  * isso continua na interface atual para quem precisar.
  */
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { useNovo } from "@/components/novo/Casca";
 import { useBuscaDePacientes } from "@/components/novo/dados";
+import { FolhaDoPaciente } from "@/components/novo/FolhaDoPaciente";
 import { Avatar, Carregando, Vazio } from "@/components/novo/pecas";
 import { useT } from "@/lib/i18n/IdiomaProvider";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 
 export function Pacientes() {
   const t = useT();
-  const { cargo } = useNovo();
+  const { cargo, role } = useNovo();
+  const router = useRouter();
+  const [cadastrar, setCadastrar] = React.useState(false);
   const [termo, setTermo] = React.useState("");
   const [busca, setBusca] = React.useState("");
   React.useEffect(() => {
@@ -27,7 +31,19 @@ export function Pacientes() {
 
   return (
     <div className="n-conteudo max-w-3xl" data-testid="novo-pacientes">
-      <h1 className="n-titulo n-entra text-[44px] leading-tight sm:text-[52px]">{rotulo}</h1>
+      <div className="n-entra flex flex-wrap items-end justify-between gap-4">
+        <h1 className="n-titulo text-[44px] leading-tight sm:text-[52px]">{rotulo}</h1>
+        {role !== "viewer" && (
+          <button
+            type="button"
+            className="n-botao n-botao-principal"
+            onClick={() => setCadastrar(true)}
+            data-testid="novo-cadastrar-paciente"
+          >
+            + {t("Novo paciente")}
+          </button>
+        )}
+      </div>
       <div className="n-entra relative mt-6">
         <input
           className="n-campo !min-h-[60px] !rounded-[22px] !bg-[var(--n-cartao)] !pl-14 !text-lg shadow-[var(--n-sombra)]"
@@ -77,6 +93,11 @@ export function Pacientes() {
           </ul>
         )}
       </div>
+      <FolhaDoPaciente
+        aberta={cadastrar}
+        aoFechar={() => setCadastrar(false)}
+        aoCriar={(id) => router.push(`/novo/pacientes/${id}`)}
+      />
     </div>
   );
 }
