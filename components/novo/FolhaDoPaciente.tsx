@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { apiClient } from "@/lib/api/client";
 import { COMPLEMENTO_DO_TIPO, PERGUNTA_DO_DETALHE } from "@/lib/clinica/origens";
-import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
+import { nomeDoContato, rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { useT } from "@/lib/i18n/IdiomaProvider";
 import { telefoneParaE164 } from "@/lib/novo/telefone";
 import { randomId } from "@/lib/random-id";
@@ -68,7 +68,7 @@ function Conteudo({
   const [chave] = React.useState(() => randomId());
   const novo = paciente === null;
 
-  const [nome, setNome] = React.useState(paciente?.display_name ?? paciente?.name ?? "");
+  const [nome, setNome] = React.useState(paciente ? (nomeDoContato(paciente) ?? "") : "");
   const [telefone, setTelefone] = React.useState(paciente?.phone_number ?? "");
   const [email, setEmail] = React.useState(paciente?.email ?? "");
   const [nascimento, setNascimento] = React.useState(paciente?.birthdate?.slice(0, 10) ?? "");
@@ -138,8 +138,7 @@ function Conteudo({
         id = r.data.contact.id;
       } else {
         const patch: ContactPatch = {};
-        if (nome.trim() !== (paciente!.display_name ?? paciente!.name ?? ""))
-          patch.display_name = nome.trim();
+        if (nome.trim() !== (nomeDoContato(paciente!) ?? "")) patch.name = nome.trim();
         if (telefoneE164 && telefoneE164 !== paciente!.phone_number)
           patch.phone_number = telefoneE164;
         if (email.trim() && email.trim() !== paciente!.email) patch.email = email.trim();
