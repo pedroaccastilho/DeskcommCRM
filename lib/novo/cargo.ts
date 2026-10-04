@@ -73,6 +73,27 @@ export function modalidadesDaVisao(
   return profissional.modalidades;
 }
 
+/**
+ * O prontuário na tela (ler e escrever evolução): só para profissional de saúde ATIVO, e nunca
+ * na tela da recepção. Quem é Administrador e também atende, ao abrir "Ver a tela de: Recepção",
+ * vê o que a recepção vê, sem cartão de evoluções nem botão "Escrever" (Pedro, 2026-10-04).
+ * A trava de verdade continua no banco (RLS e gatilho da migration 9001): sem cadastro ativo,
+ * ninguém assina registro, qualquer que seja a tela.
+ */
+export function veProntuario(cargo: Cargo, profissional: CadastroDeProfissional | null): boolean {
+  return Boolean(profissional?.ativo) && cargo !== "recepcao";
+}
+
+/** Escrever a evolução de uma sessão: além do prontuário, a modalidade tem de ser do cadastro. */
+export function escreveEvolucao(
+  cargo: Cargo,
+  profissional: CadastroDeProfissional | null,
+  modalidade: string | null | undefined,
+): boolean {
+  if (!veProntuario(cargo, profissional)) return false;
+  return modalidade ? profissional!.modalidades.includes(modalidade) : true;
+}
+
 export interface ItemDoMenu {
   href: string;
   rotulo: string;

@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { cargoDe, cargosParaVer, menuDoCargo, modalidadesDaVisao, veConfiguracoes } from "./cargo";
+import {
+  cargoDe,
+  cargosParaVer,
+  escreveEvolucao,
+  menuDoCargo,
+  modalidadesDaVisao,
+  veConfiguracoes,
+  veProntuario,
+} from "./cargo";
 
 describe("cargo na interface nova", () => {
   it("deduz o cargo do cadastro de profissional e do papel", () => {
@@ -62,5 +70,24 @@ describe("cada um vê a própria área", () => {
   it("configurações só para o administrador", () => {
     expect(veConfiguracoes("admin")).toBe(true);
     expect(veConfiguracoes("manager")).toBe(false);
+  });
+
+  it("recepção não lê prontuário nem escreve evolução, nem o administrador vendo a tela dela", () => {
+    const fisio = { conselho: "CREFITO", modalidades: ["fisioterapia"], ativo: true };
+    expect(veProntuario("recepcao", null)).toBe(false);
+    expect(veProntuario("gestao", null)).toBe(false);
+    // Administrador que também atende, com "Ver a tela de: Recepção".
+    expect(veProntuario("recepcao", fisio)).toBe(false);
+    expect(escreveEvolucao("recepcao", fisio, "fisioterapia")).toBe(false);
+    expect(veProntuario("gestao", fisio)).toBe(true);
+    expect(veProntuario("saude", fisio)).toBe(true);
+    expect(veProntuario("saude", { ...fisio, ativo: false })).toBe(false);
+  });
+
+  it("evolução só na modalidade do cadastro", () => {
+    const fisio = { conselho: "CREFITO", modalidades: ["fisioterapia"], ativo: true };
+    expect(escreveEvolucao("saude", fisio, "fisioterapia")).toBe(true);
+    expect(escreveEvolucao("saude", fisio, "medicina")).toBe(false);
+    expect(escreveEvolucao("saude", fisio, null)).toBe(true);
   });
 });

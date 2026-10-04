@@ -53,11 +53,11 @@ const SITUACAO: Record<string, { rotulo: string; classe: string }> = {
 export function Paciente({ contactId }: { contactId: string }) {
   const t = useT();
   const tag = useTagDeIdioma();
-  const { fuso, eu, role } = useNovo();
+  const { fuso, role, veProntuario } = useNovo();
   const paciente = usePaciente(contactId);
   const sessoes = useSessoesDoPaciente(contactId);
   const pacotes = usePacotesDoPaciente(contactId);
-  const ehProfissional = Boolean(eu?.profissional);
+  const ehProfissional = veProntuario;
   const prontuario = useProntuario(contactId, ehProfissional);
   // A grade de hoje só serve para saber quem são os profissionais na hora de agendar.
   const grade = useGradeDoDia(diaLocalISO(new Date(), fuso), fuso);
