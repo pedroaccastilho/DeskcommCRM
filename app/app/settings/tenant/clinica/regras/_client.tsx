@@ -18,6 +18,12 @@ import { useT } from "@/hooks/i18n/useT";
 import { apiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/types";
 import type { RegrasDaClinica as Regras } from "@/lib/clinica/agenda";
+import {
+  ROTULO_DO_TIPO_DE_ORIGEM,
+  TIPOS_DE_ORIGEM,
+  type OrigemDaClinica,
+  type TipoDeOrigem,
+} from "@/lib/clinica/origens";
 import { MODALIDADES, ROTULO_DA_MODALIDADE, type Modalidade } from "@/lib/clinica/vocabulario";
 import { parseReaisToCents } from "@/lib/money";
 
@@ -125,6 +131,7 @@ const BLOCOS: Bloco[] = [
 const CHAVE_REGRAS = ["clinica", "regras"];
 const CHAVE_TIPOS = ["clinica", "tipos-atendimento"];
 const CHAVE_PRODUTOS = ["clinica", "produtos"];
+const CHAVE_ORIGENS = ["clinica", "origens"];
 
 const campo = "rounded-md border border-border bg-surface-elevated p-2 text-sm text-text";
 
@@ -164,6 +171,7 @@ export function RegrasDaClinica() {
       />
       <TiposDeAtendimento />
       <CatalogoDePacotes />
+      <OrigensDosPacientes />
     </div>
   );
 }
@@ -610,6 +618,132 @@ function LinhaDoProduto({ produto }: { produto: ProdutoDoCatalogo | null }) {
         onClick={() => salvar.mutate()}
       >
         {produto ? t("Salvar") : t("Adicionar")}
+      </Button>
+    </li>
+  );
+}
+
+/**
+ * Por onde os pacientes chegam (migration 9005). A recepção escolhe uma destas no cadastro; o
+ * tipo diz o que ela conta (qual influenciador ou anúncio, qual médico, quem indicou) e não muda
+ * depois de criado. Tirar da lista é desligar, porque paciente registrado aponta para cá.
+ */
+function OrigensDosPacientes() {
+  const t = useT();
+  const origens = useQuery({
+    queryKey: CHAVE_ORIGENS,
+    queryFn: async () =>
+      (await apiClient.get<{ data: OrigemDaClinica[] }>("/api/v1/clinica/origens")).data,
+  });
+  const lista = origens.data ?? [];
+
+  return (
+    <section
+      className="flex flex-col gap-3 rounded-md border border-border p-3"
+      data-testid="bloco-origens"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="text-sm font-semibold">{t("Origens dos pacientes")}</h2>
+        <Badge variant="success">{t("Em uso")}</Badge>
+      </div>
+      <p className="text-xs text-text-muted">
+        {t(
+          "A recepção escolhe uma destas no cadastro do paciente. Quem chega pelo WhatsApp entra como WhatsApp sozinho, e a recepção pode corrigir.",
+        )}
+      </p>
+      {origens.isError ? (
+        <p className="text-danger text-sm">{t("Não foi possível carregar as origens.")}</p>
+      ) : origens.isLoading ? null : (
+        <ul className="divide-y divide-border/60">
+          {lista.map((origem) => (
+            <LinhaDaOrigem key={JSON.stringify(origem)} origem={origem} />
+          ))}
+          <LinhaDaOrigem key="nova" origem={null} />
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function LinhaDaOrigem({ origem }: { origem: OrigemDaClinica | null }) {
+  const t = useT();
+  const qc = useQueryClient();
+  const [nome, setNome] = useState(origem?.nome ?? "");
+  const [tipo, setTipo] = useState<TipoDeOrigem>(origem?.tipo ?? "outro");
+  const [ativo, setAtivo] = useState(origem?.ativo ?? true);
+
+  const valido = nome.trim().length >= 2;
+  const mudou = origem === null || nome.trim() !== origem.nome || ativo !== origem.ativo;
+
+  const salvar = useMutation({
+    mutationFn: () =>
+      origem === null
+        ? apiClient.post("/api/v1/clinica/origens", { nome: nome.trim(), tipo })
+        : apiClient.patch(`/api/v1/clinica/origens/${origem.id}`, { nome: nome.trim(), ativo }),
+    onSuccess: () => {
+      if (origem === null) setNome("");
+      void qc.invalidateQueries({ queryKey: CHAVE_ORIGENS });
+    },
+    onError: showApiError,
+  });
+  const pode = !salvar.isPending && valido && mudou;
+
+  return (
+    <li
+      className="flex flex-wrap items-end gap-2 py-2"
+      data-testid={origem ? `origem-${origem.id}` : "origem-nova"}
+    >
+      <label className="flex min-w-40 flex-1 flex-col gap-1 text-xs text-text-muted">
+        {origem ? t("Nome") : t("Nova origem")}
+        <input
+          value={nome}
+          maxLength={60}
+          placeholder={t("Ex.: Panfleto na academia")}
+          data-testid="origem-nome"
+          onChange={(e) => setNome(e.target.value)}
+          className={campo}
+        />
+      </label>
+      <label className="flex w-52 flex-col gap-1 text-xs text-text-muted">
+        {t("Tipo")}
+        {origem ? (
+          <span className="p-2 text-sm text-text" data-testid="origem-tipo">
+            {t(ROTULO_DO_TIPO_DE_ORIGEM[origem.tipo])}
+          </span>
+        ) : (
+          <select
+            value={tipo}
+            data-testid="origem-tipo"
+            onChange={(e) => setTipo(e.target.value as TipoDeOrigem)}
+            className={campo}
+          >
+            {TIPOS_DE_ORIGEM.map((tp) => (
+              <option key={tp} value={tp}>
+                {t(ROTULO_DO_TIPO_DE_ORIGEM[tp])}
+              </option>
+            ))}
+          </select>
+        )}
+      </label>
+      {origem ? (
+        <label className="flex items-center gap-2 pb-2 text-xs text-text-muted">
+          <input
+            type="checkbox"
+            checked={ativo}
+            data-testid="origem-ativo"
+            onChange={(e) => setAtivo(e.target.checked)}
+          />
+          {t("Na lista")}
+        </label>
+      ) : null}
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={!pode}
+        data-testid="salvar-origem"
+        onClick={() => salvar.mutate()}
+      >
+        {origem ? t("Salvar") : t("Adicionar")}
       </Button>
     </li>
   );

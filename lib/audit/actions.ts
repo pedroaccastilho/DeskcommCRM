@@ -1022,6 +1022,10 @@ export const AUDIT_ACTIONS = [
   "clinica.pacote_congelado",
   "clinica.pacote_prorrogado",
   "clinica.pacote_cancelado",
+  // Origem do paciente (fork TOQ, migration 9005): a lista de origens e o registro da recepção.
+  "clinica.origem_cadastrada",
+  "clinica.origem_alterada",
+  "clinica.paciente_origem_registrada",
   // Chatbot de menu do WhatsApp (fork TOQ): quem ligou, desligou ou mudou o menu de uma conexão.
   "clinica.chatbot_menu_atualizado",
   // Plano de tratamento (migration 9006): o retorno de reavaliação que o sistema marcou sozinho
