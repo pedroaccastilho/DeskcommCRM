@@ -22,6 +22,7 @@ import {
   menuDoCargo,
   modalidadesDaVisao,
   veConfiguracoes,
+  veProntuario,
   type Cargo,
   type ItemDoMenu,
 } from "@/lib/novo/cargo";
@@ -46,6 +47,8 @@ interface Contexto {
   modalidades: readonly string[] | null;
   /** A interface nova mostra só as sessões de quem está logado? */
   soAsMinhas: boolean;
+  /** Prontuário na tela (ler e escrever evolução): profissional ativo, fora da tela da recepção. */
+  veProntuario: boolean;
 }
 
 const Ctx = React.createContext<Contexto | null>(null);
@@ -128,6 +131,7 @@ export function Casca({
     eu: eu.data,
     modalidades: modalidadesDaVisao(cargo, profissional),
     soAsMinhas: atende(cargo),
+    veProntuario: veProntuario(cargo, profissional),
   };
 
   const pathname = usePathname() ?? "/novo";

@@ -60,7 +60,7 @@ import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 export function Hoje() {
   const t = useT();
   const tag = useTagDeIdioma();
-  const { fuso, cargo, meuId, meuNome, soAsMinhas: soMinhas, role, eu } = useNovo();
+  const { fuso, cargo, meuId, meuNome, soAsMinhas: soMinhas, role, veProntuario } = useNovo();
   const org = useActiveOrg();
   const agora = useAgora();
   const dia = diaLocalISO(agora, fuso);
@@ -69,7 +69,7 @@ export function Hoje() {
   const recepcao = !soMinhas && role !== "viewer";
   const renovar = usePacotesParaRenovar(recepcao);
   const multas = useMultasPendentes(recepcao);
-  const pendencias = usePendencias(Boolean(eu?.profissional));
+  const pendencias = usePendencias(veProntuario);
   const conversas = useConversationCounts(recepcao ? (org?.orgId ?? null) : null);
 
   const [filtroProf, setFiltroProf] = React.useState<string | null>(null);
@@ -113,7 +113,7 @@ export function Hoje() {
 
   const [verEncerradas, setVerEncerradas] = React.useState(false);
   const moeda = moedaServidaOu(org?.currency);
-  const lateral = recepcao || Boolean(eu?.profissional);
+  const lateral = recepcao || veProntuario;
 
   return (
     <div className="n-conteudo" data-testid="novo-hoje">
@@ -258,7 +258,7 @@ export function Hoje() {
 
         {lateral && (
           <aside className="grid content-start gap-5">
-            {eu?.profissional && (
+            {veProntuario && (
               <PainelLateral
                 titulo="Evoluções para escrever"
                 vazio="Nenhuma evolução pendente. Tudo em dia."
