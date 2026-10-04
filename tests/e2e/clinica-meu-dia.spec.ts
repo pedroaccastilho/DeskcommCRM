@@ -5,6 +5,7 @@
  * feito na última sessão à esquerda e a evolução de hoje à direita, já vinculada à sessão. A spec
  * prova pela tela o que ele faz entre um paciente e outro:
  *
+ *   - ver o saldo do pacote e vê-lo gastar uma sessão quando o paciente comparece;
  *   - marcar que o paciente compareceu;
  *   - repetir a conduta da última sessão com um toque e escolher a dor na escala de 0 a 10;
  *   - assinar a evolução sem sair da tela;
@@ -183,6 +184,12 @@ test.describe("Meu dia do profissional com o módulo clínica", () => {
       });
       expect(anterior.status(), await anterior.text()).toBeLessThan(300);
 
+      // Um pacote de 10 sessões de fisioterapia, vendido pela recepção.
+      const venda = await page.request.post("/api/v1/clinica/pacotes", {
+        data: { contact_id: contactId, modalidade: "fisioterapia", aceite_politica: true },
+      });
+      expect(venda.status(), await venda.text()).toBe(201);
+
       await page.goto("/app/clinica/meu-dia");
       await expect(page.getByRole("heading", { name: "Meu dia" })).toBeVisible({ timeout: ESPERA });
       await page.getByTestId(`horario-${sessaoId}`).click();
@@ -193,12 +200,19 @@ test.describe("Meu dia do profissional com o módulo clínica", () => {
         { timeout: ESPERA },
       );
       await expect(modo.getByTestId("registro-sessao")).toBeVisible();
+      await expect(modo.getByTestId("pacote-da-sessao")).toContainText("Restam 10 de 10 sessões", {
+        timeout: ESPERA,
+      });
       await page.screenshot({ path: path.join(EVIDENCIA, "modo-atendimento.png"), fullPage: true });
 
       // O paciente chegou.
       await modo.getByTestId("acao-compareceu").click();
       await expect(page.getByText("Presença registrada.")).toBeVisible({ timeout: ESPERA });
       await expect(page.getByTestId(`horario-${sessaoId}`)).toContainText("Compareceu", {
+        timeout: ESPERA,
+      });
+      // A presença gastou uma sessão do pacote, e o saldo na tela acompanha.
+      await expect(modo.getByTestId("pacote-da-sessao")).toContainText("Restam 9 de 10 sessões", {
         timeout: ESPERA,
       });
 
@@ -278,6 +292,7 @@ test.describe("Meu dia do profissional com o módulo clínica", () => {
       expect(largura).toBeLessThanOrEqual(390);
       await page.screenshot({ path: path.join(EVIDENCIA, "meu-dia-celular.png"), fullPage: true });
     } finally {
+      await admin.from("clinica_pacotes").delete().eq("contact_id", contactId);
       if (proximaId) await admin.from("calendar_appointments").delete().eq("id", proximaId);
       await admin.from("calendar_appointments").delete().eq("id", sessaoId);
       await admin.from("clinica_tipos_atendimento").delete().eq("event_type_id", tipoId);

@@ -39,13 +39,14 @@ import {
   congeladoAte,
   corpoDaVenda,
   opcoesDeVenda,
+  pacoteDaSessao,
   separarPacotes,
   type AjusteDoPacote,
   type OpcaoDeVenda,
   type PacoteDaFicha,
   type ProdutoDoCatalogo,
 } from "@/lib/clinica/pacotes-na-ficha";
-import { ROTULO_DA_MODALIDADE } from "@/lib/clinica/vocabulario";
+import { ROTULO_DA_MODALIDADE, type Modalidade } from "@/lib/clinica/vocabulario";
 import { formatCents, parseReaisToCents } from "@/lib/money";
 import { randomId } from "@/lib/random-id";
 import { cn } from "@/lib/utils";
@@ -330,7 +331,16 @@ function rotuloDaOpcao(o: OpcaoDeVenda, t: (s: string) => string) {
 }
 
 /** Montado a cada abertura: a chave de idempotência e o formulário nascem limpos. */
-function VenderPacote({ contactId, aoFechar }: { contactId: string; aoFechar: () => void }) {
+export function VenderPacote({
+  contactId,
+  modalidadeSugerida = null,
+  aoFechar,
+}: {
+  contactId: string;
+  /** Vindo de uma sessão: a primeira opção dessa modalidade já abre escolhida. */
+  modalidadeSugerida?: Modalidade | null;
+  aoFechar: () => void;
+}) {
   const t = useT();
   const atualizar = useAtualizarPacotes(contactId);
   const politica = usePolitica();
@@ -342,13 +352,21 @@ function VenderPacote({ contactId, aoFechar }: { contactId: string; aoFechar: ()
       (await apiClient.get<{ data: ProdutoDoCatalogo[] }>("/api/v1/clinica/produtos")).data,
   });
   const [chaveDeIdempotencia] = React.useState(() => randomId());
-  const [escolha, setEscolha] = React.useState<string | null>(null);
+  const [escolhaFeita, setEscolha] = React.useState<string | null>(null);
   const [valor, setValor] = React.useState("");
   const [aceite, setAceite] = React.useState(false);
   const [enviando, setEnviando] = React.useState(false);
   const [erro, setErro] = React.useState<string | null>(null);
 
   const opcoes = catalogo.data ? opcoesDeVenda(catalogo.data) : null;
+  const escolha =
+    escolhaFeita ??
+    opcoes?.find(
+      (o) =>
+        modalidadeSugerida !== null &&
+        (o.tipo === "produto" ? o.produto.modalidade : o.modalidade) === modalidadeSugerida,
+    )?.chave ??
+    null;
   const opcao = opcoes?.find((o) => o.chave === escolha) ?? null;
   const valorCents = opcao?.tipo === "padrao" ? parseReaisToCents(valor) : null;
   const valorInvalido = opcao?.tipo === "padrao" && valor.trim() !== "" && valorCents === null;
@@ -650,5 +668,74 @@ function AjustarPacote({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * O pacote no atendimento: uma linha com o que a sessão vai gastar ("Restam 4 de 10 sessões") ou
+ * o aviso de que ela é avulsa, e o atalho para vender ou renovar sem sair da tela. Some para quem
+ * não vê valor (Somente leitura recebe 403 da rota).
+ */
+export function PacoteDaSessao({
+  contactId,
+  modalidade,
+  podeVender,
+}: {
+  contactId: string;
+  modalidade: Modalidade | null;
+  podeVender: boolean;
+}) {
+  const t = useT();
+  const localeDaData = useLocaleDeData();
+  const pacotes = usePacotes(contactId, Boolean(modalidade));
+  const [vendendo, setVendendo] = React.useState(false);
+  if (!modalidade || !pacotes.data) return null;
+
+  const p = pacoteDaSessao(pacotes.data, modalidade);
+  const dia = (iso: string) => format(new Date(iso), t("d 'de' MMMM"), { locale: localeDaData });
+  const oferecer = podeVender && (!p || p.precisa_renovar);
+
+  return (
+    <div
+      className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm"
+      data-testid="pacote-da-sessao"
+    >
+      {p ? (
+        <span>
+          <span className="font-medium">
+            {t(p.saldo === 1 ? "Resta {n} de {total} sessões" : "Restam {n} de {total} sessões")
+              .replace("{n}", String(p.saldo))
+              .replace("{total}", String(p.sessoes_total))}
+          </span>{" "}
+          <span className="text-text-muted">
+            {t("no pacote. Vale até {data}.").replace("{data}", dia(p.valido_ate))}
+          </span>
+        </span>
+      ) : (
+        <span className="text-text-muted">{t("Sessão avulsa, sem pacote valendo.")}</span>
+      )}
+      {p?.precisa_renovar ? (
+        <Badge variant="warning" className="whitespace-nowrap">
+          {t("Hora de renovar")}
+        </Badge>
+      ) : null}
+      {oferecer ? (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setVendendo(true)}
+          data-testid="vender-pacote-da-sessao"
+        >
+          {p ? t("Renovar pacote") : t("Vender pacote")}
+        </Button>
+      ) : null}
+      {vendendo ? (
+        <VenderPacote
+          contactId={contactId}
+          modalidadeSugerida={modalidade}
+          aoFechar={() => setVendendo(false)}
+        />
+      ) : null}
+    </div>
   );
 }

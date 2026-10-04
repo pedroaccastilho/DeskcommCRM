@@ -51,12 +51,14 @@ function horaNoFuso(iso: string, fuso: string, tag: string): string {
   }).format(new Date(iso));
 }
 
-/** Depois de qualquer ação, a grade da clínica, a da agenda e as multas repintam. */
+/** Depois de qualquer ação, a grade da clínica, a da agenda, as multas e os pacotes repintam. */
 export function useRecarregarBalcao() {
   const qc = useQueryClient();
   return React.useCallback(() => {
     void qc.invalidateQueries({ queryKey: ["clinica", "balcao"] });
     void qc.invalidateQueries({ queryKey: ["clinica", "multas"] });
+    // Compareceu e falta gastam do pacote; cancelar e remarcar devolvem.
+    void qc.invalidateQueries({ queryKey: ["clinica", "pacotes"] });
     void qc.invalidateQueries({ queryKey: ["agenda"] });
   }, [qc]);
 }
