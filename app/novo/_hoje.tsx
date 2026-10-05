@@ -37,6 +37,7 @@ import {
   usePendencias,
   useTiposDeAtendimento,
 } from "@/components/novo/dados";
+import { PainelDeTarefas } from "@/components/novo/Tarefas";
 import { FolhaAgendar } from "@/components/novo/FolhaAgendar";
 import { FolhaDaSessao, seloDa } from "@/components/novo/FolhaDaSessao";
 import { FolhaDeEvolucao } from "@/components/novo/FolhaDeEvolucao";
@@ -279,6 +280,7 @@ export function Hoje() {
                 testid="novo-pendencias"
               />
             )}
+            <PainelDeTarefas />
             {recepcao && (
               <>
                 <Link

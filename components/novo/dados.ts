@@ -230,6 +230,7 @@ export function useProntuario(contactId: string, habilitado: boolean) {
 export function usePaciente(contactId: string) {
   return useQuery({
     queryKey: ["contacts", contactId],
+    enabled: contactId !== "",
     queryFn: async () =>
       (await apiClient.get<{ data: Contact }>(`/api/v1/contacts/${encodeURIComponent(contactId)}`))
         .data,

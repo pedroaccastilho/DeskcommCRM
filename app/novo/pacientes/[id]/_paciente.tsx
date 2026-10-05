@@ -31,6 +31,7 @@ import { FolhaAgendar } from "@/components/novo/FolhaAgendar";
 import { FolhaDeEvolucao } from "@/components/novo/FolhaDeEvolucao";
 import { FolhaDoPaciente } from "@/components/novo/FolhaDoPaciente";
 import { CartaoDePacotes } from "@/components/novo/PacotesNaFicha";
+import { CartaoDeTarefas } from "@/components/novo/Tarefas";
 import { Avatar, Carregando, Secao, Vazio, dataCurta, hora } from "@/components/novo/pecas";
 import { diaLocalISO } from "@/lib/agenda/fuso";
 import { useT } from "@/lib/i18n/IdiomaProvider";
@@ -258,6 +259,8 @@ export function Paciente({ contactId }: { contactId: string }) {
           </section>
 
           <CartaoDePacotes contactId={contactId} />
+
+          <CartaoDeTarefas contactId={contactId} nome={nome} />
 
           <a
             href={`/app/contacts/${contactId}`}
