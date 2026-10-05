@@ -9034,6 +9034,13 @@ export const DICIONARIO: Traducoes = {
     {
       es: "; en un Supabase propio, apuntando GOTRUE_MAILER_TEMPLATES_* a las rutas /email-templates/ de la app.",
     },
+  "Seu e-mail foi confirmado. Entre com seu e-mail e a senha que você criou.": {
+    es: "Tu correo fue confirmado. Inicia sesión con tu correo y la contraseña que creaste.",
+  },
+  "Este link de nova senha só funciona no mesmo navegador em que você pediu. Peça outro em Recuperar senha e abra o e-mail nesse navegador.":
+    {
+      es: "Este enlace de nueva contraseña solo funciona en el mismo navegador donde la pediste. Pide otro en Recuperar contraseña y abre el correo en ese navegador.",
+    },
   "Conta suspensa": { es: "Cuenta suspendida" },
   // Tela irmã de `/account-suspended`: quem TINHA acesso e não tem mais.
   "Acesso revogado": { es: "Acceso revocado" },

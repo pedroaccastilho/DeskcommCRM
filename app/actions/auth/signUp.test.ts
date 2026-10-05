@@ -26,7 +26,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { headers } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
+import { createClientQuePedeLinkPorEmail } from "@/lib/supabase/server";
 import { modoDeCadastro } from "@/lib/auth/politica-de-cadastro";
 
 // O client admin que `criarContaDeConvite` usa quando o GoTrue está com o
@@ -45,7 +45,7 @@ vi.mock("next/headers", () => ({ headers: vi.fn() }));
 vi.mock("@/lib/auth/politica-de-cadastro", () => ({
   modoDeCadastro: vi.fn(async () => "aberto"),
 }));
-vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+vi.mock("@/lib/supabase/server", () => ({ createClientQuePedeLinkPorEmail: vi.fn() }));
 vi.mock("@/lib/audit", async (orig) => ({
   ...(await orig<Record<string, unknown>>()),
   audit: vi.fn(async () => undefined),
@@ -70,7 +70,7 @@ describe("signUp — a tela precisa saber se a sessão já veio aberta", () => {
       // IP diferente a cada caso, pelo mesmo motivo do e-mail.
       get: (k: string) => (k === "x-forwarded-for" ? `198.51.100.${n % 250}` : null),
     } as never);
-    vi.mocked(createClient).mockResolvedValue({
+    vi.mocked(createClientQuePedeLinkPorEmail).mockResolvedValue({
       auth: { signUp: signUpDoProvedor },
     } as never);
     vi.mocked(modoDeCadastro).mockResolvedValue("aberto");
@@ -129,7 +129,7 @@ describe("signUp — instalação que só aceita convidados", () => {
     vi.mocked(headers).mockResolvedValue({
       get: (k: string) => (k === "x-forwarded-for" ? `203.0.113.${n % 250}` : null),
     } as never);
-    vi.mocked(createClient).mockResolvedValue({
+    vi.mocked(createClientQuePedeLinkPorEmail).mockResolvedValue({
       auth: { signUp: signUpDoProvedor },
     } as never);
     vi.mocked(modoDeCadastro).mockResolvedValue("so_convite");
@@ -233,7 +233,7 @@ describe("signUp — convite com o cadastro público do GoTrue fechado (#1653)",
     vi.mocked(headers).mockResolvedValue({
       get: (k: string) => (k === "x-forwarded-for" ? `192.0.2.${(n % 250) + 1}` : null),
     } as never);
-    vi.mocked(createClient).mockResolvedValue({
+    vi.mocked(createClientQuePedeLinkPorEmail).mockResolvedValue({
       auth: { signUp: signUpDoProvedor, resend },
     } as never);
     vi.mocked(modoDeCadastro).mockResolvedValue("so_convite");
@@ -260,7 +260,11 @@ describe("signUp — convite com o cadastro público do GoTrue fechado (#1653)",
       }),
     );
     expect(resend).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "signup", email: corpo.email }),
+      expect.objectContaining({
+        type: "signup",
+        email: corpo.email,
+        options: { emailRedirectTo: expect.stringContaining(`&convite=${encodeURIComponent(token)}`) },
+      }),
     );
     // O caminho que o GoTrue recusa quando `disable_signup` está ligado não é
     // nem chamado — quem cria a conta é o client admin.
@@ -279,6 +283,15 @@ describe("signUp — convite com o cadastro público do GoTrue fechado (#1653)",
     // Instalação em `aberto` (e `so_convite` ainda sem sincronizar) não muda de
     // comportamento por causa deste conserto: é a restrição "aberto inalterado".
     expect(signUpDoProvedor).toHaveBeenCalled();
+    // O convite viaja no link do e-mail: quem o abre noutro aparelho não tem o
+    // verificador de PKCE, e `/auth/confirm` precisa saber para onde mandá-lo.
+    expect(signUpDoProvedor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: expect.objectContaining({
+          emailRedirectTo: expect.stringContaining(`&convite=${encodeURIComponent(token)}`),
+        }),
+      }),
+    );
     expect(admin.createUser).not.toHaveBeenCalled();
   });
 

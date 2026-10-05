@@ -110,3 +110,28 @@ export async function createClient() {
 export async function createClientDeEntradaComGoogle() {
   return clienteDeServidor("lax");
 }
+
+/**
+ * Cliente para PEDIR um link por e-mail (criar conta e redefinir senha) — com
+ * `sameSite: "lax"` pelo mesmo motivo de `createClientDeEntradaComGoogle`.
+ *
+ * Sem modelos de e-mail próprios, o Supabase manda o link PADRÃO dele, que
+ * passa pelo `/auth/v1/verify` e volta ao `/auth/confirm` com um `code` de
+ * PKCE. E no plano grátis com o remetente embutido os modelos NÃO são
+ * editáveis — medido em 2026-10-05 na instalação da TOQ: o `PATCH` do
+ * `marca-emails.sh` volta "Email template modification is not available for
+ * free tier projects using the default email provider". Então o formato
+ * `code` não é o caso raro de quem esqueceu de configurar: é o ÚNICO possível
+ * ali.
+ *
+ * O clique vem do webmail, navegação cross-site: com o verificador em cookie
+ * Strict ele não chega e a troca falha. Com Lax ele viaja (GET de topo) e o
+ * link fecha — no mesmo navegador em que a pessoa pediu o e-mail. Noutro
+ * aparelho não há verificador nenhum, e `/auth/confirm` trata esse caso.
+ *
+ * Só o verificador fica Lax: quem grava os cookies de SESSÃO é
+ * `/auth/confirm`, com o `createClient` de sempre, Strict.
+ */
+export async function createClientQuePedeLinkPorEmail() {
+  return clienteDeServidor("lax");
+}

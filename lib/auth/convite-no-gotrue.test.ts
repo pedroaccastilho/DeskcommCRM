@@ -17,7 +17,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createClientQuePedeLinkPorEmail } from "@/lib/supabase/server";
 
 const admin = vi.hoisted(() => ({
   createUser: vi.fn(),
@@ -28,7 +28,7 @@ const admin = vi.hoisted(() => ({
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: vi.fn(() => ({ auth: { admin: { createUser: admin.createUser, deleteUser: admin.deleteUser } } })),
 }));
-vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
+vi.mock("@/lib/supabase/server", () => ({ createClientQuePedeLinkPorEmail: vi.fn() }));
 vi.mock("@/lib/logger", () => ({ logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 
 const convite = async () => await import("./convite-no-gotrue");
@@ -100,7 +100,7 @@ describe("lerConfigPublicaDoGoTrue", () => {
 
 describe("criarContaDeConvite", () => {
   beforeEach(() => {
-    vi.mocked(createClient).mockResolvedValue({ auth: { resend: admin.resend } } as never);
+    vi.mocked(createClientQuePedeLinkPorEmail).mockResolvedValue({ auth: { resend: admin.resend } } as never);
   });
 
   it("cria pela admin API com o convite no user_metadata e manda o e-mail", async () => {

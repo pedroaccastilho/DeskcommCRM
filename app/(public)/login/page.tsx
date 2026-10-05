@@ -89,6 +89,30 @@ export default async function LoginPage({
           )}
         </div>
       )}
+      {/*
+        Link PADRÃO do Supabase (formato `code`) aberto noutro navegador: o
+        GoTrue já confirmou o e-mail, só a sessão não fechou. No plano grátis
+        com o remetente embutido os modelos não são editáveis, então este é o
+        caminho normal de quem abre o e-mail no celular — não um erro.
+      */}
+      {error === "email_confirmado" && (
+        <div
+          className="rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-sm"
+          role="status"
+        >
+          {t("Seu e-mail foi confirmado. Entre com seu e-mail e a senha que você criou.")}
+        </div>
+      )}
+      {error === "recuperacao_noutro_navegador" && (
+        <div
+          className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          role="alert"
+        >
+          {t(
+            "Este link de nova senha só funciona no mesmo navegador em que você pediu. Peça outro em Recuperar senha e abra o e-mail nesse navegador.",
+          )}
+        </div>
+      )}
       {error === "provisionamento" && (
         <div
           className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"

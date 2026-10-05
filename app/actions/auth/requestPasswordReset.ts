@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClientQuePedeLinkPorEmail } from "@/lib/supabase/server";
 import { forgotPasswordSchema, type ForgotPasswordInput } from "@/lib/auth/schemas";
 import { audit, hashEmail } from "@/lib/audit";
 import { authRateLimited, AUTH_LIMITS } from "@/lib/auth/rate-limit";
@@ -45,7 +45,8 @@ export async function requestPasswordReset(
     return { ok: false, error: "rate_limited" };
   }
 
-  const supabase = await createClient();
+  // Lax só no verificador de PKCE — ver `createClientQuePedeLinkPorEmail`.
+  const supabase = await createClientQuePedeLinkPorEmail();
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
     // ?type=recovery sobrevive ao redirect do GoTrue (preserva query string
     // existente ao anexar `code=`/`token_hash=`) — sem SMTP customizado o
