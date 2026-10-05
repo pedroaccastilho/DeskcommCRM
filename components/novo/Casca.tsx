@@ -27,8 +27,10 @@ import {
   type ItemDoMenu,
 } from "@/lib/novo/cargo";
 import { useTheme, type Theme } from "@/lib/theme";
+import { veRelatoriosDaGestao } from "@/lib/clinica/gestao";
 import {
   CalendarBlank,
+  ChartBar,
   Gear,
   IdentificationCard,
   Moon,
@@ -99,6 +101,7 @@ const ICONE: Record<
   agenda: CalendarBlank,
   pacientes: UsersThree,
   conversas: WhatsappLogo,
+  relatorios: ChartBar,
   ajustes: Gear,
 };
 
@@ -143,7 +146,7 @@ export function Casca({
   };
 
   const pathname = usePathname() ?? "/novo";
-  const menu = menuDoCargo(cargo);
+  const menu = menuDoCargo(cargo, veRelatoriosDaGestao(role, eu.data?.cargos ?? []));
   const ativo = (href: string) =>
     href === "/novo" ? pathname === "/novo" : pathname === href || pathname.startsWith(`${href}/`);
 

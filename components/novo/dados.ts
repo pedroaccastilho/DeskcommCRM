@@ -29,6 +29,8 @@ export interface Eu {
       })
     | null;
   ve_acessos: boolean;
+  /** Os perfis de quem está logado (migration 9008): o acesso é a soma deles. */
+  cargos?: string[];
 }
 
 export function useEu() {
