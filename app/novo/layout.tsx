@@ -4,12 +4,15 @@ import { redirect } from "next/navigation";
 import { Casca } from "@/components/novo/Casca";
 import { AuthProvider } from "@/hooks/auth/AuthProvider";
 import { isMfaEnrolled, loadAuthUser, requiresMfa, resolveActiveOrg } from "@/lib/auth/server";
+import { DEFAULT_VISIBILITY_MODE, type VisibilityMode } from "@/lib/auth/types";
 import { marcaDaInstalacao } from "@/lib/branding/instalacao";
 import { resolverMarcaDaOrganizacao } from "@/lib/branding/organizacao";
 import { env } from "@/lib/env";
 import { IdiomaProvider } from "@/lib/i18n/IdiomaProvider";
 import { modulosLigados } from "@/lib/instalacao/modulos";
+import { capacidadesLigadas } from "@/lib/organizacao/capacidades";
 import { ehOperante } from "@/lib/organizacao/operante";
+import { clientePelaAgendaLigado } from "@/lib/schemas/settings";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fusoUtilizavel } from "@/lib/tempo/fusos";
 
@@ -72,7 +75,18 @@ export default async function LayoutDaInterfaceNova({ children }: { children: Re
     await marcaDaInstalacao(),
     env,
   );
-  const activeOrg = { ...org, modulos_ligados: modulos };
+  // Os mesmos campos que `/app/layout.tsx` expõe ao cliente: a caixa de entrada do WhatsApp
+  // (`/novo/whatsapp`) decide as visões pelo `visibility_mode`.
+  const settings = orgRes.data?.settings ?? null;
+  const activeOrg = {
+    ...org,
+    modulos_ligados: modulos,
+    visibility_mode:
+      (settings as { visibility_mode?: VisibilityMode } | null)?.visibility_mode ??
+      DEFAULT_VISIBILITY_MODE,
+    cliente_pela_agenda: clientePelaAgendaLigado(settings),
+    capacidades_ligadas: capacidadesLigadas(settings, modulos),
+  };
   const fuso = fusoUtilizavel(org.timezone);
 
   return (

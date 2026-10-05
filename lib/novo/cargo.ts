@@ -117,6 +117,6 @@ export function menuDoCargo(cargo: Cargo): ItemDoMenu[] {
     },
     ...(quemAtende
       ? []
-      : [{ href: "/app/inbox", rotulo: "WhatsApp", icone: "conversas" as const }]),
+      : [{ href: "/novo/whatsapp", rotulo: "WhatsApp", icone: "conversas" as const }]),
   ];
 }

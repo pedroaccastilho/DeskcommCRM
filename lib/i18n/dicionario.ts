@@ -17603,6 +17603,18 @@ export const DICIONARIO: Traducoes = {
   Instagram: { es: "Instagram" },
   "Indicação de paciente": { es: "Recomendación de paciente" },
   "Encaminhamento médico": { es: "Derivación médica" },
+  // Plano e acessos na ficha da interface nova (/novo)
+  Sessão: { es: "Sesión" },
+  "sessão feita": { es: "sesión realizada" },
+  "sessões feitas": { es: "sesiones realizadas" },
+  "por semana": { es: "por semana" },
+  "avaliado por": { es: "evaluado por" },
+  "Reavaliação marcada": { es: "Reevaluación agendada" },
+  "Reavaliação prevista para": { es: "Reevaluación prevista para el" },
+  "ainda sem horário": { es: "todavía sin horario" },
+  "Cada leitura na tela e cada PDF baixado ficam registrados.": {
+    es: "Cada lectura en pantalla y cada PDF descargado quedan registrados.",
+  },
   // Cadastro do paciente na interface nova (/novo)
   "Escreva o nome do paciente.": { es: "Escribe el nombre del paciente." },
   "Confira o telefone: DDD e número, como (11) 98888-7777.": {
