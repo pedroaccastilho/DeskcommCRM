@@ -4,9 +4,10 @@
  *
  * GET ?de=ISO&ate=ISO[&profissional=uuid,uuid][&modalidade=fisioterapia,pilates][&incluir_canceladas=1]
  *
- * Devolve `{ profissionais, sessoes, politica }`. `profissionais` são os de saúde ativos (as
- * colunas); uma sessão de quem não está no cadastro vem com o `profissional_user_id` dela e a
- * tela decide onde pô-la. `modalidade` é `null` em compromisso cujo tipo não foi etiquetado em
+ * Devolve `{ profissionais, sessoes, politica }`. Cada sessão traz `chegou_em` e
+ * `atendimento_iniciado_em` (migration 9007; `null` quando não houve a etapa).
+ * `profissionais` são os de saúde ativos (as colunas); uma sessão de quem não está no cadastro
+ * vem com o `profissional_user_id` dela e a tela decide onde pô-la. `modalidade` é `null` em compromisso cujo tipo não foi etiquetado em
  * `tipos-atendimento`. Qualquer membro lê: a grade não tem dado clínico.
  *
  * ⚠️ CLIENT DE SESSÃO. A RLS de `calendar_appointments` já limita à organização; o filtro
@@ -20,6 +21,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import {
   politicaDaLinha,
   sessaoDaGrade,
+  type EtapaDaSessao,
   type LinhaDoCompromisso,
   type Modalidade,
   type PoliticaDaAgenda,
@@ -31,6 +33,41 @@ import { createClient } from "@/lib/supabase/server";
 export const dynamic = "force-dynamic";
 
 const LIMITE_DE_SESSOES = 2000;
+/** Ids por consulta de etapas: a lista vai na URL do PostgREST, e URL longa demais é recusada. */
+const IDS_POR_CONSULTA = 200;
+
+/**
+ * As etapas do dia ("chegou", "em atendimento") das sessões da grade (migration 9007).
+ *
+ * A tabela nasce numa versão do módulo posterior às outras: numa instalação em que ela ainda não
+ * existe (42P01, ou PGRST205 enquanto o PostgREST não recarregou o schema), a grade segue inteira
+ * e as etapas vêm `null`. Outro erro é erro.
+ */
+async function etapasDasSessoes(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  org: string,
+  ids: string[],
+): Promise<Map<string, EtapaDaSessao> | Error> {
+  const etapas = new Map<string, EtapaDaSessao>();
+  for (let i = 0; i < ids.length; i += IDS_POR_CONSULTA) {
+    const { data, error } = await supabase
+      .from("clinica_sessao_etapas")
+      .select("appointment_id, chegou_em, atendimento_iniciado_em")
+      .eq("organization_id", org)
+      .in("appointment_id", ids.slice(i, i + IDS_POR_CONSULTA));
+    if (error) {
+      if (moduloClinicaNaoInstalado(error) || error.code === "PGRST205") return new Map();
+      return new Error(error.message);
+    }
+    for (const e of data ?? []) {
+      etapas.set(e.appointment_id as string, {
+        chegou_em: (e.chegou_em as string | null) ?? null,
+        atendimento_iniciado_em: (e.atendimento_iniciado_em as string | null) ?? null,
+      });
+    }
+  }
+  return etapas;
+}
 
 export async function GET(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
@@ -126,8 +163,16 @@ export async function GET(req: NextRequest): Promise<Response> {
   const { data, error } = await consulta;
   if (error) return fail("internal_error", error.message, 500, { requestId });
 
-  const sessoes = ((data ?? []) as unknown as LinhaDoCompromisso[]).map((linha) =>
-    sessaoDaGrade(linha, tipos, politica),
+  const linhas = (data ?? []) as unknown as LinhaDoCompromisso[];
+  const etapas = await etapasDasSessoes(
+    supabase,
+    org,
+    linhas.map((l) => l.id),
+  );
+  if (etapas instanceof Error) return fail("internal_error", etapas.message, 500, { requestId });
+
+  const sessoes = linhas.map((linha) =>
+    sessaoDaGrade(linha, tipos, politica, etapas.get(linha.id) ?? null),
   );
 
   return ok({ de: q.de, ate: q.ate, profissionais, sessoes, politica }, { requestId });
