@@ -29,6 +29,8 @@ export interface Eu {
       })
     | null;
   ve_acessos: boolean;
+  /** Os perfis de quem está logado (migration 9008): o acesso é a soma deles. */
+  cargos?: string[];
 }
 
 export function useEu() {
@@ -165,6 +167,24 @@ export function usePacotesParaRenovar(habilitado: boolean) {
   });
 }
 
+/**
+ * Sessões da clínica dos próximos dias que ainda esperam confirmação (`pending`), para a recepção
+ * ligar ou mandar WhatsApp. Quem confirma pelo WhatsApp sai da lista sozinho.
+ */
+export function useAConfirmar(habilitado: boolean, horas = 48) {
+  return useQuery({
+    queryKey: ["clinica", "a-confirmar", horas],
+    enabled: habilitado,
+    queryFn: async () =>
+      (
+        await apiClient.get<{ data: SessaoDaGrade[] }>(
+          `/api/v1/clinica/agenda/a-confirmar?horas=${horas}`,
+        )
+      ).data,
+    retry: false,
+  });
+}
+
 export interface MultaPendente {
   id: string;
   contact_id: string;
@@ -230,6 +250,7 @@ export function useProntuario(contactId: string, habilitado: boolean) {
 export function usePaciente(contactId: string) {
   return useQuery({
     queryKey: ["contacts", contactId],
+    enabled: contactId !== "",
     queryFn: async () =>
       (await apiClient.get<{ data: Contact }>(`/api/v1/contacts/${encodeURIComponent(contactId)}`))
         .data,

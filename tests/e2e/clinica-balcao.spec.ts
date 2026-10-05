@@ -11,7 +11,8 @@
  *
  * As sessões são semeadas pelo service role em instantes RELATIVOS ao agora (de 25 minutos atrás
  * a duas horas à frente), para caírem no dia de hoje. Perto da meia-noite do fuso da organização
- * alguma pode cair no dia seguinte; a CI roda de dia no fuso de São Paulo.
+ * alguma cairia no dia vizinho: durante o caso a organização fica num fuso em que a janela inteira
+ * cabe no mesmo dia (`helpers/virada-do-dia.ts`), e o fuso de antes volta no fim.
  *
  * ⚠️ Instalar é da INSTALAÇÃO e não se desfaz, como em `clinica-prontuario`.
  */
@@ -24,6 +25,7 @@ import { expect, test } from "./helpers/test";
 
 import { carregarEnvLocal, destinoEhLocal } from "../../scripts/lib/env-de-teste";
 import { lerCreds, loginComoAdmin, loginComoDono } from "./helpers/login-admin";
+import { fusoDaOrganizacaoLongeDaVirada } from "./helpers/virada-do-dia";
 import { afirmarDonoDoServidor } from "./utils/precondicao";
 
 const ESPERA = 30_000;
@@ -124,6 +126,7 @@ test.describe("Balcão da recepção com o módulo clínica", () => {
 
     const contatos: string[] = [];
     const ids: Record<string, string> = {};
+    const desfazerFuso = await fusoDaOrganizacaoLongeDaVirada(admin, orgId, 30, 180);
     try {
       const pacientes = {
         semConfirmacao: { nome: `Ana Confirmar ${sufixo}`, minutos: 60, status: "pending" },
@@ -236,6 +239,7 @@ test.describe("Balcão da recepção com o módulo clínica", () => {
       expect(largura).toBeLessThanOrEqual(390);
       await page.screenshot({ path: path.join(EVIDENCIA, "balcao-celular.png"), fullPage: true });
     } finally {
+      await desfazerFuso();
       const lista = Object.values(ids);
       if (lista.length > 0) {
         await admin.from("clinica_multas").delete().in("appointment_id", lista);

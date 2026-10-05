@@ -17,6 +17,7 @@ import { expect, test } from "./helpers/test";
 
 import { carregarEnvLocal, destinoEhLocal } from "../../scripts/lib/env-de-teste";
 import { lerCreds, loginComoAdmin, loginComoDono } from "./helpers/login-admin";
+import { fusoDaOrganizacaoLongeDaVirada } from "./helpers/virada-do-dia";
 import { afirmarDonoDoServidor } from "./utils/precondicao";
 
 const ESPERA = 30_000;
@@ -163,6 +164,8 @@ test.describe("Chegou e em atendimento com o módulo clínica", () => {
       throw new Error(`calendar_appointments insert: ${erroSessao?.message}`);
     const sessaoId = (sessao as { id: string }).id;
 
+    // A sessão é daqui a 10 min: perto da meia-noite ela cairia amanhã e sumiria da fila de hoje.
+    const desfazerFuso = await fusoDaOrganizacaoLongeDaVirada(admin, orgId, 30, 120);
     try {
       // Recepção: o paciente chegou.
       await page.goto("/app/clinica/balcao");
@@ -219,6 +222,7 @@ test.describe("Chegou e em atendimento com o módulo clínica", () => {
         0,
       );
     } finally {
+      await desfazerFuso();
       await admin.from("calendar_appointments").delete().eq("id", sessaoId);
       await admin.from("contacts").delete().eq("id", contactId);
       await admin.from("clinica_tipos_atendimento").delete().eq("event_type_id", tipoId);
