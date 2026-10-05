@@ -165,6 +165,24 @@ export function usePacotesParaRenovar(habilitado: boolean) {
   });
 }
 
+/**
+ * Sessões da clínica dos próximos dias que ainda esperam confirmação (`pending`), para a recepção
+ * ligar ou mandar WhatsApp. Quem confirma pelo WhatsApp sai da lista sozinho.
+ */
+export function useAConfirmar(habilitado: boolean, horas = 48) {
+  return useQuery({
+    queryKey: ["clinica", "a-confirmar", horas],
+    enabled: habilitado,
+    queryFn: async () =>
+      (
+        await apiClient.get<{ data: SessaoDaGrade[] }>(
+          `/api/v1/clinica/agenda/a-confirmar?horas=${horas}`,
+        )
+      ).data,
+    retry: false,
+  });
+}
+
 export interface MultaPendente {
   id: string;
   contact_id: string;

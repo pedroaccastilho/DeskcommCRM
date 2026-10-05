@@ -17609,6 +17609,17 @@ export const DICIONARIO: Traducoes = {
   Instagram: { es: "Instagram" },
   "Indicação de paciente": { es: "Recomendación de paciente" },
   "Encaminhamento médico": { es: "Derivación médica" },
+  // Multas e confirmações na interface nova (/novo)
+  Multas: { es: "Multas" },
+  Isenta: { es: "Exenta" },
+  Paga: { es: "Pagada" },
+  "Multa isenta.": { es: "Multa exenta." },
+  "Ex.: trouxe atestado médico": { es: "Ej.: trajo certificado médico" },
+  "O motivo, quem isentou e quando ficam registrados.": {
+    es: "El motivo, quién la eximió y cuándo quedan registrados.",
+  },
+  "A confirmar nos próximos dias": { es: "Por confirmar en los próximos días" },
+  "Todo mundo de amanhã já confirmou.": { es: "Todos los de mañana ya confirmaron." },
   // Plano e acessos na ficha da interface nova (/novo)
   Sessão: { es: "Sesión" },
   "sessão feita": { es: "sesión realizada" },

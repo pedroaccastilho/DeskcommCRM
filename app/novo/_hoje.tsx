@@ -32,6 +32,7 @@ import {
 import { useNovo } from "@/components/novo/Casca";
 import {
   useGradeDoDia,
+  useAConfirmar,
   useMultasPendentes,
   usePacotesParaRenovar,
   usePendencias,
@@ -70,6 +71,7 @@ export function Hoje() {
   const recepcao = !soMinhas && role !== "viewer";
   const renovar = usePacotesParaRenovar(recepcao);
   const multas = useMultasPendentes(recepcao);
+  const aConfirmar = useAConfirmar(recepcao);
   const pendencias = usePendencias(veProntuario);
   const conversas = useConversationCounts(recepcao ? (org?.orgId ?? null) : null);
 
@@ -92,7 +94,12 @@ export function Hoje() {
       ? todas.filter((s) => s.profissional_user_id === filtroProf)
       : todas;
   const arrumado = arrumarDia(visiveis, agora);
-  const sessaoAberta = todas.find((s) => s.id === aberta) ?? null;
+  // As de hoje já estão na lista do dia; o painel "A confirmar" fica com as dos próximos dias.
+  const proximasAConfirmar = (aConfirmar.data ?? []).filter(
+    (s) => diaLocalISO(new Date(s.inicio), fuso) !== dia,
+  );
+  const sessaoAberta =
+    todas.find((s) => s.id === aberta) ?? proximasAConfirmar.find((s) => s.id === aberta) ?? null;
   const politica = grade.data?.politica ?? POLITICA_PADRAO;
   const precoDe = (s: SessaoDaGrade | null) =>
     (s?.tipo && tipos.data?.find((t) => t.event_type_id === s.tipo!.id)?.preco_cents) ?? null;
@@ -298,6 +305,22 @@ export function Hoje() {
                   </span>
                   <span className="n-fraco">›</span>
                 </Link>
+                <PainelLateral
+                  titulo="A confirmar nos próximos dias"
+                  vazio="Todo mundo de amanhã já confirmou."
+                  itens={proximasAConfirmar.slice(0, 6).map((s) => {
+                    const nome = s.paciente?.nome ?? s.titulo;
+                    return {
+                      id: s.id,
+                      nome,
+                      detalhe: `${dataLonga(s.inicio, fuso, tag).split(",")[0]} ${t("às")} ${hora(s.inicio, fuso)} · ${s.tipo?.nome ?? s.titulo}`,
+                      acao: () => abrir(s),
+                      rotuloDaAcao: "Abrir",
+                    };
+                  })}
+                  total={proximasAConfirmar.length}
+                  testid="novo-a-confirmar"
+                />
                 <PainelLateral
                   titulo="Oferecer renovação"
                   vazio="Ninguém com o pacote no fim."

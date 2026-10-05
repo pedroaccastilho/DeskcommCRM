@@ -30,6 +30,7 @@ import {
 import { FolhaAgendar } from "@/components/novo/FolhaAgendar";
 import { FolhaDeEvolucao } from "@/components/novo/FolhaDeEvolucao";
 import { FolhaDoPaciente } from "@/components/novo/FolhaDoPaciente";
+import { CartaoDeMultas } from "@/components/novo/Multas";
 import { CartaoDePacotes } from "@/components/novo/PacotesNaFicha";
 import { CartaoDeTarefas } from "@/components/novo/Tarefas";
 import { CartaoDeAcessos, CartaoDoPlano } from "@/components/novo/PlanoEAcessos";
@@ -276,6 +277,8 @@ export function Paciente({ contactId }: { contactId: string }) {
           <CartaoDoPlano contactId={contactId} fuso={fuso} />
 
           <CartaoDePacotes contactId={contactId} />
+
+          <CartaoDeMultas contactId={contactId} fuso={fuso} />
 
           <CartaoDeTarefas contactId={contactId} nome={nome} />
           {eu?.ve_acessos && <CartaoDeAcessos contactId={contactId} fuso={fuso} />}
