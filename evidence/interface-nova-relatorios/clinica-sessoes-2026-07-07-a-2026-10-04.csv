@@ -1,0 +1,21 @@
+﻿Data;Hora;Paciente;Profissional;Modalidade;Tipo;Situação;Cobrança;Preço de tabela (R$)
+14/09/2026;15:30;Ana Beatriz Ferreira;Júlia Martins;Pilates;Aula de pilates;Cancelada;;90,00
+28/09/2026;09:00;Ana Beatriz Ferreira;Rafael Costa;Fisioterapia;Sessão de fisioterapia;Cancelada;;180,00
+30/09/2026;11:00;Fernando Ribeiro;Marcos Alves;Enfermagem;Atendimento de enfermagem;Realizada;Avulsa;120,00
+01/10/2026;09:00;Ana Beatriz Ferreira;Rafael Costa;Fisioterapia;Avaliação de fisioterapia;Realizada;Avulsa;250,00
+02/10/2026;08:00;Eduarda Nunes;Camila Rocha;Fisioterapia;Sessão de fisioterapia;Confirmada;;180,00
+02/10/2026;10:00;Bruno Henrique Dias;Rafael Costa;Fisioterapia;Sessão de fisioterapia;Confirmada;;180,00
+02/10/2026;14:00;Cecília Moura;Dra. Helena Prado;Medicina;Consulta médica;Realizada;Avulsa;350,00
+02/10/2026;18:00;Daniel Okada;Júlia Martins;Pilates;Aula de pilates;Falta;;90,00
+04/10/2026;12:35;Ana Beatriz Ferreira;Rafael Costa;Fisioterapia;Sessão de fisioterapia;Realizada;Avulsa;180,00
+04/10/2026;13:35;Cecília Moura;Dra. Helena Prado;Medicina;Consulta médica;Realizada;Avulsa;350,00
+04/10/2026;14:35;Daniel Okada;Júlia Martins;Pilates;Aula de pilates;Falta;;90,00
+04/10/2026;16:20;Eduarda Nunes;Camila Rocha;Fisioterapia;Sessão de fisioterapia;Confirmada;;180,00
+04/10/2026;17:15;Bruno Henrique Dias;Rafael Costa;Fisioterapia;Sessão de fisioterapia;Confirmada;;180,00
+04/10/2026;17:25;Heitor Campos;Dra. Helena Prado;Medicina;Consulta médica;Confirmada;;350,00
+04/10/2026;18:10;Gabriela Teles;Camila Rocha;Fisioterapia;Avaliação de fisioterapia;A confirmar;;250,00
+04/10/2026;18:35;Fernando Ribeiro;Marcos Alves;Enfermagem;Atendimento de enfermagem;Confirmada;;120,00
+04/10/2026;19:10;Ana Beatriz Ferreira;Rafael Costa;Fisioterapia;Sessão de fisioterapia;A confirmar;;180,00
+04/10/2026;20:05;Daniel Okada;Júlia Martins;Pilates;Aula de pilates;Confirmada;;90,00
+04/10/2026;20:35;Fernando Ribeiro;Camila Rocha;Pilates;Aula de pilates;Confirmada;;90,00
+04/10/2026;21:35;Cecília Moura;Dra. Helena Prado;Fisioterapia;Reavaliação;A confirmar;;200,00

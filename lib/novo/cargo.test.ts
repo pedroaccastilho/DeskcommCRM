@@ -57,6 +57,22 @@ describe("cargo na interface nova", () => {
       "Alunos",
     ]);
   });
+
+  it("os perfis somam: Gerente ou Financeiro ganha Relatórios em qualquer visão", () => {
+    expect(menuDoCargo("gestao", true).map((i) => i.rotulo)).toEqual([
+      "Hoje",
+      "Agenda",
+      "Pacientes",
+      "WhatsApp",
+      "Relatórios",
+    ]);
+    expect(menuDoCargo("saude", true).map((i) => i.rotulo)).toEqual([
+      "Meu dia",
+      "Minha agenda",
+      "Meus pacientes",
+      "Relatórios",
+    ]);
+  });
 });
 
 describe("cada um vê a própria área", () => {
