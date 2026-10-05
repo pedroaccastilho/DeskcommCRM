@@ -16012,6 +16012,23 @@ export const DICIONARIO: Traducoes = {
   "no pacote. Vale até {data}.": { es: "en el paquete. Vale hasta el {data}." },
   "Sessão avulsa, sem pacote valendo.": { es: "Sesión suelta, sin paquete vigente." },
   "Renovar pacote": { es: "Renovar paquete" },
+  // ─── Clínica: chegou e em atendimento (fork TOQ) ───
+  "Chegada registrada.": { es: "Llegada registrada." },
+  "Atendimento iniciado.": { es: "Atención iniciada." },
+  "Chegada desfeita.": { es: "Llegada deshecha." },
+  "Na clínica": { es: "En la clínica" },
+  "Na recepção": { es: "En recepción" },
+  "Chegou": { es: "Llegó" },
+  "Desfazer chegada": { es: "Deshacer llegada" },
+  "Chegou às {chegada}. Em atendimento desde as {inicio}.": {
+    es: "Llegó a las {chegada}. En atención desde las {inicio}.",
+  },
+  "Chegou às {chegada}. Aguardando na recepção.": {
+    es: "Llegó a las {chegada}. Esperando en recepción.",
+  },
+  "Iniciar atendimento": { es: "Iniciar atención" },
+  "Em atendimento desde as {hora}.": { es: "En atención desde las {hora}." },
+  "Chegou às {hora} e está na recepção.": { es: "Llegó a las {hora} y está en recepción." },
   // ─── Clínica: Meu dia do profissional (fork TOQ) ───
   "Meu dia": { es: "Mi día" },
   "Seus horários de hoje e o paciente da vez, com a evolução ao lado.": {

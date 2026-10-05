@@ -1,5 +1,6 @@
 /**
- * Clínica (prontuário, agenda, pacotes, origem do paciente e plano de tratamento) — módulo oficial via ADR-0002 (migrations 9001 a 9008, fork TOQ).
+ * Clínica (prontuário, agenda, pacotes, origem do paciente, plano de tratamento, perfis e etapas da
+ * sessão) — módulo oficial via ADR-0002 (migrations 9001 a 9008, fork TOQ).
  *
  * `protecaoPropria` em todas: a RLS do prontuário é por PROFISSIONAL (não por papel
  * nem por membro), e a da agenda separa leitura (membro, ou `agent`+ na multa) de escrita
@@ -32,6 +33,8 @@ moldeDeProvisionadora({
     // Os perfis de cada usuário (migration 9008), pela auxiliar das origens.
     "clinica_cargos_membro",
     "clinica_convites_cargos",
+    // As etapas do dia da sessão (migration 9007), chamadas pela dos pacotes.
+    "clinica_sessao_etapas",
   ],
   protecaoPropria: [
     "clinica_profissionais",
@@ -50,5 +53,6 @@ moldeDeProvisionadora({
     "clinica_planos_tratamento",
     "clinica_cargos_membro",
     "clinica_convites_cargos",
+    "clinica_sessao_etapas",
   ],
 });

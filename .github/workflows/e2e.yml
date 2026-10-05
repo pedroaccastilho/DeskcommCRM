@@ -1207,6 +1207,7 @@ jobs:
         suspensao-administrativa.spec.ts
         clinica-meu-dia.spec.ts
         clinica-agenda-janelas.spec.ts
+        clinica-chegou.spec.ts
 
       # ─── PARTE 7 — nasceu em 2026-10-04 (fork TOQ): as specs da clínica ───
       #

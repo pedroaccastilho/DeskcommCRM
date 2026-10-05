@@ -149,6 +149,19 @@ describe("sessão da grade", () => {
     expect(s.falta_liberada_em).toBeNull();
     expect(s.cancelamento_sem_multa_ate).toBeNull();
   });
+
+  it("etapa do dia: sem linha vem null; com linha, vem como o banco guardou", () => {
+    const tipos = new Map([["t1", { nome: "Fisio", modalidade: "fisioterapia" as const }]]);
+    const sem = sessaoDaGrade(linha, tipos, POLITICA_PADRAO);
+    expect(sem.chegou_em).toBeNull();
+    expect(sem.atendimento_iniciado_em).toBeNull();
+    const com = sessaoDaGrade(linha, tipos, POLITICA_PADRAO, {
+      chegou_em: "2026-10-05T12:55:00.000Z",
+      atendimento_iniciado_em: null,
+    });
+    expect(com.chegou_em).toBe("2026-10-05T12:55:00.000Z");
+    expect(com.atendimento_iniciado_em).toBeNull();
+  });
 });
 
 describe("validação das rotas", () => {
