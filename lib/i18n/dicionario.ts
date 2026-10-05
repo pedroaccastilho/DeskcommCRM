@@ -17659,6 +17659,32 @@ export const DICIONARIO: Traducoes = {
   "Ninguém com esse nome. Busque pelo telefone com DDD.": {
     es: "Nadie con ese nombre. Busca por el teléfono con código de área.",
   },
+  // Tarefas na interface nova (/novo)
+  "Apagar esta tarefa?": { es: "¿Borrar esta tarea?" },
+  "Apagar tarefa": { es: "Borrar tarea" },
+  "Buscar paciente": { es: "Buscar paciente" },
+  "Criar tarefa": { es: "Crear tarea" },
+  "Ex.: ligar para confirmar o exame": { es: "Ej.: llamar para confirmar el examen" },
+  "Mais para frente": { es: "Más adelante" },
+  "Marcar como feita": { es: "Marcar como hecha" },
+  "Nada pendente": { es: "Nada pendiente" },
+  "Nada vencendo hoje.": { es: "Nada vence hoy." },
+  "Nenhuma tarefa em aberto.": { es: "Ninguna tarea abierta." },
+  "Nome ou telefone do paciente": { es: "Nombre o teléfono del paciente" },
+  "Nos próximos 7 dias": { es: "En los próximos 7 días" },
+  "O que ficou combinado, com prazo. Presa a um paciente, aparece na ficha dele.": { es: "Lo acordado, con plazo. Si está ligada a un paciente, aparece en su ficha." },
+  "Paciente (opcional)": { es: "Paciente (opcional)" },
+  "Quais tarefas": { es: "Qué tareas" },
+  "Quando algo ficar combinado (ligar de volta, pedir um exame), anote aqui.": { es: "Cuando algo quede acordado (devolver una llamada, pedir un examen), anótalo aquí." },
+  "Reabrir tarefa": { es: "Reabrir tarea" },
+  "Tarefa": { es: "Tarea" },
+  "Tarefa apagada.": { es: "Tarea borrada." },
+  "Tarefa atualizada.": { es: "Tarea actualizada." },
+  "Tarefa concluída.": { es: "Tarea completada." },
+  "Tarefa criada.": { es: "Tarea creada." },
+  "Tarefas de hoje": { es: "Tareas de hoy" },
+  "Tirar": { es: "Quitar" },
+  "Ver todas as tarefas": { es: "Ver todas las tareas" },
 };
 
 /**
