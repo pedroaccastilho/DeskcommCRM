@@ -289,7 +289,7 @@ export function Hoje() {
             {recepcao && (
               <>
                 <Link
-                  href="/app/inbox"
+                  href="/novo/whatsapp"
                   className="n-cartao n-entra flex items-center gap-4 p-5 transition-transform hover:-translate-y-0.5"
                 >
                   <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[var(--n-ok-suave)] text-[var(--n-ok)]">

@@ -32,6 +32,7 @@ import { FolhaDeEvolucao } from "@/components/novo/FolhaDeEvolucao";
 import { FolhaDoPaciente } from "@/components/novo/FolhaDoPaciente";
 import { CartaoDeMultas } from "@/components/novo/Multas";
 import { CartaoDePacotes } from "@/components/novo/PacotesNaFicha";
+import { CartaoDeAcessos, CartaoDoPlano } from "@/components/novo/PlanoEAcessos";
 import { Avatar, Carregando, Secao, Vazio, dataCurta, hora } from "@/components/novo/pecas";
 import { diaLocalISO } from "@/lib/agenda/fuso";
 import { useT } from "@/lib/i18n/IdiomaProvider";
@@ -49,7 +50,7 @@ const SITUACAO: Record<string, { rotulo: string; classe: string }> = {
 export function Paciente({ contactId }: { contactId: string }) {
   const t = useT();
   const tag = useTagDeIdioma();
-  const { fuso, role, veProntuario } = useNovo();
+  const { fuso, role, veProntuario, eu } = useNovo();
   const paciente = usePaciente(contactId);
   const sessoes = useSessoesDoPaciente(contactId);
   const pacotes = usePacotesDoPaciente(contactId);
@@ -167,7 +168,21 @@ export function Paciente({ contactId }: { contactId: string }) {
       <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="grid content-start gap-8">
           {ehProfissional ? (
-            <Secao titulo="Prontuário" contagem={prontuario.data?.length}>
+            <Secao
+              titulo="Prontuário"
+              contagem={prontuario.data?.length}
+              acao={
+                (prontuario.data ?? []).length > 0 ? (
+                  <a
+                    href={`/api/v1/clinica/prontuario/pdf?contact_id=${encodeURIComponent(contactId)}`}
+                    className="n-botao n-botao-suave n-botao-pequeno"
+                    data-testid="novo-prontuario-pdf"
+                  >
+                    {t("Baixar PDF")}
+                  </a>
+                ) : null
+              }
+            >
               {prontuario.isLoading ? (
                 <Carregando linhas={2} />
               ) : (prontuario.data ?? []).length === 0 ? (
@@ -258,9 +273,12 @@ export function Paciente({ contactId }: { contactId: string }) {
             )}
           </section>
 
+          <CartaoDoPlano contactId={contactId} fuso={fuso} />
+
           <CartaoDePacotes contactId={contactId} />
 
           <CartaoDeMultas contactId={contactId} fuso={fuso} />
+          {eu?.ve_acessos && <CartaoDeAcessos contactId={contactId} fuso={fuso} />}
 
           <a
             href={`/app/contacts/${contactId}`}

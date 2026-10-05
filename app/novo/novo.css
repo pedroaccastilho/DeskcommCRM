@@ -578,3 +578,51 @@
     transition: none !important;
   }
 }
+
+/*
+ * O WHATSAPP (/novo/whatsapp): a caixa de entrada da versão atual com a paleta da interface nova.
+ * As cores de lá são `--color-*` (lidas pelos utilitários) e as do shadcn (`--background`, …),
+ * que no `:root` já foram resolvidas — por isso as duas camadas são reapontadas aqui. Claro e
+ * escuro vêm de graça: `--n-*` já muda com o tema.
+ */
+.novo .n-inbox {
+  --color-bg: var(--n-papel);
+  --color-surface: var(--n-cartao);
+  --color-surface-elevated: var(--n-papel-2);
+  --color-text: var(--n-tinta);
+  --color-text-muted: var(--n-tinta-2);
+  --color-text-subtle: var(--n-tinta-3);
+  --color-border: var(--n-linha);
+  --color-border-strong: color-mix(in oklab, var(--n-tinta) 22%, var(--n-linha));
+  --background: var(--n-papel);
+  --foreground: var(--n-tinta);
+  --card: var(--n-cartao);
+  --card-foreground: var(--n-tinta);
+  --popover: var(--n-cartao);
+  --popover-foreground: var(--n-tinta);
+  --muted: var(--n-papel-2);
+  --muted-foreground: var(--n-tinta-2);
+  --border: var(--n-linha);
+  --input: var(--n-linha);
+  /* O fundo da conversa selecionada: na versão atual é um tom claro fixo, ilegível no escuro. */
+  --color-accent-50: color-mix(in oklab, var(--n-acao) 14%, var(--n-cartao));
+  padding: 12px 12px 0;
+}
+
+/* Sem o cabeçalho de 3,5rem da versão atual; no celular, desconta a barra de abas. */
+.novo .n-inbox > .grid {
+  height: calc(100dvh - 12px - 108px);
+  overflow: hidden;
+  border-radius: var(--n-raio);
+  background: var(--n-cartao);
+  box-shadow: var(--n-sombra);
+}
+
+@media (min-width: 900px) {
+  .novo .n-inbox {
+    padding: 16px 16px 16px 0;
+  }
+  .novo .n-inbox > .grid {
+    height: calc(100dvh - 32px);
+  }
+}
