@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import {
   JanelaProximaSessao,
   JanelaWhatsApp,
+  useEtapaDaSessao,
   useRecarregarBalcao,
 } from "@/components/clinica/JanelasDaSessao";
 import {
@@ -72,6 +73,8 @@ const SITUACAO: Record<
   sem_confirmacao: { rotulo: "Sem confirmação", variante: "warning" },
   confirmado: { rotulo: "Confirmado", variante: "info" },
   atrasado: { rotulo: "Passou do horário", variante: "error" },
+  na_recepcao: { rotulo: "Na recepção", variante: "success" },
+  em_atendimento: { rotulo: "Em atendimento", variante: "info" },
   realizado: { rotulo: "Compareceu", variante: "success" },
   faltou: { rotulo: "Faltou", variante: "error" },
   cancelado: { rotulo: "Cancelado", variante: "neutral" },
@@ -249,6 +252,7 @@ function ModoAtendimento({
   const t = useT();
   const tag = useTagDeIdioma();
   const recarregar = useRecarregarBalcao();
+  const etapa = useEtapaDaSessao(sessao.id);
   const [whatsapp, setWhatsapp] = React.useState(false);
   const paciente = sessao.paciente;
 
@@ -281,7 +285,12 @@ function ModoAtendimento({
   const aberta =
     sessao.situacao === "confirmado" ||
     sessao.situacao === "sem_confirmacao" ||
-    sessao.situacao === "atrasado";
+    sessao.situacao === "atrasado" ||
+    sessao.situacao === "na_recepcao" ||
+    sessao.situacao === "em_atendimento";
+  // Iniciar o atendimento só existe em sessão da clínica (é ela que guarda as etapas). Enquanto
+  // não começou, ele é o botão principal; depois, a principal passa a ser "Compareceu".
+  const podeIniciar = aberta && Boolean(sessao.modalidade) && !sessao.atendimento_iniciado_em;
   const camposDoUltimo = ultimo
     ? camposParaMostrar(ultimo.modalidade, ultimo.tipo)
         .filter((c) => ultimo.conteudo[c.chave] !== undefined && ultimo.conteudo[c.chave] !== "")
@@ -298,6 +307,19 @@ function ModoAtendimento({
               {hora(sessao.inicio)} · {sessao.tipo?.nome ?? sessao.titulo}
               {sessao.modalidade ? ` · ${t(ROTULO_DA_MODALIDADE[sessao.modalidade])}` : ""}
             </p>
+            {sessao.chegou_em ? (
+              <p className="text-sm" data-testid="hora-da-chegada">
+                {sessao.atendimento_iniciado_em
+                  ? t("Em atendimento desde as {hora}.").replace(
+                      "{hora}",
+                      hora(sessao.atendimento_iniciado_em),
+                    )
+                  : t("Chegou às {hora} e está na recepção.").replace(
+                      "{hora}",
+                      hora(sessao.chegou_em),
+                    )}
+              </p>
+            ) : null}
             {paciente ? (
               <div className="mt-1">
                 <PacoteDaSessao contactId={paciente.id} modalidade={sessao.modalidade} podeVender />
@@ -309,9 +331,20 @@ function ModoAtendimento({
           </Badge>
         </div>
         <div className="flex flex-wrap gap-2">
-          {aberta ? (
+          {podeIniciar ? (
             <Button
               size="lg"
+              onClick={() => etapa.mutate("em_atendimento")}
+              disabled={etapa.isPending}
+              data-testid="acao-iniciar-atendimento"
+            >
+              {t("Iniciar atendimento")}
+            </Button>
+          ) : null}
+          {aberta ? (
+            <Button
+              size={podeIniciar ? "default" : "lg"}
+              variant={podeIniciar ? "outline" : "primary"}
               onClick={() => presenca.mutate("completed")}
               disabled={presenca.isPending}
               data-testid="acao-compareceu"

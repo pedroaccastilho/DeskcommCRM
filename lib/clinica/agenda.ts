@@ -170,6 +170,65 @@ export interface SessaoDaGrade {
   falta_liberada_em: string | null;
   /** Até quando o paciente cancela sem multa (só sessão da clínica). */
   cancelamento_sem_multa_ate: string | null;
+  /** Quando a recepção marcou que o paciente chegou (migration 9007); `null` = não chegou. */
+  chegou_em: string | null;
+  /** Quando o atendimento começou (migration 9007); `null` = ainda não começou. */
+  atendimento_iniciado_em: string | null;
+}
+
+/** A etapa do dia de uma sessão, como `clinica_sessao_etapas` a guarda (migration 9007). */
+export interface EtapaDaSessao {
+  chegou_em: string | null;
+  atendimento_iniciado_em: string | null;
+}
+
+/** A linha inteira da etapa, com quem marcou cada passo. */
+export interface EtapaComAutoria extends EtapaDaSessao {
+  chegou_por_user_id: string | null;
+  atendimento_iniciado_por_user_id: string | null;
+}
+
+/** Os status do núcleo em que a sessão ainda está em aberto e aceita etapa do dia. */
+export const STATUS_QUE_ACEITAM_ETAPA = ["pending", "confirmed"] as const;
+
+/**
+ * A etapa depois do pedido. Pura. Marcar de novo o que já está marcado não muda nada (nem a hora,
+ * nem quem marcou): é o que torna o botão idempotente. "em_atendimento" sem chegada marca as duas,
+ * porque não existe atendimento sem chegada (CHECK da 9007).
+ */
+export function proximaEtapa(
+  atual: EtapaComAutoria | null,
+  pedida: "chegou" | "em_atendimento" | "desfazer",
+  agora: string,
+  userId: string,
+): EtapaComAutoria {
+  if (pedida === "desfazer") {
+    return {
+      chegou_em: null,
+      chegou_por_user_id: null,
+      atendimento_iniciado_em: null,
+      atendimento_iniciado_por_user_id: null,
+    };
+  }
+  const chegada = atual?.chegou_em
+    ? { chegou_em: atual.chegou_em, chegou_por_user_id: atual.chegou_por_user_id }
+    : { chegou_em: agora, chegou_por_user_id: userId };
+  if (pedida === "chegou") {
+    return {
+      ...chegada,
+      atendimento_iniciado_em: atual?.atendimento_iniciado_em ?? null,
+      atendimento_iniciado_por_user_id: atual?.atendimento_iniciado_por_user_id ?? null,
+    };
+  }
+  return {
+    ...chegada,
+    ...(atual?.atendimento_iniciado_em
+      ? {
+          atendimento_iniciado_em: atual.atendimento_iniciado_em,
+          atendimento_iniciado_por_user_id: atual.atendimento_iniciado_por_user_id,
+        }
+      : { atendimento_iniciado_em: agora, atendimento_iniciado_por_user_id: userId }),
+  };
 }
 
 export interface LinhaDoCompromisso {
@@ -189,6 +248,7 @@ export function sessaoDaGrade(
   linha: LinhaDoCompromisso,
   tipos: ReadonlyMap<string, { nome: string; modalidade: Modalidade | null }>,
   politica: PoliticaDaAgenda,
+  etapa: EtapaDaSessao | null = null,
 ): SessaoDaGrade {
   const tipo = linha.event_type_id ? tipos.get(linha.event_type_id) : undefined;
   const modalidade = tipo?.modalidade ?? null;
@@ -217,5 +277,7 @@ export function sessaoDaGrade(
     cancelamento_sem_multa_ate: modalidade
       ? cancelamentoSemMultaAte(inicio, politica).toISOString()
       : null,
+    chegou_em: etapa?.chegou_em ?? null,
+    atendimento_iniciado_em: etapa?.atendimento_iniciado_em ?? null,
   };
 }

@@ -80,3 +80,13 @@ export const cancelarSessaoSchema = z.object({
   pela_clinica: z.boolean().default(false),
   revision: z.number().int().positive().optional(),
 });
+
+/** As etapas do dia de uma sessão (migration 9007). "desfazer" limpa chegada e atendimento. */
+export const ETAPAS_DA_SESSAO = ["chegou", "em_atendimento", "desfazer"] as const;
+export type EtapaPedida = (typeof ETAPAS_DA_SESSAO)[number];
+
+export const etapaDaSessaoSchema = z.object({
+  etapa: z.enum(ETAPAS_DA_SESSAO, {
+    message: 'Etapa inválida: use "chegou", "em_atendimento" ou "desfazer".',
+  }),
+});
