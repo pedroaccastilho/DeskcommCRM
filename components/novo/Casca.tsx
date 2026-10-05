@@ -8,11 +8,13 @@
  * do dia a dia da clínica fica de fora; o Administrador ganha a porta "Ajustes", que abre as
  * configurações na interface atual.
  */
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
 import { useAuth } from "@/hooks/auth/AuthProvider";
+import { apiClient } from "@/lib/api/client";
 import type { Role } from "@/lib/auth/types";
 import {
   ROTULO_DO_CARGO,
@@ -258,6 +260,7 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
   const t = useT();
   const { signOut } = useAuth();
   const { meuNome, cargo, cargos, trocarCargo, role } = useNovo();
+  const interfaceDaEquipe = useInterfaceDaEquipe();
   const [aberto, setAberto] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -314,6 +317,7 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
             </div>
           )}
           <EscolhaDoTema />
+          {veConfiguracoes(role) && <InterfaceDaEquipe />}
           <div className="border-t border-[var(--n-linha)] pt-2">
             {veConfiguracoes(role) && (
               <Link href="/novo/equipe" className="n-linha-clicavel px-2 py-2 text-sm">
@@ -325,9 +329,14 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
                 {t("Configurações")}
               </a>
             )}
-            <a href="/app" className="n-linha-clicavel px-2 py-2 text-sm" data-testid="novo-voltar">
-              {t("Voltar para a versão atual")}
-            </a>
+            {/* Só o Administrador alterna entre as duas interfaces (Pedro, 2026-10-04): com a
+                escolha da organização ligada, para os outros perfis a interface atual leva de
+                volta para cá (`lib/novo/raiz.ts`), e a porta sumiria num laço. */}
+            {(veConfiguracoes(role) || interfaceDaEquipe.data?.nova_principal === false) && (
+              <a href="/app" className="n-linha-clicavel px-2 py-2 text-sm" data-testid="novo-voltar">
+                {t("Voltar para a versão atual")}
+              </a>
+            )}
             <button
               type="button"
               onClick={() => void signOut()}
@@ -371,6 +380,74 @@ const TEMAS: { valor: Theme; rotulo: string }[] = [
 ];
 
 /** No menu da pessoa (o único lugar no celular): claro, escuro ou o que o aparelho usar. */
+const CHAVE_DA_INTERFACE = ["clinica", "interface"];
+
+/** A escolha da organização (qualquer membro lê; só o Administrador grava). */
+function useInterfaceDaEquipe() {
+  return useQuery({
+    queryKey: CHAVE_DA_INTERFACE,
+    queryFn: async () =>
+      (await apiClient.get<{ data: { nova_principal: boolean } }>("/api/v1/clinica/interface"))
+        .data,
+    staleTime: 60_000,
+    retry: false,
+  });
+}
+
+/**
+ * A escolha da ORGANIZAÇÃO, só do Administrador: ligada, quem não administra trabalha só na
+ * interface nova (a atual leva para cá). Mora em `clinica_politicas` (migration 9010).
+ */
+function InterfaceDaEquipe() {
+  const t = useT();
+  const qc = useQueryClient();
+  const lida = useInterfaceDaEquipe();
+  const gravar = useMutation({
+    mutationFn: async (nova_principal: boolean) =>
+      (
+        await apiClient.put<{ data: { nova_principal: boolean } }>("/api/v1/clinica/interface", {
+          nova_principal,
+        })
+      ).data,
+    onSuccess: (d) => qc.setQueryData(CHAVE_DA_INTERFACE, d),
+  });
+  if (!lida.data) return null;
+  const ligada = gravar.isPending ? gravar.variables === true : lida.data.nova_principal;
+  return (
+    <div className="border-t border-[var(--n-linha)] py-2">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={ligada}
+        disabled={gravar.isPending}
+        onClick={() => gravar.mutate(!ligada)}
+        className="n-linha-clicavel items-start justify-between gap-3 px-2 py-2 text-left text-sm"
+        data-testid="novo-interface-da-equipe"
+      >
+        <span>
+          <span className="block font-semibold">{t("A equipe usa só a interface nova")}</span>
+          <span className="n-fraco block text-xs">
+            {ligada
+              ? t("Ligado: quem não é administrador não vê mais a versão atual.")
+              : t("Desligado: a equipe continua na versão atual.")}
+          </span>
+        </span>
+        <span
+          aria-hidden
+          className={`mt-0.5 flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors ${
+            ligada ? "justify-end bg-[var(--n-acao)]" : "justify-start bg-[var(--n-linha)]"
+          }`}
+        >
+          <span className="h-4 w-4 rounded-full bg-white shadow-sm" />
+        </span>
+      </button>
+      {gravar.isError && (
+        <p className="px-2 text-xs text-[var(--n-alerta)]">{t("Não deu para salvar. Tente de novo.")}</p>
+      )}
+    </div>
+  );
+}
+
 function EscolhaDoTema() {
   const t = useT();
   const { theme, setTheme } = useTheme();

@@ -17648,6 +17648,16 @@ export const DICIONARIO: Traducoes = {
   "Ninguém com esse nome. Busque pelo telefone com DDD.": {
     es: "Nadie con ese nombre. Busca por el teléfono con código de área.",
   },
+  // A interface nova é a principal para quem não administra
+  "Abrir a interface nova": { es: "Abrir la interfaz nueva" },
+  "A equipe usa só a interface nova": { es: "El equipo usa solo la interfaz nueva" },
+  "Ligado: quem não é administrador não vê mais a versão atual.": {
+    es: "Activado: quien no es administrador ya no ve la versión actual.",
+  },
+  "Desligado: a equipe continua na versão atual.": {
+    es: "Desactivado: el equipo sigue en la versión actual.",
+  },
+  "Não deu para salvar. Tente de novo.": { es: "No se pudo guardar. Inténtalo de nuevo." },
 };
 
 /**
