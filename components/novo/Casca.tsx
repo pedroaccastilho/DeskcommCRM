@@ -27,7 +27,15 @@ import {
   type ItemDoMenu,
 } from "@/lib/novo/cargo";
 import { useTheme, type Theme } from "@/lib/theme";
-import { CalendarBlank, Gear, Moon, Sun, UsersThree, WhatsappLogo } from "@/lib/ui/icons";
+import {
+  CalendarBlank,
+  Gear,
+  IdentificationCard,
+  Moon,
+  Sun,
+  UsersThree,
+  WhatsappLogo,
+} from "@/lib/ui/icons";
 
 import { useEu, type Eu } from "./dados";
 import { Avatar } from "./pecas";
@@ -161,6 +169,17 @@ export function Casca({
         })}
         <div className="mt-auto flex flex-col items-center gap-1">
           <BotaoDoTema />
+          {veConfiguracoes(role) && (
+            <Link
+              href="/novo/equipe"
+              className="n-porta"
+              aria-current={ativo("/novo/equipe") ? "page" : undefined}
+              data-testid="novo-porta-equipe"
+            >
+              <IdentificationCard size={22} weight={ativo("/novo/equipe") ? "fill" : "regular"} />
+              Equipe
+            </Link>
+          )}
           {veConfiguracoes(role) && (
             <a
               href="/app/settings"
@@ -304,6 +323,11 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
             >
               {t("Tarefas")}
             </Link>
+            {veConfiguracoes(role) && (
+              <Link href="/novo/equipe" className="n-linha-clicavel px-2 py-2 text-sm">
+                {t("Equipe")}
+              </Link>
+            )}
             {veConfiguracoes(role) && (
               <a href="/app/settings" className="n-linha-clicavel px-2 py-2 text-sm">
                 {t("Configurações")}
