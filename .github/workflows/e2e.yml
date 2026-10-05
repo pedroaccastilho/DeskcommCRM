@@ -1263,6 +1263,7 @@ jobs:
         clinica-ficha-resumo.spec.ts
         clinica-balcao.spec.ts
         clinica-menu-por-cargo.spec.ts
+        clinica-perfis-da-equipe.spec.ts
         clinica-plano-de-tratamento.spec.ts
 
       # ─── FORA_DO_CI — as que ficaram fora, e o motivo de cada uma ───

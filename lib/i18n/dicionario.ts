@@ -13032,6 +13032,19 @@ export const DICIONARIO: Traducoes = {
     {
       es: "Envía un mensaje de WhatsApp al cliente. Lo recibe de verdad, en su celular, y no se puede deshacer.",
     },
+  "Abrir a Equipe": { es: "Abrir el Equipo" },
+  "O cadastro da equipe agora fica em Equipe, na interface nova: lá você escolhe os perfis de cada pessoa (Médico, Fisioterapeuta, Gerente, Financeiro…) e o registro no conselho vai junto.":
+    {
+      es: "El registro del equipo ahora está en Equipo, en la interfaz nueva: allí eliges los perfiles de cada persona (Médico, Fisioterapeuta, Gerente, Financiero…) y el registro en el consejo va junto.",
+    },
+  "Cada pessoa pode ter mais de um perfil. O acesso é a soma de todos.": {
+    es: "Cada persona puede tener más de un perfil. El acceso es la suma de todos.",
+  },
+  "Sem perfil: escolha um": { es: "Sin perfil: elige uno" },
+  "Nome como está no conselho": { es: "Nombre como figura en el consejo" },
+  "O e-mail não está configurado. Mande este link para a pessoa pelo WhatsApp:": {
+    es: "El correo no está configurado. Envía este enlace a la persona por WhatsApp:",
+  },
   "Equipe de atendimento": { es: "Equipo de atención" },
   "Faz uma origem voltar a receber contatos, ou parar. Desligada, o formulário do seu site continua no ar e ninguém do outro lado é avisado.":
     {
