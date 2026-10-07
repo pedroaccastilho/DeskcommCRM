@@ -17534,7 +17534,6 @@ export const DICIONARIO: Traducoes = {
   "Usar o tema escuro": { es: "Usar el tema oscuro" },
   "A interface nova mostra a agenda, os pacientes e o prontuário da clínica. Peça ao administrador para instalar o módulo em Configurações da instalação › Módulos.": { es: "La interfaz nueva muestra la agenda, los pacientes y la historia clínica. Pide al administrador que instale el módulo en Configuración de la instalación › Módulos." },
   "Abrir a ficha completa na versão atual": { es: "Abrir la ficha completa en la versión actual" },
-  "Configurações (abre na versão atual)": { es: "Configuración (se abre en la versión actual)" },
   "Confirmar ou lembrar": { es: "Confirmar o recordar" },
   "Dentro do prazo: sem multa.": { es: "Dentro del plazo: sin multa." },
   "Dia que passou": { es: "Día pasado" },
@@ -17745,6 +17744,15 @@ export const DICIONARIO: Traducoes = {
   // Minha conta na interface nova (/conta)
   Avisos: { es: "Avisos" },
   "Minha conta": { es: "Mi cuenta" },
+  // Ajustes do administrador na interface nova (/ajustes)
+  Ajustes: { es: "Ajustes" },
+  "Ajustes são do administrador": { es: "Los ajustes son del administrador" },
+  "Buscar um ajuste": { es: "Buscar un ajuste" },
+  "Nenhum ajuste com esse nome.": { es: "Ningún ajuste con ese nombre." },
+  "Tudo o que o administrador configura na clínica.": {
+    es: "Todo lo que el administrador configura en la clínica.",
+  },
+  "versão atual": { es: "versión actual" },
 };
 
 /**

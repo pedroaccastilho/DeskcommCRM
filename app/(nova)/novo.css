@@ -642,3 +642,32 @@
     height: calc(100dvh - 32px);
   }
 }
+
+/* AJUSTES (/ajustes): cartões que levam a uma tela. */
+.novo .n-cartao-link {
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+.novo .n-cartao-link:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--n-sombra-alta);
+}
+.novo .n-cartao-link:focus-visible {
+  outline: 2px solid var(--n-acao);
+  outline-offset: 2px;
+}
+
+/*
+ * Uma tela da versão atual dentro da interface nova (`components/novo/CascaDoAjuste.tsx`): sem o
+ * respiro próprio de lá (a casca nova já tem o seu) e com o título na fonte daqui.
+ */
+.novo .n-ajuste > .p-6 {
+  padding: 0;
+}
+.novo .n-ajuste h1 {
+  font-family: var(--novo-fonte-titulo), Georgia, serif;
+  font-size: 2.25rem;
+  line-height: 1.15;
+  font-weight: 600;
+}
