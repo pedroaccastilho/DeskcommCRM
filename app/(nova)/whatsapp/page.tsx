@@ -20,7 +20,7 @@ export default async function WhatsAppDaInterfaceNova({
   searchParams: Promise<{ id?: string; rascunho?: string }>;
 }) {
   const user = await loadAuthUser();
-  if (!user) redirect("/login?next=/novo/whatsapp");
+  if (!user) redirect("/login?next=/whatsapp");
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app");
 

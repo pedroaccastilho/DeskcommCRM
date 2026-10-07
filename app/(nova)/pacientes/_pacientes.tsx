@@ -75,7 +75,7 @@ export function Pacientes() {
               return (
                 <li key={c.id}>
                   <Link
-                    href={`/novo/pacientes/${c.id}`}
+                    href={`/pacientes/${c.id}`}
                     className="n-linha-clicavel items-center gap-4 px-3 py-3"
                   >
                     <Avatar nome={nome} tamanho={44} />
@@ -96,7 +96,7 @@ export function Pacientes() {
       <FolhaDoPaciente
         aberta={cadastrar}
         aoFechar={() => setCadastrar(false)}
-        aoCriar={(id) => router.push(`/novo/pacientes/${id}`)}
+        aoCriar={(id) => router.push(`/pacientes/${id}`)}
       />
     </div>
   );

@@ -291,7 +291,7 @@ export function Hoje() {
             {recepcao && (
               <>
                 <Link
-                  href="/novo/whatsapp"
+                  href="/whatsapp"
                   className="n-cartao n-entra flex items-center gap-4 p-5 transition-transform hover:-translate-y-0.5"
                 >
                   <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[var(--n-ok-suave)] text-[var(--n-ok)]">
@@ -330,7 +330,7 @@ export function Hoje() {
                       id: p.id,
                       nome,
                       detalhe: `${p.saldo} ${p.saldo === 1 ? "sessão restante" : "sessões restantes"} · ${p.nome}`,
-                      href: `/novo/pacientes/${p.contact_id}`,
+                      href: `/pacientes/${p.contact_id}`,
                     };
                   })}
                   total={renovar.data?.length ?? 0}
@@ -348,7 +348,7 @@ export function Hoje() {
                           m.valor_cents != null
                             ? formatCents(m.valor_cents, moeda)
                             : `${m.percentual}% da sessão`,
-                        href: `/novo/pacientes/${m.contact_id}`,
+                        href: `/pacientes/${m.contact_id}`,
                       };
                     })}
                     total={multas.data?.length ?? 0}

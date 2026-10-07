@@ -25,23 +25,23 @@ describe("quem trabalha só na interface nova", () => {
 
 describe("a tela equivalente", () => {
   it("leva cada tela do dia a dia para a nova, com o mesmo paciente e a mesma conversa", () => {
-    expect(destinoNaInterfaceNova("/app")).toBe("/novo");
-    expect(destinoNaInterfaceNova("/app/")).toBe("/novo");
-    expect(destinoNaInterfaceNova("/app/clinica/balcao")).toBe("/novo");
-    expect(destinoNaInterfaceNova("/app/clinica/meu-dia")).toBe("/novo");
-    expect(destinoNaInterfaceNova("/app/agenda")).toBe("/novo/agenda");
-    expect(destinoNaInterfaceNova("/app/tasks")).toBe("/novo/tarefas");
-    expect(destinoNaInterfaceNova("/app/contacts")).toBe("/novo/pacientes");
-    expect(destinoNaInterfaceNova(`/app/contacts/${ID}`)).toBe(`/novo/pacientes/${ID}`);
-    expect(destinoNaInterfaceNova("/app/inbox", `id=${ID}`)).toBe(`/novo/whatsapp?id=${ID}`);
-    expect(destinoNaInterfaceNova(`/app/inbox/${ID}`)).toBe(`/novo/whatsapp?id=${ID}`);
+    expect(destinoNaInterfaceNova("/app")).toBe("/hoje");
+    expect(destinoNaInterfaceNova("/app/")).toBe("/hoje");
+    expect(destinoNaInterfaceNova("/app/clinica/balcao")).toBe("/hoje");
+    expect(destinoNaInterfaceNova("/app/clinica/meu-dia")).toBe("/hoje");
+    expect(destinoNaInterfaceNova("/app/agenda")).toBe("/agenda");
+    expect(destinoNaInterfaceNova("/app/tasks")).toBe("/tarefas");
+    expect(destinoNaInterfaceNova("/app/contacts")).toBe("/pacientes");
+    expect(destinoNaInterfaceNova(`/app/contacts/${ID}`)).toBe(`/pacientes/${ID}`);
+    expect(destinoNaInterfaceNova("/app/inbox", `id=${ID}`)).toBe(`/whatsapp?id=${ID}`);
+    expect(destinoNaInterfaceNova(`/app/inbox/${ID}`)).toBe(`/whatsapp?id=${ID}`);
   });
 
   it("tela sem equivalente continua na atual, e lixo na URL não vira destino", () => {
     expect(destinoNaInterfaceNova("/app/settings/profile")).toBeNull();
     expect(destinoNaInterfaceNova("/app/notifications")).toBeNull();
     expect(destinoNaInterfaceNova("/app/contacts/nao-e-uuid")).toBeNull();
-    expect(destinoNaInterfaceNova("/app/inbox", "id=//evil.example")).toBe("/novo/whatsapp");
+    expect(destinoNaInterfaceNova("/app/inbox", "id=//evil.example")).toBe("/whatsapp");
   });
 });
 
@@ -59,7 +59,7 @@ describe("todo destino existe", () => {
     for (const origem of origens) {
       const destino = destinoNaInterfaceNova(origem)!;
       const rota = destino.split("?")[0]!.replace(ID, "[id]");
-      const pagina = path.join(process.cwd(), "app", rota, "page.tsx");
+      const pagina = path.join(process.cwd(), "app", "(nova)", rota, "page.tsx");
       expect(existsSync(pagina), `${origem} leva a ${rota}, que não tem ${pagina}`).toBe(true);
     }
   });

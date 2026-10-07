@@ -33,7 +33,7 @@ export default async function Page() {
         {t(
           "O cadastro da equipe agora fica em Equipe, na interface nova: lá você escolhe os perfis de cada pessoa (Médico, Fisioterapeuta, Gerente, Financeiro…) e o registro no conselho vai junto.",
         )}{" "}
-        <a href="/novo/equipe" className="font-semibold underline">
+        <a href="/equipe" className="font-semibold underline">
           {t("Abrir a Equipe")}
         </a>
       </p>

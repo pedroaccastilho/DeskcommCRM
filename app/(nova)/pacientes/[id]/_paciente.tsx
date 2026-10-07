@@ -93,7 +93,7 @@ export function Paciente({ contactId }: { contactId: string }) {
 
   return (
     <div className="n-conteudo" data-testid="novo-paciente">
-      <Link href="/novo/pacientes" className="n-suave text-sm font-semibold">
+      <Link href="/pacientes" className="n-suave text-sm font-semibold">
         ‹ Pacientes
       </Link>
 

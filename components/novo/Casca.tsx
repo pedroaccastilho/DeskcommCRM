@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * A CASCA da interface nova (`/novo`): o trilho escuro à esquerda no computador, a barra de abas
+ * A CASCA da interface nova: o trilho escuro à esquerda no computador, a barra de abas
  * embaixo no celular, e o contexto que toda tela da interface nova lê (cargo, fuso, quem sou).
  *
  * O menu tem no máximo quatro portas, conforme o cargo (`lib/novo/cargo.ts`). Tudo o que não é
@@ -147,15 +147,14 @@ export function Casca({
     veProntuario: veProntuario(cargo, profissional),
   };
 
-  const pathname = usePathname() ?? "/novo";
+  const pathname = usePathname() ?? "/hoje";
   const menu = menuDoCargo(cargo, veRelatoriosDaGestao(role, eu.data?.cargos ?? []));
-  const ativo = (href: string) =>
-    href === "/novo" ? pathname === "/novo" : pathname === href || pathname.startsWith(`${href}/`);
+  const ativo = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <Ctx.Provider value={contexto}>
       <nav className="n-trilho" aria-label="Menu principal">
-        <Link href="/novo" className="mb-3 !w-auto !p-0" aria-label={marca.nome}>
+        <Link href="/hoje" className="mb-3 !w-auto !p-0" aria-label={marca.nome}>
           <Monograma marca={marca} />
         </Link>
         {menu.map((item) => {
@@ -176,12 +175,12 @@ export function Casca({
           <BotaoDoTema />
           {veConfiguracoes(role) && (
             <Link
-              href="/novo/equipe"
+              href="/equipe"
               className="n-porta"
-              aria-current={ativo("/novo/equipe") ? "page" : undefined}
+              aria-current={ativo("/equipe") ? "page" : undefined}
               data-testid="novo-porta-equipe"
             >
-              <IdentificationCard size={22} weight={ativo("/novo/equipe") ? "fill" : "regular"} />
+              <IdentificationCard size={22} weight={ativo("/equipe") ? "fill" : "regular"} />
               Equipe
             </Link>
           )}
@@ -323,7 +322,7 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
           {veConfiguracoes(role) && <InterfaceDaEquipe />}
           <div className="border-t border-[var(--n-linha)] pt-2">
             <Link
-              href="/novo/tarefas"
+              href="/tarefas"
               onClick={() => setAberto(false)}
               className="n-linha-clicavel px-2 py-2 text-sm"
               data-testid="novo-menu-tarefas"
@@ -331,7 +330,7 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
               {t("Tarefas")}
             </Link>
             {veConfiguracoes(role) && (
-              <Link href="/novo/equipe" className="n-linha-clicavel px-2 py-2 text-sm">
+              <Link href="/equipe" className="n-linha-clicavel px-2 py-2 text-sm">
                 {t("Equipe")}
               </Link>
             )}

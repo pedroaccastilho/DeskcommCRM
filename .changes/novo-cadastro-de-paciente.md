@@ -1,7 +1,7 @@
 ---
 impacto: capacidade_nova
 secao: adicionado
-titulo: Cadastrar e editar paciente na interface nova (/novo), com a origem e as etiquetas
+titulo: Cadastrar e editar paciente na interface nova, com a origem e as etiquetas
 ---
 
 Na interface nova, a lista de pacientes ganhou o botão "Novo paciente" e a ficha ganhou "Editar".

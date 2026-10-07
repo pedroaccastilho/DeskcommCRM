@@ -41,21 +41,21 @@ export function destinoNaInterfaceNova(caminho: string, busca = ""): string | nu
   const p = caminho.replace(/\/+$/, "") || "/";
   const q = new URLSearchParams(busca);
 
-  if (p === "/app") return "/novo";
-  if (/^\/app\/clinica\/(balcao|meu-dia|pendencias)$/.test(p)) return "/novo";
-  if (p === "/app/agenda") return "/novo/agenda";
-  if (p === "/app/tasks") return "/novo/tarefas";
-  if (p === "/app/clinica/origens") return "/novo/relatorios";
-  if (p === "/app/contacts") return "/novo/pacientes";
+  if (p === "/app") return "/hoje";
+  if (/^\/app\/clinica\/(balcao|meu-dia|pendencias)$/.test(p)) return "/hoje";
+  if (p === "/app/agenda") return "/agenda";
+  if (p === "/app/tasks") return "/tarefas";
+  if (p === "/app/clinica/origens") return "/relatorios";
+  if (p === "/app/contacts") return "/pacientes";
   const ficha = p.match(new RegExp(`^/app/contacts/(${UUID})$`, "i"));
-  if (ficha) return `/novo/pacientes/${ficha[1]}`;
+  if (ficha) return `/pacientes/${ficha[1]}`;
   if (p === "/app/inbox") {
     const id = q.get("id");
     return id && new RegExp(`^${UUID}$`, "i").test(id)
-      ? `/novo/whatsapp?id=${id}`
-      : "/novo/whatsapp";
+      ? `/whatsapp?id=${id}`
+      : "/whatsapp";
   }
   const conversa = p.match(new RegExp(`^/app/inbox/(${UUID})$`, "i"));
-  if (conversa) return `/novo/whatsapp?id=${conversa[1]}`;
+  if (conversa) return `/whatsapp?id=${conversa[1]}`;
   return null;
 }
