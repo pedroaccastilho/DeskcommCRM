@@ -37,8 +37,14 @@ describe("a tela equivalente", () => {
     expect(destinoNaInterfaceNova(`/app/inbox/${ID}`)).toBe(`/whatsapp?id=${ID}`);
   });
 
+  it("a conta da pessoa (perfil, segurança, avisos) também tem tela na nova", () => {
+    expect(destinoNaInterfaceNova("/app/settings/profile")).toBe("/conta");
+    expect(destinoNaInterfaceNova("/app/settings/security")).toBe("/conta/seguranca");
+    expect(destinoNaInterfaceNova("/app/settings/notifications")).toBe("/conta/avisos");
+  });
+
   it("tela sem equivalente continua na atual, e lixo na URL não vira destino", () => {
-    expect(destinoNaInterfaceNova("/app/settings/profile")).toBeNull();
+    expect(destinoNaInterfaceNova("/app/settings/billing")).toBeNull();
     expect(destinoNaInterfaceNova("/app/notifications")).toBeNull();
     expect(destinoNaInterfaceNova("/app/contacts/nao-e-uuid")).toBeNull();
     expect(destinoNaInterfaceNova("/app/inbox", "id=//evil.example")).toBe("/whatsapp");
@@ -55,6 +61,9 @@ describe("todo destino existe", () => {
       "/app/contacts",
       `/app/contacts/${ID}`,
       "/app/inbox",
+      "/app/settings/profile",
+      "/app/settings/security",
+      "/app/settings/notifications",
     ];
     for (const origem of origens) {
       const destino = destinoNaInterfaceNova(origem)!;
