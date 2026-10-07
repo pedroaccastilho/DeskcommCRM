@@ -84,3 +84,66 @@ export function enderecoDoAjuste(href: string): { href: string; naNova: boolean 
   if (dia) return { href: dia, naNova: true };
   return { href, naNova: false };
 }
+
+/**
+ * As telas de DETALHE que as listas acima abrem (o quadro de um funil, um negócio, um agente), no
+ * mesmo esquema. `[id]` e `[slug]` casam um segmento do caminho; a ordem importa (a mais
+ * específica antes), como nas rotas.
+ */
+export const DETALHES_NA_INTERFACE_NOVA: readonly (readonly [string, string])[] = [
+  ["/app/extensions/[id]", "/ajustes/extensoes/[id]"],
+  ["/app/ai/agents/new", "/ajustes/ia/agentes/novo"],
+  ["/app/ai/agents/[id]", "/ajustes/ia/agentes/[id]"],
+  ["/app/ai/atendimento/[id]", "/ajustes/ia/atendimento/[id]"],
+  ["/app/ai/routers/[id]", "/ajustes/ia/roteadores/[id]"],
+  ["/app/ai/followups/enrollments/[id]", "/ajustes/ia/follow-ups/inscricao/[id]"],
+  ["/app/ai/followups/[id]", "/ajustes/ia/follow-ups/[id]"],
+  ["/app/companies/[id]", "/ajustes/crm/empresas/[id]"],
+  ["/app/people/[id]", "/ajustes/crm/pessoas/[id]"],
+  ["/app/pipelines/[id]", "/ajustes/funis/[id]"],
+  ["/app/leads/[id]", "/ajustes/leads/[id]"],
+  ["/app/integracao-dados/[id]", "/ajustes/integracao-de-dados/[id]"],
+  ["/app/settings/tenant/proposals/modelos/[slug]", "/ajustes/propostas/modelos/[slug]"],
+  ["/app/imports/[id]", "/ajustes/importacoes/[id]"],
+  ["/app/proposals/novo", "/ajustes/propostas/nova"],
+  ["/app/proposals/[id]", "/ajustes/propostas/[id]"],
+  ["/app/lgpd/requests/[id]", "/ajustes/lgpd/[id]"],
+  ["/app/campaigns/new", "/ajustes/campanhas/nova"],
+  ["/app/campaigns/[id]/edit", "/ajustes/campanhas/[id]/editar"],
+  ["/app/campaigns/[id]", "/ajustes/campanhas/[id]"],
+];
+
+function casar(padrao: string, caminho: string): Record<string, string> | null {
+  const a = padrao.split("/");
+  const b = caminho.split("/");
+  if (a.length !== b.length) return null;
+  const valores: Record<string, string> = {};
+  for (let i = 0; i < a.length; i++) {
+    const m = a[i]!.match(/^\[(\w+)\]$/);
+    if (m) {
+      if (!/^[\w-]+$/.test(b[i]!)) return null;
+      valores[m[1]!] = b[i]!;
+    } else if (a[i] !== b[i]) return null;
+  }
+  return valores;
+}
+
+/**
+ * Para onde um link da versão atual leva quem está na interface nova: a tela equivalente daqui
+ * (lista, detalhe ou do dia a dia), com a mesma busca; `null` quando não há.
+ */
+export function enderecoNaInterfaceNova(href: string): string | null {
+  if (!href.startsWith("/app") || href.includes("#")) return null;
+  const [caminho = "", busca = ""] = href.split("?");
+  const p = caminho.replace(/\/+$/, "") || "/";
+  const comBusca = (destino: string) =>
+    busca ? `${destino}${destino.includes("?") ? "&" : "?"}${busca}` : destino;
+  const exato = (AJUSTES_NA_INTERFACE_NOVA as Record<string, string>)[p];
+  if (exato) return comBusca(exato);
+  for (const [antigo, novo] of DETALHES_NA_INTERFACE_NOVA) {
+    const valores = casar(antigo, p);
+    if (valores) return comBusca(novo.replace(/\[(\w+)\]/g, (_, k: string) => valores[k]!));
+  }
+  if (p === "/app/team") return comBusca("/equipe");
+  return destinoNaInterfaceNova(p, busca);
+}
