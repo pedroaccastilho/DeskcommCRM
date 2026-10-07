@@ -97,11 +97,15 @@ export function escreveEvolucao(
 export interface ItemDoMenu {
   href: string;
   rotulo: string;
-  icone: "hoje" | "agenda" | "pacientes" | "conversas";
+  icone: "hoje" | "agenda" | "pacientes" | "conversas" | "relatorios";
 }
 
-/** O menu da interface nova: quatro portas no máximo, o nome conforme o cargo. */
-export function menuDoCargo(cargo: Cargo): ItemDoMenu[] {
+/**
+ * O menu da interface nova: o nome das portas conforme o cargo que a tela mostra, mais o que os
+ * PERFIS da pessoa somam (migration 9008). Quem é Gerente ou Financeiro ganha "Relatórios" em
+ * qualquer visão, inclusive a gerente que também é fisioterapeuta e está vendo o próprio dia.
+ */
+export function menuDoCargo(cargo: Cargo, veRelatorios = false): ItemDoMenu[] {
   const quemAtende = atende(cargo);
   return [
     { href: "/novo", rotulo: quemAtende ? "Meu dia" : "Hoje", icone: "hoje" },
@@ -118,5 +122,8 @@ export function menuDoCargo(cargo: Cargo): ItemDoMenu[] {
     ...(quemAtende
       ? []
       : [{ href: "/novo/whatsapp", rotulo: "WhatsApp", icone: "conversas" as const }]),
+    ...(veRelatorios
+      ? [{ href: "/novo/relatorios", rotulo: "Relatórios", icone: "relatorios" as const }]
+      : []),
   ];
 }
