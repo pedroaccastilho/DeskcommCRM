@@ -5,8 +5,8 @@
  * embaixo no celular, e o contexto que toda tela da interface nova lê (cargo, fuso, quem sou).
  *
  * O menu tem no máximo quatro portas, conforme o cargo (`lib/novo/cargo.ts`). Tudo o que não é
- * do dia a dia da clínica fica de fora; o Administrador ganha a porta "Ajustes", que abre as
- * configurações na interface atual.
+ * do dia a dia da clínica fica de fora; o Administrador ganha a porta "Ajustes" (`/ajustes`), com
+ * tudo o que ele configura (`lib/novo/ajustes.ts`).
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -185,14 +185,15 @@ export function Casca({
             </Link>
           )}
           {veConfiguracoes(role) && (
-            <a
-              href="/app/settings"
+            <Link
+              href="/ajustes"
               className="n-porta"
-              title={t("Configurações (abre na versão atual)")}
+              aria-current={ativo("/ajustes") ? "page" : undefined}
+              data-testid="novo-porta-ajustes"
             >
-              <Gear size={22} />
+              <Gear size={22} weight={ativo("/ajustes") ? "fill" : "regular"} />
               Ajustes
-            </a>
+            </Link>
           )}
           <MenuDaPessoa />
         </div>
@@ -343,9 +344,13 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
               </Link>
             )}
             {veConfiguracoes(role) && (
-              <a href="/app/settings" className="n-linha-clicavel px-2 py-2 text-sm">
-                {t("Configurações")}
-              </a>
+              <Link
+                href="/ajustes"
+                onClick={() => setAberto(false)}
+                className="n-linha-clicavel px-2 py-2 text-sm"
+              >
+                {t("Ajustes")}
+              </Link>
             )}
             {/* Só o Administrador alterna entre as duas interfaces (Pedro, 2026-10-04): com a
                 escolha da organização ligada, para os outros perfis a interface atual leva de
