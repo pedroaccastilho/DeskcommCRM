@@ -37,6 +37,9 @@ export async function proxy(request: NextRequest) {
   // Expose pathname to Server Components via header (used by onboarding layout).
   response.headers.set("x-pathname", pathname);
   request.headers.set("x-pathname", pathname);
+  // A busca também (`?id=` da conversa): o layout de `/app` leva quem não administra à mesma
+  // conversa na interface nova (`lib/novo/raiz.ts`).
+  request.headers.set("x-search", search);
 
   // EPIC-11: the admin surface is reached by PATH (`/admin/*`) — the self-host kit
   // points `NEXT_PUBLIC_ADMIN_URL` at the same host as the app and maps no `admin.`

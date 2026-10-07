@@ -46147,6 +46147,26 @@ grant execute on function public.fn_clinica_provisionar() to service_role;
 -- núcleo não muda: a grade da clínica devolve as etapas como `null` quando a tabela não existe.
 
 -- ---- a provisionadora das etapas da sessão ----
+-- ---- clínica: a escolha da interface principal (migration 9010, fork TOQ) ----
+-- Espelho de supabase/migrations/20261005030000_9010_clinica_interface_principal.sql. A
+-- provisionadora das etapas (9007, logo abaixo) passa a chamá-la; a definição da 9007 sai daqui.
+create or replace function public.fn_clinica_provisionar_interface()
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $f$
+begin
+  alter table public.clinica_politicas
+    add column if not exists interface_nova_principal boolean not null default false;
+  comment on column public.clinica_politicas.interface_nova_principal is
+    'Ligada, quem não é Administrador trabalha só na interface nova: as telas da atual que têm equivalente levam para ela. Só o Administrador muda (rota /api/v1/clinica/interface).';
+end;
+$f$;
+
+revoke execute on function public.fn_clinica_provisionar_interface() from public, anon, authenticated;
+grant execute on function public.fn_clinica_provisionar_interface() to service_role;
+
 create or replace function public.fn_clinica_provisionar_etapas()
 returns void
 language plpgsql
@@ -46185,6 +46205,9 @@ begin
 
   comment on table public.clinica_sessao_etapas is
     'Etapa da sessão no dia: quando o paciente chegou e quando o atendimento começou, e quem marcou. Uma linha por sessão. Só o servidor escreve, pela rota /api/v1/clinica/agenda/[id]/etapa.';
+
+  -- A interface nova como a principal da equipe (migration 9010).
+  perform public.fn_clinica_provisionar_interface();
 end;
 $f$;
 
