@@ -29,8 +29,10 @@ import {
   type ItemDoMenu,
 } from "@/lib/novo/cargo";
 import { useTheme, type Theme } from "@/lib/theme";
+import { veRelatoriosDaGestao } from "@/lib/clinica/gestao";
 import {
   CalendarBlank,
+  ChartBar,
   Gear,
   IdentificationCard,
   Moon,
@@ -103,6 +105,7 @@ const ICONE: Record<
   agenda: CalendarBlank,
   pacientes: UsersThree,
   conversas: WhatsappLogo,
+  relatorios: ChartBar,
   ajustes: Gear,
 };
 
@@ -154,7 +157,7 @@ export function Casca({
   };
 
   const pathname = usePathname() ?? "/novo";
-  const menu = menuDoCargo(cargo);
+  const menu = menuDoCargo(cargo, veRelatoriosDaGestao(role, eu.data?.cargos ?? []));
   const ativo = (href: string) =>
     href === "/novo" ? pathname === "/novo" : pathname === href || pathname.startsWith(`${href}/`);
 
@@ -369,6 +372,14 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
           )}
           <EscolhaDoTema />
           <div className="border-t border-[var(--n-linha)] pt-2">
+            <Link
+              href="/novo/tarefas"
+              onClick={() => setAberto(false)}
+              className="n-linha-clicavel px-2 py-2 text-sm"
+              data-testid="novo-menu-tarefas"
+            >
+              {t("Tarefas")}
+            </Link>
             {veConfiguracoes(role) && (
               <Link href="/novo/equipe" className="n-linha-clicavel px-2 py-2 text-sm">
                 {t("Equipe")}
