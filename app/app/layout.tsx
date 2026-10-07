@@ -127,7 +127,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // Quem não administra trabalha na interface nova quando a organização escolheu assim
     // (Pedro, 2026-10-04; o Administrador liga): a tela da atual que tem equivalente leva para
     // lá. Nunca enquanto o segundo fator pendente segura a pessoa aqui, porque a nova manda de
-    // volta para esta tela cadastrá-lo (`app/novo/layout.tsx`). A escolha só é lida para quem
+    // volta para esta tela cadastrá-lo (`app/(nova)/layout.tsx`). A escolha só é lida para quem
     // seria levado: Administrador e organização sem o módulo não pagam a consulta.
     if (
       !(mfaRequired && !isEnrolled) &&

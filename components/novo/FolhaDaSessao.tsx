@@ -218,7 +218,7 @@ export function FolhaDaSessao({
             <div className="grid gap-1 border-t border-[var(--n-linha)] pt-3">
               {sessao.paciente && (
                 <Link
-                  href={`/novo/pacientes/${sessao.paciente.id}`}
+                  href={`/pacientes/${sessao.paciente.id}`}
                   className="n-linha-clicavel items-center gap-3 px-2 py-2.5"
                   onClick={aoFechar}
                 >

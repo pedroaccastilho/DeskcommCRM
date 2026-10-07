@@ -1,5 +1,5 @@
 /*
- * A INTERFACE NOVA (/novo) — estilos escopados em `.novo`.
+ * A INTERFACE NOVA — estilos escopados em `.novo`.
  *
  * Nada aqui vaza para a interface de /app: todo seletor começa em `.novo`. A cor de ação segue a
  * marca da organização (`--color-accent`, Configurações › Marca); o resto é a paleta própria da
@@ -580,7 +580,7 @@
 }
 
 /*
- * O WHATSAPP (/novo/whatsapp): a caixa de entrada da versão atual com a paleta da interface nova.
+ * O WHATSAPP (/whatsapp): a caixa de entrada da versão atual com a paleta da interface nova.
  * As cores de lá são `--color-*` (lidas pelos utilitários) e as do shadcn (`--background`, …),
  * que no `:root` já foram resolvidas — por isso as duas camadas são reapontadas aqui. Claro e
  * escuro vêm de graça: `--n-*` já muda com o tema.

@@ -6,7 +6,7 @@
  * gerente). Escolher um perfil de saúde pede o registro do conselho na mesma folha, e a pessoa
  * já entra com o que aquele perfil vê e faz.
  *
- * A prova dirige a tela `/novo/equipe` como o administrador faria e confere no banco o que o
+ * A prova dirige a tela `/equipe` como o administrador faria e confere no banco o que o
  * gesto gravou: papel, cadastro de profissional e a lista de perfis. Depois, um convite com três
  * perfis é aceito por quem foi convidado, e os perfis chegam junto.
  *
@@ -108,7 +108,7 @@ test.describe("Perfis da equipe escolhidos no cadastro", () => {
       if (erroMembro) throw new Error(`user_organizations insert: ${erroMembro.message}`);
 
       // ── 1. Somar Gerente + Fisioterapeuta numa pessoa que já está na equipe ──
-      await page.goto("/novo/equipe");
+      await page.goto("/equipe");
       await expect(page.getByTestId("novo-equipe")).toBeVisible({ timeout: ESPERA });
       const linha = page.getByTestId("novo-equipe-membro").filter({ hasText: emailMembro });
       await expect(linha.getByText("Recepção", { exact: true })).toBeVisible({ timeout: ESPERA });

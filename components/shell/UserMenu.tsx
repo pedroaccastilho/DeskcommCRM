@@ -94,7 +94,7 @@ export function UserMenu() {
           {alternaParaANova && (
             <>
               <DropdownMenuItem asChild>
-                <a href="/novo" data-testid="porta-interface-nova">
+                <a href="/hoje" data-testid="porta-interface-nova">
                   <Sparkle size={16} className="mr-2" aria-hidden />
                   {t("Abrir a interface nova")}
                 </a>

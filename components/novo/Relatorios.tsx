@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * RELATÓRIOS da interface nova (`/novo/relatorios`): como a clínica está andando no período, e a
+ * RELATÓRIOS da interface nova (`/relatorios`): como a clínica está andando no período, e a
  * exportação para a contabilidade.
  *
  * Pedido do Pedro (2026-10-04): o gerente acompanha a clínica e manda o período para um

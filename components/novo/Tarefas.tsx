@@ -179,7 +179,7 @@ function PacienteDaTarefa({ contactId }: { contactId: string }) {
   const nome = rotuloDoContato(paciente.data, t);
   return (
     <Link
-      href={`/novo/pacientes/${contactId}`}
+      href={`/pacientes/${contactId}`}
       className="n-botao n-botao-suave n-botao-pequeno max-w-[40%] shrink-0 gap-2"
       title={nome}
     >
@@ -602,7 +602,7 @@ export function PainelDeTarefas() {
         </ul>
       )}
       <Link
-        href="/novo/tarefas"
+        href="/tarefas"
         className="n-botao n-botao-suave n-botao-pequeno mt-3"
         data-testid="novo-ver-tarefas"
       >

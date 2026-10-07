@@ -19,7 +19,7 @@ import { fusoUtilizavel } from "@/lib/tempo/fusos";
 import "./novo.css";
 
 /**
- * A INTERFACE NOVA (`/novo`) — teste A/B da TOQ, módulo clínica.
+ * A INTERFACE NOVA — teste A/B da TOQ, módulo clínica.
  *
  * Uma segunda casca sobre o MESMO backend: mesmo login, mesmas rotas `/api/v1`, mesma RLS. Nada
  * aqui substitui a interface de `/app`, que segue intacta; o dono compara as duas lado a lado.
@@ -48,7 +48,7 @@ export const metadata = { title: "TOQ" };
 
 export default async function LayoutDaInterfaceNova({ children }: { children: React.ReactNode }) {
   const user = await loadAuthUser();
-  if (!user) redirect("/login?next=/novo");
+  if (!user) redirect("/login?next=/hoje");
 
   const org = await resolveActiveOrg(user);
   if (!org) redirect("/app");
@@ -76,7 +76,7 @@ export default async function LayoutDaInterfaceNova({ children }: { children: Re
     env,
   );
   // Os mesmos campos que `/app/layout.tsx` expõe ao cliente: a caixa de entrada do WhatsApp
-  // (`/novo/whatsapp`) decide as visões pelo `visibility_mode`.
+  // (`/whatsapp`) decide as visões pelo `visibility_mode`.
   const settings = orgRes.data?.settings ?? null;
   const activeOrg = {
     ...org,

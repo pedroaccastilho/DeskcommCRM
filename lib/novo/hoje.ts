@@ -1,5 +1,5 @@
 /**
- * A tela "Hoje" da interface nova (`/novo`): o dia da clínica em quatro perguntas simples.
+ * A tela "Hoje" da interface nova (`/hoje`): o dia da clínica em quatro perguntas simples.
  *
  *  - Quem está sendo atendido AGORA?
  *  - O que já passou e ninguém fechou (realizado ou faltou)?
