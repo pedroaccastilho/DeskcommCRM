@@ -45,30 +45,29 @@ export default async function Ajustes() {
   const vistos = new Set<string>();
   const grupos: GrupoDeAjustes[] = [];
   for (const grupo of NAV_GROUPS) {
-    const secoes = new Map<string, GrupoDeAjustes["secoes"][number]["itens"]>();
+    const secoes = new Map<string, GrupoDeAjustes["secoes"][number]>();
     for (const d of visiveis) {
       if (d.group !== grupo.id) continue;
       const destino = enderecoDoAjuste(d.href);
       // Duas telas da atual podem levar à mesma da nova (o Balcão e o Meu dia viram "Hoje").
       if (vistos.has(destino.href)) continue;
       vistos.add(destino.href);
-      const secao = d.section ?? "";
-      const itens = secoes.get(secao) ?? [];
-      itens.push({
+      const secao = secoes.get(d.section ?? "") ?? {
+        titulo: d.section ? traduzir(d.section, user.idioma) : "",
+        itens: [],
+      };
+      secao.itens.push({
         href: destino.href,
         naNova: destino.naNova,
         rotulo: traduzir(d.label, user.idioma),
         descricao: traduzir(d.description, user.idioma),
       });
-      secoes.set(secao, itens);
+      secoes.set(d.section ?? "", secao);
     }
     if (secoes.size === 0) continue;
     grupos.push({
       titulo: traduzir(grupo.label, user.idioma),
-      secoes: [...secoes.entries()].map(([secao, itens]) => ({
-        titulo: secao ? traduzir(secao, user.idioma) : "",
-        itens,
-      })),
+      secoes: [...secoes.values()],
     });
   }
 
