@@ -7,8 +7,10 @@
  * quando já tem casa aqui, e na versão atual enquanto não tem — com o aviso escrito no cartão.
  *
  * As telas de `AJUSTES_NA_INTERFACE_NOVA` são as da versão atual montadas dentro da casca nova
- * (`app/(nova)/ajustes/*`): a MESMA página, com os mesmos portões de papel e as mesmas ações, só
- * com a paleta daqui. Migrar uma tela é acrescentar uma linha aqui e uma página lá.
+ * (`app/(nova)/ajustes/*`): a MESMA página, dentro dos MESMOS layouts do caminho de lá (são eles
+ * que recusam a tela com o módulo ou a capacidade desligado), com os mesmos portões de papel e as
+ * mesmas ações, só com a paleta daqui. Migrar uma tela é acrescentar uma linha aqui e uma página
+ * lá; `ajustes.test.ts` cobra a página, os layouts e que nenhuma tela do catálogo fique de fora.
  */
 import { destinoNaInterfaceNova } from "./raiz";
 
@@ -24,6 +26,53 @@ export const AJUSTES_NA_INTERFACE_NOVA = {
   "/app/connections": "/ajustes/conexoes",
   "/app/audit": "/ajustes/auditoria",
   "/app/lgpd/requests": "/ajustes/lgpd",
+  "/app/prospecting": "/ajustes/prospeccao",
+  "/app/radar": "/ajustes/radar",
+  "/app/templates": "/ajustes/respostas-rapidas",
+  "/app/kanban": "/ajustes/funis",
+  "/app/campaigns": "/ajustes/campanhas",
+  "/app/companies": "/ajustes/crm/empresas",
+  "/app/people": "/ajustes/crm/pessoas",
+  "/app/calls": "/ajustes/chamadas",
+  "/app/products": "/ajustes/produtos",
+  "/app/imports": "/ajustes/importacoes",
+  "/app/proposals": "/ajustes/propostas",
+  "/app/settings/tenant/proposals": "/ajustes/propostas/configuracao",
+  "/app/settings/tenant/proposals/modelos": "/ajustes/propostas/modelos",
+  "/app/comandas": "/ajustes/comandas",
+  "/app/settings/tenant/pipelines": "/ajustes/etapas-do-funil",
+  "/app/ai/agents": "/ajustes/ia/agentes",
+  "/app/ai/followups": "/ajustes/ia/follow-ups",
+  "/app/ai/atendimento": "/ajustes/ia/atendimento",
+  "/app/ai/routers": "/ajustes/ia/roteadores",
+  "/app/ai/credentials": "/ajustes/ia/credenciais",
+  "/app/ai/providers": "/ajustes/ia/provedores",
+  "/app/ai/knowledge/sources": "/ajustes/ia/conhecimento",
+  "/app/ai/memory": "/ajustes/ia/memoria",
+  "/app/ai/skills": "/ajustes/ia/skills",
+  "/app/ai/cases": "/ajustes/ia/casos",
+  "/app/ai/inbox": "/ajustes/ia/alertas",
+  "/app/ai/cases/avisos": "/ajustes/ia/avisos",
+  "/app/ai/proposals": "/ajustes/ia/propostas",
+  "/app/ai/runs": "/ajustes/ia/execucoes",
+  "/app/ai/usage": "/ajustes/ia/uso",
+  "/app/ai/evolution": "/ajustes/ia/evolucao",
+  "/app/integrations/nuvemshop": "/ajustes/canais/nuvemshop",
+  "/app/webhooks": "/ajustes/canais/webhooks",
+  "/app/faturamento": "/ajustes/faturamento",
+  "/app/honorarios": "/ajustes/honorarios",
+  "/app/metrics": "/ajustes/desempenho",
+  "/app/ads/meta": "/ajustes/meta-ads",
+  "/app/activities": "/ajustes/atividades",
+  "/app/settings/atendimento": "/ajustes/distribuicao",
+  "/app/settings/recursos": "/ajustes/recursos",
+  "/app/settings/conversoes": "/ajustes/conversoes",
+  "/app/settings/meta-ads": "/ajustes/meta-ads/conta",
+  "/app/settings/billing": "/ajustes/plano",
+  "/app/settings/api-tokens": "/ajustes/api-tokens",
+  "/app/settings/voip-trunk": "/ajustes/trunk-sip",
+  "/app/extensions": "/ajustes/extensoes",
+  "/app/integracao-dados": "/ajustes/integracao-de-dados",
 } as const;
 
 /** Onde uma tela do catálogo abre para quem está na interface nova, e se já é aqui. */

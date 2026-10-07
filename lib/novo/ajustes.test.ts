@@ -15,7 +15,19 @@ describe("os ajustes do administrador na interface nova", () => {
       expect(CATALOGO.has(atual), `${atual} fora do catálogo de navegação`).toBe(true);
       const pagina = path.join(process.cwd(), "app", "(nova)", nova, "page.tsx");
       expect(existsSync(pagina), `${nova} sem ${pagina}`).toBe(true);
-      expect(readFileSync(pagina, "utf8")).toContain(`from "@/app${atual}/page"`);
+      const fonte = readFileSync(pagina, "utf8");
+      expect(fonte).toContain(`from "@/app${atual}/page"`);
+      // Os layouts do caminho de lá recusam a tela com o módulo ou a capacidade desligado; sem
+      // eles, a tela abriria aqui o que lá não existe.
+      const partes = atual.split("/").filter(Boolean);
+      for (let i = 2; i <= partes.length; i++) {
+        const pasta = partes.slice(0, i).join("/");
+        if (existsSync(path.join(process.cwd(), "app", ...partes.slice(0, i), "layout.tsx"))) {
+          expect(fonte, `${nova} sem o layout de /${pasta}`).toContain(
+            `from "@/app/${pasta}/layout"`,
+          );
+        }
+      }
     }
   });
 
@@ -26,6 +38,12 @@ describe("os ajustes do administrador na interface nova", () => {
     });
     expect(enderecoDoAjuste("/app/team")).toEqual({ href: "/equipe", naNova: true });
     expect(enderecoDoAjuste("/app/agenda")).toEqual({ href: "/agenda", naNova: true });
-    expect(enderecoDoAjuste("/app/kanban")).toEqual({ href: "/app/kanban", naNova: false });
+    expect(enderecoDoAjuste("/app/kanban")).toEqual({ href: "/ajustes/funis", naNova: true });
+    expect(enderecoDoAjuste("/app/crm")).toEqual({ href: "/app/crm", naNova: false });
+  });
+
+  it("nenhuma tela do catálogo ficou só na versão atual", () => {
+    const fora = NAV_CATALOG.map((d) => d.href).filter((h) => !enderecoDoAjuste(h).naNova);
+    expect(fora).toEqual([]);
   });
 });
