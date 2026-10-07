@@ -19,6 +19,7 @@ export const TELAS_DA_INTERFACE_NOVA = [
   "tarefas",
   "relatorios",
   "equipe",
+  "conta",
 ] as const;
 
 /** O caminho é de uma tela da interface nova (`/agenda`, `/pacientes/<id>`…)? */

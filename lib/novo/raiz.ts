@@ -6,8 +6,8 @@
  * ela, com o mesmo paciente, a mesma conversa. Só o Administrador alterna entre as duas.
  *
  * O que fica de fora, de propósito:
- *  - tela SEM equivalente na nova (perfil, senha, segundo fator, notificações): continua abrindo
- *    na interface atual, para ninguém perder uma função que só existe lá;
+ *  - tela SEM equivalente na nova: continua abrindo na interface atual, para ninguém perder uma
+ *    função que só existe lá;
  *  - sessão de suporte e administrador da plataforma: trabalham na interface atual;
  *  - instalação sem o módulo clínica: a interface nova não tem o que mostrar.
  *
@@ -47,6 +47,9 @@ export function destinoNaInterfaceNova(caminho: string, busca = ""): string | nu
   if (p === "/app/tasks") return "/tarefas";
   if (p === "/app/clinica/origens") return "/relatorios";
   if (p === "/app/contacts") return "/pacientes";
+  if (p === "/app/settings/profile") return "/conta";
+  if (p === "/app/settings/security") return "/conta/seguranca";
+  if (p === "/app/settings/notifications") return "/conta/avisos";
   const ficha = p.match(new RegExp(`^/app/contacts/(${UUID})$`, "i"));
   if (ficha) return `/pacientes/${ficha[1]}`;
   if (p === "/app/inbox") {

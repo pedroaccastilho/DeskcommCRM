@@ -308,7 +308,8 @@
   color: var(--n-tinta-2);
 }
 
-.novo .n-chip[aria-pressed="true"] {
+.novo .n-chip[aria-pressed="true"],
+.novo .n-chip[aria-current="page"] {
   background: var(--n-forte);
   color: var(--n-forte-tinta);
 }
@@ -585,7 +586,8 @@
  * que no `:root` já foram resolvidas — por isso as duas camadas são reapontadas aqui. Claro e
  * escuro vêm de graça: `--n-*` já muda com o tema.
  */
-.novo .n-inbox {
+.novo .n-inbox,
+.novo .n-vestida {
   --color-bg: var(--n-papel);
   --color-surface: var(--n-cartao);
   --color-surface-elevated: var(--n-papel-2);
@@ -606,7 +608,21 @@
   --input: var(--n-linha);
   /* O fundo da conversa selecionada: na versão atual é um tom claro fixo, ilegível no escuro. */
   --color-accent-50: color-mix(in oklab, var(--n-acao) 14%, var(--n-cartao));
+}
+
+.novo .n-inbox {
   padding: 12px 12px 0;
+}
+
+/*
+ * MINHA CONTA (/conta): os formulários da versão atual com a paleta acima. Os cartões deles ganham
+ * os cantos e a sombra dos cartões da interface nova.
+ */
+.novo .n-vestida .rounded-lg.border.shadow-xs {
+  border-radius: var(--n-raio);
+  border-color: transparent;
+  background: var(--n-cartao);
+  box-shadow: var(--n-sombra);
 }
 
 /* Sem o cabeçalho de 3,5rem da versão atual; no celular, desconta a barra de abas. */

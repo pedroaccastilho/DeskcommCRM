@@ -322,6 +322,14 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
           {veConfiguracoes(role) && <InterfaceDaEquipe />}
           <div className="border-t border-[var(--n-linha)] pt-2">
             <Link
+              href="/conta"
+              onClick={() => setAberto(false)}
+              className="n-linha-clicavel px-2 py-2 text-sm"
+              data-testid="novo-menu-conta"
+            >
+              {t("Minha conta")}
+            </Link>
+            <Link
               href="/tarefas"
               onClick={() => setAberto(false)}
               className="n-linha-clicavel px-2 py-2 text-sm"

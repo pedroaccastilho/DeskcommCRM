@@ -17742,6 +17742,9 @@ export const DICIONARIO: Traducoes = {
   "Tarefas de hoje": { es: "Tareas de hoy" },
   "Tirar": { es: "Quitar" },
   "Ver todas as tarefas": { es: "Ver todas las tareas" },
+  // Minha conta na interface nova (/conta)
+  Avisos: { es: "Avisos" },
+  "Minha conta": { es: "Mi cuenta" },
 };
 
 /**
