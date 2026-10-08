@@ -12,6 +12,8 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 
+import { AnonymizeDialog } from "@/components/contacts/AnonymizeDialog";
+import { TimelineView } from "@/components/contacts/TimelineView";
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { apiClient } from "@/lib/api/client";
 import { atende } from "@/lib/novo/cargo";
@@ -70,6 +72,7 @@ export function Paciente({ contactId }: { contactId: string }) {
   const [escrever, setEscrever] = React.useState(false);
   const [adendoDe, setAdendoDe] = React.useState<RegistroDoProntuario | null>(null);
   const [filtro, setFiltro] = React.useState<string>("");
+  const [verLinhaDoTempo, setVerLinhaDoTempo] = React.useState(false);
   const minhasModalidades: string[] = eu?.profissional?.modalidades ?? [];
   const [editar, setEditar] = React.useState(false);
   const origem = useOrigemDoPaciente(contactId);
@@ -288,6 +291,27 @@ export function Paciente({ contactId }: { contactId: string }) {
               </ul>
             )}
           </Secao>
+
+          <Secao
+            titulo={t("Linha do tempo")}
+            acao={
+              <button
+                type="button"
+                className="n-chip"
+                aria-expanded={verLinhaDoTempo}
+                onClick={() => setVerLinhaDoTempo((v) => !v)}
+                data-testid="novo-linha-do-tempo-mostrar"
+              >
+                {verLinhaDoTempo ? t("Esconder") : t("Mostrar")}
+              </button>
+            }
+          >
+            {verLinhaDoTempo ? (
+              <div className="n-vestida" data-testid="novo-linha-do-tempo">
+                <TimelineView contactId={contactId} />
+              </div>
+            ) : null}
+          </Secao>
         </div>
 
         <aside className="grid content-start gap-5">
@@ -341,6 +365,13 @@ export function Paciente({ contactId }: { contactId: string }) {
 
           <CartaoDeTarefas contactId={contactId} nome={nome} />
           {eu?.ve_acessos && <CartaoDeAcessos contactId={contactId} fuso={fuso} />}
+          {role === "admin" && (
+            <CartaoDeLgpd
+              contactId={contactId}
+              anonimizadoEm={c.is_anonymized ? (c.anonymized_at ?? "") : null}
+              fuso={fuso}
+            />
+          )}
 
           {podeIrParaAAtual && (
             <a
@@ -498,6 +529,53 @@ function AvisoDeBloqueio({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * O direito ao esquecimento, como a aba LGPD da ficha da versão atual: só o Administrador, com o
+ * mesmo diálogo de duas etapas (justificativa e a palavra de confirmação) e a mesma rota auditada.
+ */
+function CartaoDeLgpd({
+  contactId,
+  anonimizadoEm,
+  fuso,
+}: {
+  contactId: string;
+  /** `null` = não anonimizado; "" = anonimizado sem data registrada. */
+  anonimizadoEm: string | null;
+  fuso: string;
+}) {
+  const t = useT();
+  const tag = useTagDeIdioma();
+  const [aberto, setAberto] = React.useState(false);
+  return (
+    <section className="n-cartao p-5" data-testid="novo-lgpd-da-ficha">
+      <h2 className="text-[15px] font-bold">{t("Direito ao esquecimento (LGPD)")}</h2>
+      <p className="n-suave mt-1 text-sm">
+        {t(
+          "A anonimização é irreversível. Use somente após confirmação formal do titular ou ordem judicial.",
+        )}
+      </p>
+      {anonimizadoEm !== null ? (
+        <p className="mt-3 text-sm font-semibold">
+          {t("Este contato já foi anonimizado")}
+          {anonimizadoEm ? ` · ${dataCurta(anonimizadoEm, fuso, tag)}` : ""}
+        </p>
+      ) : (
+        <button
+          type="button"
+          className="n-botao n-botao-suave n-botao-pequeno mt-3 text-[var(--n-alerta)]"
+          onClick={() => setAberto(true)}
+          data-testid="novo-anonimizar"
+        >
+          {t("Anonimizar contato")}
+        </button>
+      )}
+      <div className="n-vestida">
+        <AnonymizeDialog contactId={contactId} open={aberto} onOpenChange={setAberto} />
+      </div>
+    </section>
   );
 }
 
