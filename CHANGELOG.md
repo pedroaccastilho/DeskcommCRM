@@ -8,6 +8,95 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.74.0] — 2026-10-08
+
+### Adicionado
+
+- **A recepção marca que o paciente chegou e o profissional marca o início do atendimento** Com o módulo clínica instalado, o Balcão tem o botão "Chegou": o paciente sai de "a caminho" e passa a aparecer como "Na recepção", com a hora da chegada, num filtro novo "Na clínica", e deixa de contar como atrasado ou de poder levar falta. Uma chegada marcada por engano se desfaz no próprio painel. No Meu dia, o profissional vê que o paciente está esperando e toca "Iniciar atendimento"; recepção e profissional passam a ver "Em atendimento" e desde que horas. A atualização cria a tabela das etapas da sessão na próxima vez que o módulo for provisionado, sem nenhuma ação do operador.
+
+- **O administrador da clínica pode entrar como outra pessoa da equipe para conferir a tela dela** Na tela Equipe da interface nova, o administrador abre uma pessoa e toca em "Entrar como". A interface passa a mostrar exatamente o que aquela pessoa vê, com uma faixa fixa no topo dizendo de quem é a tela e o botão "Voltar para o administrador". Nesse modo nada pode ser gravado, nem pelo administrador: toda alteração é recusada até ele voltar, e ninguém assina prontuário em nome de outra pessoa. Entrar e voltar ficam registrados na auditoria em nome do administrador. O modo se desliga sozinho depois de oito horas.
+
+- **Perfis da equipe escolhidos no cadastro, e uma pessoa pode somar vários** Com o módulo clínica instalado, a interface nova ganha a tela Equipe, só para o administrador. Nela ele cadastra uma pessoa já com os perfis dela (Administrador, Gerente, Financeiro, Jurídico, Recepção, Médico, Fisioterapeuta, Enfermeiro ou Educador físico) e troca os perfis de quem já está na equipe. A mesma pessoa pode somar perfis, como gerente e fisioterapeuta, e o acesso é a soma. Escolher um perfil de saúde pede o registro no conselho na mesma tela, e a pessoa já entra podendo ler o prontuário e assinar as próprias evoluções. Quem já estava cadastrado continua com o mesmo acesso. A atualização cria as tabelas dos perfis na próxima vez que o módulo for provisionado, sem nenhuma ação do operador.
+
+- **As telas de detalhe do administrador também abrem na interface nova** Dentro dos Ajustes da interface nova, abrir um funil, um negócio, um agente, um roteador, um
+  follow-up, uma campanha (nova ou existente), uma proposta, uma importação, uma extensão ou uma
+  solicitação de LGPD passou a manter o administrador na interface nova, com a mesma tela da versão
+  atual. Ctrl+clique continua abrindo a versão atual em outra aba.
+
+- **Todas as telas do administrador abrem dentro da interface nova** Os Ajustes da interface nova passaram a abrir dentro dela todas as telas que o administrador tem na
+  versão atual: funis, campanhas, prospecção, produtos, comandas, agentes de IA e o resto do grupo de
+  IA, canais, faturamento, desempenho, atividades, distribuição de atendimento, recursos opcionais,
+  conversões, Meta Ads, plano, tokens de API, trunk SIP e extensões. Cada tela é a mesma da versão
+  atual, com as mesmas permissões e os mesmos módulos. As telas de detalhe que elas abrem (o quadro de
+  um funil, um lead, um agente) ainda abrem na versão atual.
+
+- **Ajustes do administrador dentro da interface nova** A porta "Ajustes" da interface nova passou a abrir `/ajustes`, com tudo o que o administrador
+  configura, agrupado como no menu da versão atual e com busca. Onze telas já abrem dentro da
+  interface nova: dados da empresa, profissionais de saúde, regras da clínica, chatbot do WhatsApp,
+  tipos de agendamento, financeiro, marca, etiquetas, conexões, auditoria e pedidos de LGPD. As
+  demais abrem na versão atual, e o cartão avisa antes do clique. Só o administrador vê a porta.
+
+- **Cadastrar e editar paciente na interface nova, com a origem e as etiquetas** Na interface nova, a lista de pacientes ganhou o botão "Novo paciente" e a ficha ganhou "Editar".
+  Uma folha só pede nome, WhatsApp (digitado como se fala, com DDD), nascimento, e-mail, CPF, como o
+  paciente chegou à clínica (com o influenciador, o médico ou o paciente que indicou) e etiquetas. A
+  ficha mostra a origem e as etiquetas logo abaixo do nome. Quem é "Somente leitura" não vê os botões.
+
+- **A equipe pode usar só a interface nova, por escolha do Administrador** O Administrador ganhou, no menu da pessoa da interface nova, a chave "A equipe usa só a interface
+  nova". Ligada, quem não é Administrador entra direto na interface nova e todo link antigo que tem
+  equivalente (início, agenda, pacientes, ficha do paciente, conversa do WhatsApp, tarefas, origens)
+  leva para a tela nova; a porta "Voltar para a versão atual" some para essas pessoas. Só o
+  Administrador alterna entre as duas, e na interface atual ele ganhou a porta "Abrir a interface
+  nova" no menu do usuário. A chave nasce desligada: atualizar não muda a tela de ninguém. Precisa
+  do módulo clínica (migration 9010).
+
+- **Minha conta na interface nova (perfil, segurança e avisos)** O menu da pessoa da interface nova ganhou "Minha conta", com três abas: Perfil (nome, foto, idioma
+  e fuso), Segurança (verificação em duas etapas, códigos de recuperação e sair de todos os
+  aparelhos) e Avisos (canais, categorias e sons). São os mesmos formulários da versão atual. Quem
+  usa só a interface nova e abre o perfil, a segurança ou as notificações da versão atual é levado
+  para a tela equivalente.
+
+- **Multas na ficha e sessões a confirmar dos próximos dias na interface nova** Na ficha do paciente da interface nova aparecem as multas por cancelamento em cima da hora, com a sessão que as gerou. A recepção isenta uma multa escrevendo o motivo, que fica registrado com quem isentou e quando. Na tela Hoje, a recepção vê as sessões dos próximos dois dias que ainda esperam confirmação e abre cada uma para confirmar ou lembrar o paciente.
+
+- **Vender e ajustar pacotes na ficha da interface nova** Na ficha do paciente da interface nova, a recepção vende pacote com o aceite da política de cancelamento e congela o pacote (por exemplo, numa viagem); a gerência também prorroga e cancela, com reembolso calculado ou informado. Pacotes vencidos, esgotados e cancelados ficam em "pacotes anteriores".
+
+- **Ficha da interface nova com o plano de tratamento, o PDF do prontuário e quem abriu o prontuário** Na ficha do paciente da interface nova, o profissional de saúde baixa o prontuário em PDF, toda a equipe vê o plano de tratamento de cada modalidade ("Sessão 3 de 10", frequência e reavaliação marcada ou ainda sem horário), e o administrador vê quem abriu o prontuário e quando.
+
+- **Relatórios da gestão na interface nova, com exportação para a contabilidade** A interface nova ganhou a tela Relatórios, para Administrador, Gerente e Financeiro (os perfis
+  somam: a gerente que também atende vê a porta no menu do próprio dia). Por período (este mês, mês
+  passado, últimos 90 dias ou datas escolhidas): sessões realizadas, taxa de faltas, pacotes
+  vendidos, multas a receber, pacientes atendidos e novos; por profissional, por modalidade, o
+  dinheiro do período e a origem dos pacientes novos. Quatro planilhas para a contabilidade (resumo
+  financeiro, sessões, pacotes e multas) no padrão brasileiro: ponto e vírgula, vírgula nos
+  centavos, data dd/mm/aaaa, abrem direto no Excel. Cada exportação fica registrada na auditoria.
+  Precisa do módulo clínica; o banco ganha só funções de leitura (migration 9009).
+
+- **Tarefas na interface nova (/tarefas), na tela Hoje e na ficha do paciente** A interface nova ganhou a tela de Tarefas: lista por prazo (atrasadas, hoje, próximos 7 dias, mais para frente, sem prazo), criar e editar numa folha com prazo, prioridade e paciente opcional, e concluir com um toque. A tela Hoje mostra o que vence hoje e o que já venceu, a ficha do paciente mostra as tarefas dele com "+ Tarefa", e o menu "Você" tem a porta para a lista inteira. Mesmas tarefas da versão atual.
+
+- **WhatsApp da clínica dentro da interface nova (/whatsapp)** A porta "WhatsApp" da interface nova deixou de levar à versão atual: as conversas abrem dentro do layout novo, com a fila, a conversa, o composer e a ficha do contato, no claro e no escuro, no computador e no celular. Tudo o que a caixa de entrada já fazia continua igual (tempo real, assumir, transferir, lembrar, fechar, nota interna, mídia).
+
+- **Origem do paciente na ficha, no cadastro e no relatório** No módulo "clínica", a ficha do paciente mostra por onde ele chegou, logo abaixo do nome: "Chegou por Encaminhamento médico, Dr. Paulo Lima.", por exemplo. Quem foi indicado mostra "Indicado por", com o link para a ficha de quem indicou, e quem chegou sozinho pelo WhatsApp aparece como "WhatsApp (automático)". A recepção registra ou corrige a origem pelo botão ao lado, e o "Novo contato" ganhou o campo "Como chegou à clínica", que pede o nome do médico no encaminhamento, o influenciador ou anúncio no Instagram e o paciente que indicou na indicação. Em Análise, a tela "Origem dos pacientes" mostra, para o período escolhido, cada origem e cada médico, influenciador ou anúncio com os pacientes novos, quantos compraram pacote, a conversão e o valor vendido; só gerente e administrador a abrem. Na ficha, o antigo campo "Origem" da visão geral passa a se chamar "Canal do cadastro" quando o módulo está instalado, para não se confundir com a origem do paciente.
+
+### Alterado
+
+- **Salvar ou cancelar numa tela do administrador mantém a interface nova** Dentro dos Ajustes da interface nova, as telas que navegam sozinhas (cancelar ou salvar uma
+  campanha, salvar um agente ou um modelo de proposta, abrir a conversa de um contato) passaram a
+  levar o administrador à tela equivalente da interface nova, em vez de voltar para a versão atual.
+  O que não tem equivalente continua indo para a versão atual.
+
+- **A interface nova saiu do /novo e mora na raiz do endereço** As telas da interface nova passaram a ter endereço próprio, sem o "/novo": `/hoje` (Hoje ou Meu
+  dia), `/agenda`, `/pacientes`, `/whatsapp`, `/tarefas`, `/relatorios` e `/equipe`. Os endereços
+  antigos continuam abrindo: `/novo` leva a `/hoje`, e `/novo/agenda`, `/novo/pacientes/…` e os
+  demais levam à mesma tela no endereço novo, com a mesma conversa ou o mesmo paciente. Favoritos
+  e links já enviados não quebram, e nada precisa ser configurado.
+
+- **Interface nova com modo escuro legível e um botão para trocar entre claro e escuro** No modo escuro da interface nova, o menu lateral, as iniciais dos pacientes, os números em destaque e a linha do dia ficaram legíveis. O menu lateral ganhou um botão Claro/Escuro, e o menu da pessoa ganhou a escolha entre Claro, Escuro e Automático (o que o aparelho usar), que também vale no celular. A escolha é a mesma da interface atual.
+
+### Corrigido
+
+- **A janela "Marcar a próxima sessão" não fecha mais sozinha logo depois de remarcar** No painel do compromisso da Agenda, quem remarcava uma sessão da clínica e logo em seguida abria "Marcar a próxima sessão" às vezes via a janela fechar sozinha antes de escolher o horário. O painel agora guarda a sessão enquanto a agenda do novo horário carrega.
+
+- **O link de confirmação de cadastro e de nova senha funciona com o e-mail padrão do Supabase** No plano grátis do Supabase, usando o envio de e-mail embutido dele, os modelos de e-mail não podem ser trocados, e o link padrão caía na tela de login com o aviso "configure os modelos de e-mail", que nem tinha como ser seguido. Agora o link padrão abre direto no mesmo navegador em que a pessoa se cadastrou ou pediu a nova senha. Aberto noutro aparelho, o cadastro diz que o e-mail foi confirmado e leva a pessoa a entrar (e, se veio de um convite, ao aceite dele); a nova senha explica que o link precisa ser aberto no navegador em que foi pedido.
+
 ## [1.73.0] — 2026-10-04
 
 ### Adicionado
@@ -9816,7 +9905,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.73.0...HEAD
+[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.0...HEAD
+[1.74.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.73.0...v1.74.0
 [1.73.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.72.0...v1.73.0
 [1.72.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.71.0...v1.72.0
 [1.71.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.70.0...v1.71.0
