@@ -36,6 +36,17 @@ const admin = createClient(URL_SUPABASE, env.SUPABASE_SERVICE_ROLE_KEY ?? "", {
 
 type Creds = ReturnType<typeof lerCreds>;
 
+async function idDoUsuario(email: string): Promise<string> {
+  for (let pagina = 1; pagina <= 10; pagina++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page: pagina, perPage: 200 });
+    if (error) throw new Error(`listUsers: ${error.message}`);
+    const achado = data.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+    if (achado) return achado.id;
+    if (data.users.length < 200) break;
+  }
+  throw new Error(`usuário ${email} não encontrado`);
+}
+
 /** O `manager` do seed não tem TOTP: entra direto. */
 async function entrarComoGerente(page: Page, creds: Creds): Promise<void> {
   const usuario = creds.users.manager;
@@ -82,7 +93,7 @@ test.describe("A porta Gestão por perfil na interface nova", () => {
     await expect(cartao.getByText(/instalado/i)).toBeVisible({ timeout: ESPERA });
     await context.clearCookies();
 
-    const userId = creds.users.manager!.id;
+    const userId = await idDoUsuario(creds.users.manager!.email);
     const { data: vinculo } = await admin
       .from("user_organizations")
       .select("organization_id, role")
