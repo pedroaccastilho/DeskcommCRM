@@ -347,9 +347,12 @@ export function FolhaDaSessao({
                     A falta pode ser registrada a partir das {hora(sessao.falta_liberada_em, fuso)}.
                   </p>
                 )}
-                <div className="grid grid-cols-2 gap-2">
+                <div
+                  className={`grid gap-2 ${dentro && !(balcao && momento === "na_recepcao") ? "" : "grid-cols-2"}`}
+                >
                   {dentro ? (
-                    balcao && momento === "na_recepcao" ? (
+                    balcao &&
+                    momento === "na_recepcao" && (
                       <button
                         type="button"
                         className="n-botao n-botao-suave"
@@ -359,8 +362,6 @@ export function FolhaDaSessao({
                       >
                         {t("Desfazer chegada")}
                       </button>
-                    ) : (
-                      <span aria-hidden />
                     )
                   ) : (
                     <button
@@ -608,6 +609,11 @@ function PassoRemarcar({
     });
   }, [fuso, proxima, aPartirDe]);
   const [indice, setIndice] = React.useState(proxima ? DIAS_ATE_A_PROXIMA_SUGERIDA - 1 : 0);
+  // A próxima sessão abre daqui a uma semana, num dia que pode cair fora da fileira visível.
+  const diaInicial = React.useRef<HTMLButtonElement | null>(null);
+  React.useEffect(() => {
+    diaInicial.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, []);
   const [chave] = React.useState(() => randomId());
   const [slot, setSlot] = React.useState<string | null>(null);
   const dia = dias[indice]!;
@@ -686,6 +692,7 @@ function PassoRemarcar({
               return (
                 <button
                   key={`${d.mes}-${d.dia}`}
+                  ref={i === indice ? diaInicial : undefined}
                   type="button"
                   aria-pressed={i === indice}
                   onClick={() => {

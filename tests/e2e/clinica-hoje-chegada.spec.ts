@@ -17,7 +17,7 @@ import * as path from "node:path";
 
 import { createClient } from "@supabase/supabase-js";
 
-import { expect, test } from "./helpers/test";
+import { expect, test, type Page } from "./helpers/test";
 
 import { carregarEnvLocal, destinoEhLocal } from "../../scripts/lib/env-de-teste";
 import { lerCreds, loginComoAdmin, loginComoDono } from "./helpers/login-admin";
@@ -43,6 +43,18 @@ async function idDoUsuario(email: string): Promise<string> {
     if (data.users.length < 200) break;
   }
   throw new Error(`usuário ${email} não encontrado`);
+}
+
+/** Espera a folha terminar de abrir; as animações sem fim (o marcador de agora) ficam de fora. */
+async function animacoesTerminadas(page: Page): Promise<void> {
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+        .map((a) => a.finished.catch(() => undefined)),
+    ),
+  );
 }
 
 test.describe("Balcão e Meu dia no Hoje da interface nova", () => {
@@ -207,7 +219,6 @@ test.describe("Balcão e Meu dia no Hoje da interface nova", () => {
       await expect(folha.getByTestId("novo-chegou")).toHaveCount(0);
       await page.screenshot({
         path: path.join(EVIDENCIA, "1-folha-na-recepcao.png"),
-        fullPage: true,
       });
 
       // Marcou por engano: desfaz, e volta a ser "Confirmado".
@@ -226,7 +237,9 @@ test.describe("Balcão e Meu dia no Hoje da interface nova", () => {
       const naClinica = page.locator("section").filter({
         has: page.getByRole("heading", { name: /^Na clínica/ }),
       });
-      await expect(naClinica.getByTestId("novo-linha-sessao")).toContainText(nome, {
+      await expect(
+        naClinica.getByTestId("novo-linha-sessao").filter({ hasText: nome }),
+      ).toBeVisible({
         timeout: ESPERA,
       });
       await page.screenshot({
@@ -254,7 +267,6 @@ test.describe("Balcão e Meu dia no Hoje da interface nova", () => {
       await expect(folha.getByTestId("novo-realizado")).toHaveClass(/n-botao-principal/);
       await page.screenshot({
         path: path.join(EVIDENCIA, "3-folha-em-atendimento.png"),
-        fullPage: true,
       });
 
       const { data: etapa } = await admin
@@ -282,7 +294,6 @@ test.describe("Balcão e Meu dia no Hoje da interface nova", () => {
       await evolucao.getByLabel(/^Queixa principal/).fill("Dor ao subir escada, melhorando");
       await page.screenshot({
         path: path.join(EVIDENCIA, "4-evolucao-pronta.png"),
-        fullPage: true,
       });
       await evolucao.getByRole("button", { name: /^Assinar/ }).click();
       const proximoPasso = page.getByTestId("novo-evolucao-assinada");
@@ -306,7 +317,9 @@ test.describe("Balcão e Meu dia no Hoje da interface nova", () => {
       await proximoPasso.getByTestId("novo-marcar-proxima").click();
       const horarios = folha.getByTestId("novo-horarios-livres");
       await expect(horarios).toBeVisible({ timeout: ESPERA });
-      await page.screenshot({ path: path.join(EVIDENCIA, "5-proxima-sessao.png"), fullPage: true });
+      // A semana que vem cai fora da fileira de dias: o dia sugerido precisa aparecer sozinho.
+      await expect(folha.locator('[aria-label="Dia"] [aria-pressed="true"]')).toBeInViewport();
+      await page.screenshot({ path: path.join(EVIDENCIA, "5-proxima-sessao.png") });
       await horarios.getByRole("button").first().click();
       await folha.getByRole("button", { name: /^Marcar para/ }).click();
       await expect(proximoPasso.getByTestId("novo-proxima-ja-marcada")).toBeVisible({
@@ -317,7 +330,6 @@ test.describe("Balcão e Meu dia no Hoje da interface nova", () => {
       );
       await page.screenshot({
         path: path.join(EVIDENCIA, "6-proxima-marcada.png"),
-        fullPage: true,
       });
 
       const { data: marcadas } = await admin
@@ -344,12 +356,24 @@ test.describe("Balcão e Meu dia no Hoje da interface nova", () => {
       await expect(proximoPasso).toBeVisible();
       const largura = await page.evaluate(() => document.documentElement.scrollWidth);
       expect(largura).toBeLessThanOrEqual(390);
-      await page.screenshot({ path: path.join(EVIDENCIA, "7-celular.png"), fullPage: true });
+      await animacoesTerminadas(page);
+      await page.screenshot({ path: path.join(EVIDENCIA, "7-celular.png") });
     } finally {
       await page.evaluate(() => window.localStorage.removeItem("novo:ver-como")).catch(() => {});
       await desfazerFuso();
       if (proximaId) await admin.from("calendar_appointments").delete().eq("id", proximaId);
-      await admin.from("calendar_appointments").delete().eq("id", sessaoId);
+      // A evolução assinada aponta para a sessão e o prontuário não se apaga: a sessão é
+      // encerrada para não ficar "Na clínica" no Hoje das próximas rodadas.
+      const { error: naoApagou } = await admin
+        .from("calendar_appointments")
+        .delete()
+        .eq("id", sessaoId);
+      if (naoApagou) {
+        await admin
+          .from("calendar_appointments")
+          .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+          .eq("id", sessaoId);
+      }
       await admin.from("clinica_tipos_atendimento").delete().eq("event_type_id", tipoId);
       await admin.from("calendar_event_types").delete().eq("id", tipoId);
       if (dispAntes) {
