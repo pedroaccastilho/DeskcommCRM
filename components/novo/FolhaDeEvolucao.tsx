@@ -5,6 +5,9 @@
  * ou alta. Os campos são os mesmos modelos da interface atual (`modeloDoRegistro`), e quem carimba
  * a assinatura e recusa quem não pode é o banco (migration 9001). A dor e o esforço viram uma
  * régua de 0 a 10 de tocar, em vez de campo de número.
+ *
+ * Em cima, a ÚLTIMA SESSÃO da modalidade e o "Repetir a conduta" do Meu dia da versão atual:
+ * copia só o que se repete de uma sessão para outra (o tratamento), nunca o que se mede de novo.
  */
 import { useMutation } from "@tanstack/react-query";
 import * as React from "react";
@@ -12,20 +15,24 @@ import { toast } from "sonner";
 
 import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { apiClient } from "@/lib/api/client";
+import { ultimoRegistro, valoresParaRepetir } from "@/lib/clinica/meu-dia";
 import {
   ROTULO_DA_MODALIDADE,
   ROTULO_DO_TIPO,
   camposObrigatoriosFaltando,
+  camposParaMostrar,
   modeloDoRegistro,
+  valorParaMostrar,
   type CampoDoModelo,
   type Modalidade,
   type TipoDeRegistro,
 } from "@/lib/clinica/vocabulario";
 
 import { useNovo } from "./Casca";
-import { useRecarregar } from "./dados";
-import { Folha, primeiroNome } from "./pecas";
+import { useProntuario, useRecarregar } from "./dados";
+import { Folha, dataLonga, primeiroNome } from "./pecas";
 import { useT } from "@/lib/i18n/IdiomaProvider";
+import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 
 const TIPOS: TipoDeRegistro[] = ["evolucao", "avaliacao", "alta"];
 
@@ -35,15 +42,19 @@ export function FolhaDeEvolucao({
   appointmentId,
   modalidadeSugerida,
   aoFechar,
+  aoAssinar,
 }: {
   contactId: string;
   nomeDoPaciente: string;
   appointmentId: string | null;
   modalidadeSugerida: Modalidade | null;
   aoFechar: () => void;
+  /** Depois de assinar; sem ele, a folha só fecha. A folha da sessão pergunta o próximo passo. */
+  aoAssinar?: () => void;
 }) {
   const t = useT();
-  const { eu } = useNovo();
+  const tag = useTagDeIdioma();
+  const { eu, fuso } = useNovo();
   const recarregar = useRecarregar();
   const minhas = (eu?.profissional?.modalidades ?? []) as Modalidade[];
   const [modalidade, setModalidade] = React.useState<Modalidade | null>(
@@ -55,7 +66,20 @@ export function FolhaDeEvolucao({
   const [conteudo, setConteudo] = React.useState<Record<string, string | number>>({});
   const [texto, setTexto] = React.useState("");
 
+  const registros = useProntuario(contactId, minhas.length > 0);
+  const ultimo = modalidade ? ultimoRegistro(registros.data ?? [], modalidade) : null;
   const campos = modalidade ? modeloDoRegistro(modalidade, tipo) : [];
+  // Só o que o formulário de agora tem, e ainda não está igual ao que seria copiado.
+  const repetiveis = Object.entries(valoresParaRepetir(ultimo)).filter(
+    ([chave, valor]) =>
+      campos.some((c) => c.chave === chave) &&
+      String(conteudo[chave] ?? "").trim() !== valor.trim(),
+  );
+  const camposDoUltimo = ultimo
+    ? camposParaMostrar(ultimo.modalidade, ultimo.tipo)
+        .filter((c) => ultimo.conteudo[c.chave] !== undefined && ultimo.conteudo[c.chave] !== "")
+        .slice(0, 4)
+    : [];
   const faltando = modalidade ? camposObrigatoriosFaltando(modalidade, tipo, conteudo) : [];
   const algoEscrito =
     texto.trim() !== "" || Object.values(conteudo).some((v) => String(v).trim() !== "");
@@ -77,7 +101,7 @@ export function FolhaDeEvolucao({
         `${ROTULO_DO_TIPO[tipo]} assinada no prontuário de ${primeiroNome(nomeDoPaciente)}.`,
       );
       recarregar();
-      aoFechar();
+      (aoAssinar ?? aoFechar)();
     },
     onError: (err) => showApiError(err),
   });
@@ -135,6 +159,42 @@ export function FolhaDeEvolucao({
               </button>
             ))}
         </div>
+
+        {ultimo && (
+          <div className="rounded-[20px] bg-[var(--n-papel)] p-4" data-testid="novo-ultima-sessao">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-bold">
+                {t("Última sessão")}{" "}
+                <span className="n-fraco font-semibold">
+                  · {ROTULO_DO_TIPO[ultimo.tipo]} ·{" "}
+                  {dataLonga(ultimo.assinado_em, fuso, tag).split(",")[0]}
+                </span>
+              </p>
+              {tipo === "evolucao" && repetiveis.length > 0 && (
+                <button
+                  type="button"
+                  className="n-botao n-botao-suave n-botao-pequeno"
+                  onClick={() =>
+                    setConteudo((atual) => ({ ...atual, ...Object.fromEntries(repetiveis) }))
+                  }
+                  data-testid="novo-repetir-conduta"
+                >
+                  {t("Repetir a conduta")}
+                </button>
+              )}
+            </div>
+            <dl className="mt-2 grid gap-1.5 text-sm">
+              {camposDoUltimo.map((c) => (
+                <div key={c.chave}>
+                  <dt className="n-fraco text-xs">{c.rotulo}</dt>
+                  <dd className="whitespace-pre-wrap">
+                    {valorParaMostrar(c, ultimo.conteudo[c.chave]!)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
 
         {campos.map((c) => (
           <Campo

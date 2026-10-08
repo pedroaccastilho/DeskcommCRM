@@ -210,9 +210,10 @@ export function useMultasPendentes(habilitado: boolean) {
   });
 }
 
-export function usePacotesDoPaciente(contactId: string) {
+export function usePacotesDoPaciente(contactId: string, habilitado = true) {
   return useQuery({
     queryKey: ["clinica", "pacotes", contactId],
+    enabled: habilitado && contactId !== "",
     queryFn: async () =>
       (
         await apiClient.get<{ data: PacoteDaFicha[] }>(
@@ -327,6 +328,7 @@ export interface SessaoListada {
 export function useSessoesDoPaciente(contactId: string) {
   return useQuery({
     queryKey: ["agenda", "paciente", "novo", contactId],
+    enabled: contactId !== "",
     queryFn: async () => {
       const agora = new Date();
       const de = new Date(agora.getTime() - 60 * 86_400_000);
