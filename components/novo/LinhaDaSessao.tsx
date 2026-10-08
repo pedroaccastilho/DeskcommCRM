@@ -11,7 +11,7 @@ import { momentoDa, quantoFalta } from "@/lib/novo/hoje";
 
 import { useNovo } from "./Casca";
 import { useRecarregar } from "./dados";
-import { seloDa } from "./FolhaDaSessao";
+import { seloDa, useEtapaDaSessao } from "./FolhaDaSessao";
 import { Avatar, PontoDaModalidade, hora } from "./pecas";
 
 /**
@@ -46,6 +46,10 @@ export function LinhaDaSessao({
     onError: (err) => showApiError(err),
   });
 
+  const etapa = useEtapaDaSessao(sessao.id);
+
+  // O atalho da linha: o mesmo passo principal do Balcão (quem vê a clínica marca "Chegou") e do
+  // Meu dia (quem atende inicia o atendimento de quem já chegou). O resto fica na folha.
   const acao =
     role === "viewer"
       ? null
@@ -53,6 +57,14 @@ export function LinhaDaSessao({
         ? { rotulo: "Confirmar", status: "confirmed" as const }
         : momento === "para_fechar"
           ? { rotulo: "Realizado", status: "completed" as const }
+          : null;
+  const passo =
+    role === "viewer" || !sessao.modalidade
+      ? null
+      : !soAsMinhas && (momento === "confirmada" || momento === "atrasado")
+        ? { rotulo: "Chegou", etapa: "chegou" as const }
+        : soAsMinhas && momento === "na_recepcao"
+          ? { rotulo: "Iniciar", etapa: "em_atendimento" as const }
           : null;
 
   return (
@@ -99,6 +111,17 @@ export function LinhaDaSessao({
           <span className={`n-selo ${selo.classe}`}>{selo.rotulo}</span>
         </span>
       </button>
+      {passo && (
+        <button
+          type="button"
+          className="n-botao n-botao-escuro n-botao-pequeno"
+          disabled={etapa.isPending}
+          onClick={() => etapa.mutate(passo.etapa)}
+          data-testid="novo-linha-etapa"
+        >
+          {passo.rotulo}
+        </button>
+      )}
       {acao && (
         <button
           type="button"

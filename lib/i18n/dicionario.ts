@@ -17771,6 +17771,19 @@ export const DICIONARIO: Traducoes = {
     es: "Todo lo que el administrador configura en la clínica.",
   },
   "versão atual": { es: "versión actual" },
+  // Balcão e Meu dia no Hoje da interface nova
+  "Aguardando na recepção.": { es: "Esperando en la recepción." },
+  "Chegou às": { es: "Llegó a las" },
+  "Em atendimento desde as": { es: "En atención desde las" },
+  "Evolução assinada": { es: "Evolución firmada" },
+  "Marcar para": { es: "Agendar para" },
+  "multas em aberto": { es: "multas pendientes" },
+  "Próxima sessão de": { es: "Próxima sesión de" },
+  "Próxima sessão já marcada:": { es: "Próxima sesión ya agendada:" },
+  "Próximo paciente:": { es: "Próximo paciente:" },
+  Resta: { es: "Queda" },
+  Restam: { es: "Quedan" },
+  "sessões no pacote": { es: "sesiones en el paquete" },
 };
 
 /**

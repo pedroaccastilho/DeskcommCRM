@@ -2,7 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import type { SessaoDaGrade } from "@/lib/clinica/agenda";
 
-import { arrumarDia, janelaDoDia, momentoDa, quantoFalta, saudacao, soAsMinhas } from "./hoje";
+import {
+  arrumarDia,
+  janelaDoDia,
+  momentoDa,
+  proximoAberto,
+  quantoFalta,
+  saudacao,
+  soAsMinhas,
+} from "./hoje";
 
 function sessao(p: Partial<SessaoDaGrade> & { inicio: string; fim: string }): SessaoDaGrade {
   return {
@@ -24,9 +32,17 @@ function sessao(p: Partial<SessaoDaGrade> & { inicio: string; fim: string }): Se
 const AGORA = new Date("2026-10-03T13:30:00Z");
 
 describe("momento de cada sessão no dia", () => {
-  it("separa agora, para fechar, sem confirmação, confirmada e encerrada", () => {
+  it("separa atrasado, agora, para fechar, sem confirmação, confirmada e encerrada", () => {
+    // Sessão da clínica em curso sem a chegada marcada: atrasado, como no Balcão.
     expect(
       momentoDa(sessao({ inicio: "2026-10-03T13:00:00Z", fim: "2026-10-03T14:00:00Z" }), AGORA),
+    ).toBe("atrasado");
+    // Compromisso sem modalidade não tem chegada: em curso é só "agora".
+    expect(
+      momentoDa(
+        sessao({ inicio: "2026-10-03T13:00:00Z", fim: "2026-10-03T14:00:00Z", modalidade: null }),
+        AGORA,
+      ),
     ).toBe("agora");
     expect(
       momentoDa(sessao({ inicio: "2026-10-03T12:00:00Z", fim: "2026-10-03T13:00:00Z" }), AGORA),
@@ -50,6 +66,73 @@ describe("momento de cada sessão no dia", () => {
         AGORA,
       ),
     ).toBe("encerrada");
+  });
+
+  it("chegada e início do atendimento vencem o relógio, enquanto a sessão está aberta", () => {
+    const base = { inicio: "2026-10-03T13:00:00Z", fim: "2026-10-03T14:00:00Z" };
+    expect(momentoDa(sessao({ ...base, chegou_em: "2026-10-03T12:55:00Z" }), AGORA)).toBe(
+      "na_recepcao",
+    );
+    expect(
+      momentoDa(
+        sessao({
+          ...base,
+          chegou_em: "2026-10-03T12:55:00Z",
+          atendimento_iniciado_em: "2026-10-03T13:02:00Z",
+        }),
+        AGORA,
+      ),
+    ).toBe("em_atendimento");
+    // Chegou cedo para uma sessão das 15h: já está na clínica, não "confirmada".
+    expect(
+      momentoDa(
+        sessao({
+          inicio: "2026-10-03T15:00:00Z",
+          fim: "2026-10-03T16:00:00Z",
+          chegou_em: "2026-10-03T13:20:00Z",
+        }),
+        AGORA,
+      ),
+    ).toBe("na_recepcao");
+    // Encerrada não volta para a clínica por causa da etapa que ficou gravada.
+    expect(
+      momentoDa(sessao({ ...base, status: "completed", chegou_em: "2026-10-03T12:55:00Z" }), AGORA),
+    ).toBe("encerrada");
+  });
+
+  it("quem está na clínica sai da próxima e vai para a lista Na clínica", () => {
+    const dia = arrumarDia(
+      [
+        sessao({
+          id: "chegou-cedo",
+          inicio: "2026-10-03T14:00:00Z",
+          fim: "2026-10-03T15:00:00Z",
+          chegou_em: "2026-10-03T13:20:00Z",
+        }),
+        sessao({ id: "depois", inicio: "2026-10-03T15:00:00Z", fim: "2026-10-03T16:00:00Z" }),
+        sessao({ id: "atrasada", inicio: "2026-10-03T13:15:00Z", fim: "2026-10-03T14:15:00Z" }),
+      ],
+      AGORA,
+    );
+    expect(dia.naClinica.map((s) => s.id)).toEqual(["chegou-cedo"]);
+    expect(dia.atrasadas.map((s) => s.id)).toEqual(["atrasada"]);
+    expect(dia.proxima?.id).toBe("depois");
+  });
+
+  it("o próximo paciente é o próximo horário em aberto do dia", () => {
+    const lista = [
+      sessao({ id: "c", inicio: "2026-10-03T16:00:00Z", fim: "2026-10-03T17:00:00Z" }),
+      sessao({
+        id: "b",
+        inicio: "2026-10-03T15:00:00Z",
+        fim: "2026-10-03T16:00:00Z",
+        status: "cancelled",
+      }),
+      sessao({ id: "a", inicio: "2026-10-03T13:00:00Z", fim: "2026-10-03T14:00:00Z" }),
+    ];
+    expect(proximoAberto(lista, "a", AGORA)?.id).toBe("c");
+    expect(proximoAberto(lista, "c", AGORA)).toBeNull();
+    expect(proximoAberto(lista, "outra", AGORA)).toBeNull();
   });
 
   it("a próxima é a primeira que ainda não começou, e cancelada não conta no total", () => {

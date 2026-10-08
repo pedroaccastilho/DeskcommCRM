@@ -1,10 +1,14 @@
 /**
- * A tela "Hoje" da interface nova (`/hoje`): o dia da clínica em quatro perguntas simples.
+ * A tela "Hoje" da interface nova (`/hoje`): o dia da clínica em perguntas simples.
  *
- *  - Quem está sendo atendido AGORA?
+ *  - Quem já está NA CLÍNICA (chegou e espera na recepção, ou já está sendo atendido)?
+ *  - Quem passou do horário e ainda não chegou?
  *  - O que já passou e ninguém fechou (realizado ou faltou)?
  *  - Quem ainda não confirmou?
  *  - Quem já confirmou e está a caminho?
+ *
+ * A chegada e o início do atendimento são as etapas do Balcão e do Meu dia da versão atual
+ * (`lib/clinica/balcao.ts`, migration 9007): a mesma régua, para as duas telas dizerem o mesmo.
  *
  * Regra pura: o `agora` entra por parâmetro, a rede fica na tela.
  */
@@ -12,23 +16,46 @@ import type { SessaoDaGrade } from "@/lib/clinica/agenda";
 
 const ABERTOS = new Set(["pending", "confirmed"]);
 
-export type Momento = "agora" | "para_fechar" | "sem_confirmacao" | "confirmada" | "encerrada";
+export type Momento =
+  | "em_atendimento"
+  | "na_recepcao"
+  | "atrasado"
+  | "agora"
+  | "para_fechar"
+  | "sem_confirmacao"
+  | "confirmada"
+  | "encerrada";
 
+/**
+ * Em que pé está a sessão. Sessão da clínica (com modalidade) tem chegada: começou o horário e
+ * ninguém marcou que o paciente chegou, ele está ATRASADO, como no Balcão. Compromisso sem
+ * modalidade não tem chegada, então o horário em curso é só "agora".
+ */
 export function momentoDa(sessao: SessaoDaGrade, agora: Date): Momento {
   if (!ABERTOS.has(sessao.status)) return "encerrada";
+  if (sessao.atendimento_iniciado_em) return "em_atendimento";
+  if (sessao.chegou_em) return "na_recepcao";
   const t = agora.getTime();
   if (new Date(sessao.fim).getTime() <= t) return "para_fechar";
-  if (new Date(sessao.inicio).getTime() <= t) return "agora";
+  if (new Date(sessao.inicio).getTime() <= t) return sessao.modalidade ? "atrasado" : "agora";
   return sessao.status === "pending" ? "sem_confirmacao" : "confirmada";
 }
 
+/** O paciente está dentro da clínica: esperando na recepção ou já em atendimento. */
+export function naClinica(momento: Momento): boolean {
+  return momento === "na_recepcao" || momento === "em_atendimento";
+}
+
 export interface DiaArrumado {
+  /** Chegou ou está em atendimento: o filtro "Na clínica" do Balcão. */
+  naClinica: SessaoDaGrade[];
+  atrasadas: SessaoDaGrade[];
   agora: SessaoDaGrade[];
   paraFechar: SessaoDaGrade[];
   semConfirmacao: SessaoDaGrade[];
   confirmadas: SessaoDaGrade[];
   encerradas: SessaoDaGrade[];
-  /** A próxima sessão que ainda não começou — o cartão grande do topo. */
+  /** A próxima sessão que ainda não começou e cujo paciente não chegou: o cartão grande do topo. */
   proxima: SessaoDaGrade | null;
   total: number;
   realizadas: number;
@@ -37,6 +64,8 @@ export interface DiaArrumado {
 export function arrumarDia(sessoes: readonly SessaoDaGrade[], agora: Date): DiaArrumado {
   const ordenadas = [...sessoes].sort((a, b) => a.inicio.localeCompare(b.inicio));
   const dia: DiaArrumado = {
+    naClinica: [],
+    atrasadas: [],
     agora: [],
     paraFechar: [],
     semConfirmacao: [],
@@ -50,6 +79,13 @@ export function arrumarDia(sessoes: readonly SessaoDaGrade[], agora: Date): DiaA
     if (s.status !== "cancelled") dia.total += 1;
     if (s.status === "completed") dia.realizadas += 1;
     switch (momentoDa(s, agora)) {
+      case "em_atendimento":
+      case "na_recepcao":
+        dia.naClinica.push(s);
+        break;
+      case "atrasado":
+        dia.atrasadas.push(s);
+        break;
       case "agora":
         dia.agora.push(s);
         break;
@@ -122,4 +158,19 @@ export function janelaDoDia(horasDasSessoes: ReadonlyArray<{ inicio: number; fim
 export function posicaoNaJanela(hora: number, janela: { de: number; ate: number }): number {
   const p = (hora - janela.de) / (janela.ate - janela.de);
   return Math.min(1, Math.max(0, p));
+}
+
+/**
+ * Depois de assinar a evolução, o "Próximo paciente" do Meu dia: o próximo horário do dia, na
+ * ordem do relógio, que ainda está em aberto.
+ */
+export function proximoAberto(
+  sessoes: readonly SessaoDaGrade[],
+  atualId: string,
+  agora: Date,
+): SessaoDaGrade | null {
+  const ordenadas = [...sessoes].sort((a, b) => a.inicio.localeCompare(b.inicio));
+  const i = ordenadas.findIndex((s) => s.id === atualId);
+  if (i < 0) return null;
+  return ordenadas.slice(i + 1).find((s) => momentoDa(s, agora) !== "encerrada") ?? null;
 }

@@ -6,7 +6,8 @@
  * Em cima, a saudação e a LINHA DO DIA: o expediente inteiro numa faixa só, com cada sessão
  * pintada na cor da modalidade e o "agora" andando. Logo abaixo, o cartão escuro do PRÓXIMO
  * paciente, com o único botão que importa naquele momento. Depois, o dia em listas curtas, na
- * ordem em que pedem atenção: em atendimento, falta registrar, sem confirmação, confirmados.
+ * ordem em que pedem atenção: na clínica (chegou ou em atendimento, o "Na clínica" do Balcão),
+ * passou do horário, em andamento, falta registrar, sem confirmação, confirmados.
  *
  * Recepção e gestão veem a clínica (gestão pode filtrar por profissional); quem atende vê só as
  * próprias sessões e, ao lado, as evoluções que faltam escrever.
@@ -24,6 +25,7 @@ import {
   janelaDoDia,
   momentoDa,
   posicaoNaJanela,
+  proximoAberto,
   quantoFalta,
   saudacao,
   soAsMinhas,
@@ -205,8 +207,18 @@ export function Hoje() {
                   aoAbrir={() => abrir(arrumado.proxima!)}
                 />
               )}
+              {arrumado.naClinica.length > 0 && (
+                <Secao titulo="Na clínica" contagem={arrumado.naClinica.length}>
+                  {linhas(arrumado.naClinica)}
+                </Secao>
+              )}
+              {arrumado.atrasadas.length > 0 && (
+                <Secao titulo="Passou do horário" contagem={arrumado.atrasadas.length} tom="aviso">
+                  {linhas(arrumado.atrasadas)}
+                </Secao>
+              )}
               {arrumado.agora.length > 0 && (
-                <Secao titulo="Em atendimento agora" contagem={arrumado.agora.length}>
+                <Secao titulo="Acontecendo agora" contagem={arrumado.agora.length}>
                   {linhas(arrumado.agora)}
                 </Secao>
               )}
@@ -367,6 +379,8 @@ export function Hoje() {
         precoCents={precoDe(sessaoAberta)}
         nomeDoProfissional={sessaoAberta ? nomeDe(sessaoAberta.profissional_user_id) : null}
         aoFechar={() => setAberta(null)}
+        proximo={sessaoAberta ? proximoAberto(visiveis, sessaoAberta.id, agora) : null}
+        aoChamarProximo={setAberta}
       />
       <FolhaAgendar
         aberta={agendar}
