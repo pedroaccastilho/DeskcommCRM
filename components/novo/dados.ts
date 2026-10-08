@@ -96,6 +96,26 @@ export function useGradeDoDia(dia: string, fuso: string) {
   });
 }
 
+/** A grade de vários dias seguidos (Semana e Mês da agenda): no máximo 31, o limite da rota. */
+export function useGradeDoPeriodo(primeiro: string, ultimo: string, fuso: string, ativo = true) {
+  const limites = React.useMemo(
+    () => ({ de: limitesDoDia(primeiro, fuso).de, ate: limitesDoDia(ultimo, fuso).ate }),
+    [primeiro, ultimo, fuso],
+  );
+  return useQuery({
+    queryKey: ["clinica", "balcao", "novo", "periodo", primeiro, ultimo],
+    enabled: ativo,
+    queryFn: async () =>
+      (
+        await apiClient.get<{ data: Grade }>(
+          `/api/v1/clinica/agenda?de=${encodeURIComponent(limites.de)}&ate=${encodeURIComponent(limites.ate)}`,
+        )
+      ).data,
+    refetchInterval: 60_000,
+    retry: false,
+  });
+}
+
 export interface TipoDeAtendimento {
   event_type_id: string;
   nome: string;

@@ -17796,6 +17796,9 @@ export const DICIONARIO: Traducoes = {
   },
   "Contato desbloqueado.": { es: "Contacto desbloqueado." },
   "Ver todas": { es: "Ver todas" },
+  Semana: { es: "Semana" },
+  "Semana anterior": { es: "Semana anterior" },
+  "Visão da agenda": { es: "Vista de la agenda" },
 };
 
 /**
