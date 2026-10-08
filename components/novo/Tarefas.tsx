@@ -18,8 +18,10 @@ import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { apiClient } from "@/lib/api/client";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { useT } from "@/lib/i18n/IdiomaProvider";
+import { andar, diaDaSemana, diasDaVisao } from "@/lib/novo/agenda";
 import {
   agrupaPorPrazo,
+  diaLocalDoPrazo,
   estaAtrasada,
   estaEncerrada,
   type FaixaDePrazo,
@@ -197,6 +199,8 @@ export function TelaDeTarefas() {
   const [filtro, setFiltro] = React.useState<"aberto" | "todas">("aberto");
   const tarefas = useTarefasDaClinica(filtro === "aberto" ? { aberto: true } : {});
   const [aberta, setAberta] = React.useState<Tarefa | "nova" | null>(null);
+  const [novaNoDia, setNovaNoDia] = React.useState<string | null>(null);
+  const [modo, setModo] = React.useState<"lista" | "calendario">("lista");
   const grupos = agrupaPorPrazo(tarefas.data ?? []);
 
   return (
@@ -220,23 +224,46 @@ export function TelaDeTarefas() {
         )}
       </div>
 
-      <div className="mt-6 flex gap-2" role="group" aria-label={t("Quais tarefas")}>
-        <button
-          type="button"
-          className="n-chip"
-          aria-pressed={filtro === "aberto"}
-          onClick={() => setFiltro("aberto")}
-        >
-          {t("Em aberto")}
-        </button>
-        <button
-          type="button"
-          className="n-chip"
-          aria-pressed={filtro === "todas"}
-          onClick={() => setFiltro("todas")}
-        >
-          {t("Todas")}
-        </button>
+      <div className="mt-6 flex flex-wrap gap-2">
+        <div className="flex gap-2" role="group" aria-label={t("Como ver as tarefas")}>
+          <button
+            type="button"
+            className="n-chip"
+            aria-pressed={modo === "lista"}
+            onClick={() => setModo("lista")}
+            data-testid="novo-tarefas-lista"
+          >
+            {t("Lista")}
+          </button>
+          <button
+            type="button"
+            className="n-chip"
+            aria-pressed={modo === "calendario"}
+            onClick={() => setModo("calendario")}
+            data-testid="novo-tarefas-calendario"
+          >
+            {t("Calendário")}
+          </button>
+        </div>
+        <span className="w-px self-stretch bg-[var(--n-linha)]" aria-hidden />
+        <div className="flex gap-2" role="group" aria-label={t("Quais tarefas")}>
+          <button
+            type="button"
+            className="n-chip"
+            aria-pressed={filtro === "aberto"}
+            onClick={() => setFiltro("aberto")}
+          >
+            {t("Em aberto")}
+          </button>
+          <button
+            type="button"
+            className="n-chip"
+            aria-pressed={filtro === "todas"}
+            onClick={() => setFiltro("todas")}
+          >
+            {t("Todas")}
+          </button>
+        </div>
       </div>
 
       <div className="mt-6 grid gap-6">
@@ -244,6 +271,13 @@ export function TelaDeTarefas() {
           <div className="n-cartao h-40 animate-pulse" />
         ) : tarefas.error ? (
           <Vazio titulo={t("Não foi possível carregar as tarefas.")} />
+        ) : modo === "calendario" ? (
+          <CalendarioDasTarefas
+            tarefas={tarefas.data ?? []}
+            podeEditar={podeEditar}
+            aoAbrir={setAberta}
+            aoCriarNoDia={setNovaNoDia}
+          />
         ) : grupos.length === 0 ? (
           <Vazio
             titulo={t("Nada pendente")}
@@ -285,7 +319,157 @@ export function TelaDeTarefas() {
           aoFechar={() => setAberta(null)}
         />
       )}
+      {novaNoDia && (
+        <FolhaDaTarefa tarefa={null} diaInicial={novaNoDia} aoFechar={() => setNovaNoDia(null)} />
+      )}
     </div>
+  );
+}
+
+const TAREFAS_NO_DIA = 3;
+
+/**
+ * O mês, com o que vence em cada dia, como o Calendário de Tarefas da versão atual: tocar na
+ * tarefa abre a folha dela; tocar no dia (quem edita) abre uma tarefa nova já com esse prazo.
+ */
+function CalendarioDasTarefas({
+  tarefas,
+  podeEditar,
+  aoAbrir,
+  aoCriarNoDia,
+}: {
+  tarefas: Tarefa[];
+  podeEditar: boolean;
+  aoAbrir: (t: Tarefa) => void;
+  aoCriarNoDia: (dia: string) => void;
+}) {
+  const t = useT();
+  const tag = useTagDeIdioma();
+  const hoje = diaLocalDoPrazo(new Date().toISOString());
+  const [mes, setMes] = React.useState(`${hoje.slice(0, 8)}01`);
+  const dias = diasDaVisao("mes", mes);
+  const porDia = new Map<string, Tarefa[]>();
+  for (const x of tarefas) {
+    if (!x.due_date) continue;
+    const d = diaLocalDoPrazo(x.due_date);
+    porDia.set(d, [...(porDia.get(d) ?? []), x]);
+  }
+  const semPrazo = tarefas.filter((x) => !x.due_date).length;
+  // 5 de outubro de 2026 é uma segunda: os nomes dos dias saem dela, no idioma da pessoa.
+  const nomes = Array.from({ length: 7 }, (_, i) =>
+    new Intl.DateTimeFormat(tag, { weekday: "short", timeZone: "UTC" })
+      .format(new Date(Date.UTC(2026, 9, 5 + i, 12)))
+      .replace(".", ""),
+  );
+  const nomeDoMes = new Intl.DateTimeFormat(tag, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${mes}T12:00:00Z`));
+  return (
+    <section data-testid="novo-tarefas-mes">
+      <div className="mb-3 flex items-center gap-2">
+        <button
+          type="button"
+          className="n-botao n-botao-suave n-botao-pequeno"
+          aria-label={t("Mês anterior")}
+          onClick={() => setMes((m) => andar("mes", m, -1))}
+        >
+          ‹
+        </button>
+        <h2 className="n-inicial flex-1 text-center text-[15px] font-bold">{nomeDoMes}</h2>
+        <button
+          type="button"
+          className="n-botao n-botao-suave n-botao-pequeno"
+          aria-label={t("Próximo mês")}
+          onClick={() => setMes((m) => andar("mes", m, 1))}
+        >
+          ›
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {nomes.map((n) => (
+          <p key={n} className="n-fraco n-inicial pb-1 text-center text-xs font-bold">
+            {n}
+          </p>
+        ))}
+        {Array.from({ length: diaDaSemana(dias[0]!) }, (_, i) => (
+          <div key={`vazio-${i}`} aria-hidden />
+        ))}
+        {dias.map((d) => {
+          const doDia = porDia.get(d) ?? [];
+          const atrasadas = doDia.some((x) => estaAtrasada(x));
+          return (
+            <div
+              key={d}
+              className={`n-cartao flex min-h-[64px] min-w-0 flex-col gap-0.5 p-1.5 sm:min-h-[96px] ${
+                d === hoje ? "ring-2 ring-[var(--n-acao)]" : ""
+              }`}
+              data-testid="novo-tarefas-dia"
+            >
+              <button
+                type="button"
+                disabled={!podeEditar}
+                onClick={() => aoCriarNoDia(d)}
+                className="flex items-center justify-between text-left disabled:cursor-default"
+                aria-label={`${t("Nova tarefa")} · ${new Intl.DateTimeFormat(tag, {
+                  day: "numeric",
+                  month: "long",
+                  timeZone: "UTC",
+                }).format(new Date(`${d}T12:00:00Z`))}`}
+              >
+                <span
+                  className={`n-numero text-sm font-bold ${d === hoje ? "text-[var(--n-acao)]" : ""}`}
+                >
+                  {Number(d.slice(8))}
+                </span>
+                {doDia.length > 0 && (
+                  <span className="sm:hidden">
+                    <span
+                      className={`n-selo px-1.5 text-[10px] ${atrasadas ? "n-selo-alerta" : "n-selo-neutro"}`}
+                    >
+                      {doDia.length}
+                    </span>
+                  </span>
+                )}
+              </button>
+              <div className="hidden min-w-0 gap-0.5 sm:grid">
+                {doDia.slice(0, TAREFAS_NO_DIA).map((x) => (
+                  <button
+                    key={x.id}
+                    type="button"
+                    onClick={() => aoAbrir(x)}
+                    className={`truncate rounded-md px-1 py-0.5 text-left text-[11.5px] font-semibold hover:bg-[var(--n-papel)] ${
+                      estaEncerrada(x)
+                        ? "n-fraco line-through"
+                        : estaAtrasada(x)
+                          ? "text-[var(--n-alerta)]"
+                          : ""
+                    }`}
+                    data-testid="novo-tarefas-no-dia"
+                  >
+                    {x.title}
+                  </button>
+                ))}
+                {doDia.length > TAREFAS_NO_DIA && (
+                  <span className="n-suave px-1 text-[11px] font-semibold">
+                    +{doDia.length - TAREFAS_NO_DIA} {t("mais")}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {semPrazo > 0 && (
+        <p className="n-suave mt-3 text-sm">
+          {semPrazo}{" "}
+          {semPrazo === 1
+            ? t("tarefa sem prazo fica só na lista.")
+            : t("tarefas sem prazo ficam só na lista.")}
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -354,10 +538,13 @@ function separaPrazo(iso: string | null | undefined): { dia: string; hora: strin
 export function FolhaDaTarefa({
   tarefa,
   paciente: pacienteFixo,
+  diaInicial,
   aoFechar,
 }: {
   tarefa: Tarefa | null;
   paciente?: { id: string; nome: string };
+  /** Tarefa nova aberta pelo dia do calendário: já nasce com esse prazo (`AAAA-MM-DD`). */
+  diaInicial?: string;
   aoFechar: () => void;
 }) {
   const t = useT();
@@ -365,7 +552,7 @@ export function FolhaDaTarefa({
   const prazo = separaPrazo(tarefa?.due_date);
   const [titulo, setTitulo] = React.useState(tarefa?.title ?? "");
   const [detalhes, setDetalhes] = React.useState(tarefa?.description ?? "");
-  const [dia, setDia] = React.useState(prazo.dia);
+  const [dia, setDia] = React.useState(tarefa ? prazo.dia : (diaInicial ?? prazo.dia));
   const [hora, setHora] = React.useState(prazo.hora);
   const [prioridade, setPrioridade] = React.useState<PrioridadeDaTarefa>(
     tarefa?.priority ?? "medium",

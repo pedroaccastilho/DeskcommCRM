@@ -1274,6 +1274,7 @@ jobs:
         clinica-agenda-semana-mes.spec.ts
         clinica-equipe-completa.spec.ts
         clinica-ficha-linha-do-tempo.spec.ts
+        clinica-tarefas-calendario.spec.ts
 
       # ─── FORA_DO_CI — as que ficaram fora, e o motivo de cada uma ───
       #
