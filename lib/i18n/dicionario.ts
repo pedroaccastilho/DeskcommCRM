@@ -17799,6 +17799,8 @@ export const DICIONARIO: Traducoes = {
   Semana: { es: "Semana" },
   "Semana anterior": { es: "Semana anterior" },
   "Visão da agenda": { es: "Vista de la agenda" },
+  "Acessos e convites pendentes": { es: "Accesos e invitaciones pendientes" },
+  "Horários de atendimento": { es: "Horarios de atención" },
 };
 
 /**
