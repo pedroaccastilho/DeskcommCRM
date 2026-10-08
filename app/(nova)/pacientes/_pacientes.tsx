@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
+import { MergeDialog } from "@/components/contacts/MergeDialog";
 import { useNovo } from "@/components/novo/Casca";
 import { useBuscaDePacientes } from "@/components/novo/dados";
 import { FolhaDoPaciente } from "@/components/novo/FolhaDoPaciente";
@@ -20,6 +21,9 @@ export function Pacientes() {
   const { cargo, role } = useNovo();
   const router = useRouter();
   const [cadastrar, setCadastrar] = React.useState(false);
+  const [duplicados, setDuplicados] = React.useState(false);
+  // Juntar cadastros reescreve o histórico de dois pacientes: o servidor pede gerente para cima.
+  const juntaDuplicados = role === "admin" || role === "manager";
   const [termo, setTermo] = React.useState("");
   const [busca, setBusca] = React.useState("");
   React.useEffect(() => {
@@ -33,17 +37,30 @@ export function Pacientes() {
     <div className="n-conteudo max-w-3xl" data-testid="novo-pacientes">
       <div className="n-entra flex flex-wrap items-end justify-between gap-4">
         <h1 className="n-titulo text-[44px] leading-tight sm:text-[52px]">{rotulo}</h1>
-        {role !== "viewer" && (
-          <button
-            type="button"
-            className="n-botao n-botao-principal"
-            onClick={() => setCadastrar(true)}
-            data-testid="novo-cadastrar-paciente"
-          >
-            + {t("Novo paciente")}
-          </button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {juntaDuplicados && (
+            <button
+              type="button"
+              className="n-botao n-botao-suave"
+              onClick={() => setDuplicados(true)}
+              data-testid="novo-pacientes-duplicados"
+            >
+              {t("Duplicados")}
+            </button>
+          )}
+          {role !== "viewer" && (
+            <button
+              type="button"
+              className="n-botao n-botao-principal"
+              onClick={() => setCadastrar(true)}
+              data-testid="novo-cadastrar-paciente"
+            >
+              + {t("Novo paciente")}
+            </button>
+          )}
+        </div>
       </div>
+      {juntaDuplicados && <MergeDialog open={duplicados} onOpenChange={setDuplicados} />}
       <div className="n-entra relative mt-6">
         <input
           className="n-campo !min-h-[60px] !rounded-[22px] !bg-[var(--n-cartao)] !pl-14 !text-lg shadow-[var(--n-sombra)]"
