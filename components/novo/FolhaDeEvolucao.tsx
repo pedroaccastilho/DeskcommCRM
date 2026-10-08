@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Escrever no prontuário pela interface nova: evolução da sessão (o caso de todo dia), avaliação
- * ou alta. Os campos são os mesmos modelos da interface atual (`modeloDoRegistro`), e quem carimba
+ * Escrever no prontuário pela interface nova: evolução da sessão (o caso de todo dia), anamnese,
+ * avaliação ou alta, e o ADENDO a um registro já assinado (o único jeito de corrigir um). Os campos são os mesmos modelos da interface atual (`modeloDoRegistro`), e quem carimba
  * a assinatura e recusa quem não pode é o banco (migration 9001). A dor e o esforço viram uma
  * régua de 0 a 10 de tocar, em vez de campo de número.
  *
@@ -29,12 +29,21 @@ import {
 } from "@/lib/clinica/vocabulario";
 
 import { useNovo } from "./Casca";
-import { useProntuario, useRecarregar } from "./dados";
-import { Folha, dataLonga, primeiroNome } from "./pecas";
+import { useProntuario, useRecarregar, type RegistroDoProntuario } from "./dados";
+import { Folha, dataLonga, hora, primeiroNome } from "./pecas";
 import { useT } from "@/lib/i18n/IdiomaProvider";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 
-const TIPOS: TipoDeRegistro[] = ["evolucao", "avaliacao", "alta"];
+const TIPOS: TipoDeRegistro[] = ["evolucao", "anamnese", "avaliacao", "alta"];
+
+/** O que a assinatura de uma avaliação devolve sobre o retorno de reavaliação (migration 9006). */
+type RetornoDaAssinatura = {
+  situacao:
+    "marcado" | "marcado_outro_dia" | "sem_horario" | "sem_tipo" | "a_marcar" | "nao_pedido";
+  inicio: string | null;
+  fuso: string | null;
+  aviso: "enviado" | "nao_deu" | null;
+};
 
 export function FolhaDeEvolucao({
   contactId,
@@ -43,6 +52,7 @@ export function FolhaDeEvolucao({
   modalidadeSugerida,
   aoFechar,
   aoAssinar,
+  adendoDe = null,
 }: {
   contactId: string;
   nomeDoPaciente: string;
@@ -51,23 +61,27 @@ export function FolhaDeEvolucao({
   aoFechar: () => void;
   /** Depois de assinar; sem ele, a folha só fecha. A folha da sessão pergunta o próximo passo. */
   aoAssinar?: () => void;
+  /** O registro assinado que este adendo corrige; com ele, a folha só pede o texto. */
+  adendoDe?: RegistroDoProntuario | null;
 }) {
   const t = useT();
   const tag = useTagDeIdioma();
   const { eu, fuso } = useNovo();
   const recarregar = useRecarregar();
   const minhas = (eu?.profissional?.modalidades ?? []) as Modalidade[];
-  const [modalidade, setModalidade] = React.useState<Modalidade | null>(
+  const [modalidadeEscolhida, setModalidade] = React.useState<Modalidade | null>(
     modalidadeSugerida && minhas.includes(modalidadeSugerida)
       ? modalidadeSugerida
       : (minhas[0] ?? null),
   );
-  const [tipo, setTipo] = React.useState<TipoDeRegistro>("evolucao");
+  const [tipoEscolhido, setTipo] = React.useState<TipoDeRegistro>("evolucao");
+  const modalidade = adendoDe ? adendoDe.modalidade : modalidadeEscolhida;
+  const tipo: TipoDeRegistro = adendoDe ? "adendo" : tipoEscolhido;
   const [conteudo, setConteudo] = React.useState<Record<string, string | number>>({});
   const [texto, setTexto] = React.useState("");
 
   const registros = useProntuario(contactId, minhas.length > 0);
-  const ultimo = modalidade ? ultimoRegistro(registros.data ?? [], modalidade) : null;
+  const ultimo = modalidade && !adendoDe ? ultimoRegistro(registros.data ?? [], modalidade) : null;
   const campos = modalidade ? modeloDoRegistro(modalidade, tipo) : [];
   // Só o que o formulário de agora tem, e ainda não está igual ao que seria copiado.
   const repetiveis = Object.entries(valoresParaRepetir(ultimo)).filter(
@@ -84,22 +98,54 @@ export function FolhaDeEvolucao({
   const algoEscrito =
     texto.trim() !== "" || Object.values(conteudo).some((v) => String(v).trim() !== "");
 
+  /** O retorno marcado ao assinar a avaliação, dito na hora para quem assinou. */
+  const avisarDoRetorno = (r: RetornoDaAssinatura | null | undefined) => {
+    if (!r) return;
+    if ((r.situacao === "marcado" || r.situacao === "marcado_outro_dia") && r.inicio) {
+      const fusoDoRetorno = r.fuso ?? fuso;
+      const quando = `${dataLonga(r.inicio, fusoDoRetorno, tag)}, ${hora(r.inicio, fusoDoRetorno)}`;
+      toast.success(t("Retorno de reavaliação marcado: {quando}.").replace("{quando}", quando), {
+        description:
+          r.situacao === "marcado_outro_dia"
+            ? t(
+                "O dia pedido estava cheio; ficou no horário livre mais próximo. A recepção foi avisada.",
+              )
+            : r.aviso === "enviado"
+              ? t("Paciente avisado pelo WhatsApp.")
+              : t("A confirmação pelo WhatsApp não saiu; a recepção vai avisar o paciente."),
+      });
+      return;
+    }
+    if (r.situacao === "sem_horario" || r.situacao === "sem_tipo") {
+      toast.warning(
+        t("O retorno não pôde ser marcado sozinho. A recepção recebeu uma tarefa para marcar."),
+      );
+    }
+  };
+
   const assinar = useMutation({
     mutationFn: async () =>
-      apiClient.post("/api/v1/clinica/prontuario", {
-        contact_id: contactId,
-        modalidade,
-        tipo,
-        appointment_id: appointmentId,
-        conteudo: Object.fromEntries(
-          Object.entries(conteudo).filter(([, v]) => String(v).trim() !== ""),
-        ),
-        texto: texto.trim() || null,
-      }),
-    onSuccess: () => {
+      apiClient.post<{ data: { retorno?: RetornoDaAssinatura | null } }>(
+        "/api/v1/clinica/prontuario",
+        {
+          contact_id: contactId,
+          modalidade,
+          tipo,
+          appointment_id: adendoDe ? null : appointmentId,
+          adendo_de: adendoDe?.id ?? null,
+          conteudo: Object.fromEntries(
+            Object.entries(conteudo).filter(([, v]) => String(v).trim() !== ""),
+          ),
+          texto: texto.trim() || null,
+        },
+      ),
+    onSuccess: (resposta) => {
       toast.success(
-        `${ROTULO_DO_TIPO[tipo]} assinada no prontuário de ${primeiroNome(nomeDoPaciente)}.`,
+        adendoDe
+          ? `Adendo assinado no prontuário de ${primeiroNome(nomeDoPaciente)}.`
+          : `${ROTULO_DO_TIPO[tipo]} assinada no prontuário de ${primeiroNome(nomeDoPaciente)}.`,
       );
+      avisarDoRetorno(resposta.data?.retorno);
       recarregar();
       (aoAssinar ?? aoFechar)();
     },
@@ -123,42 +169,61 @@ export function FolhaDeEvolucao({
       aberta
       aoFechar={aoFechar}
       titulo={`${ROTULO_DO_TIPO[tipo]} de ${primeiroNome(nomeDoPaciente)}`}
-      subtitulo="Depois de assinado, o registro não se edita. Para corrigir, faça um adendo."
+      subtitulo={
+        adendoDe
+          ? "O registro original fica como está; o adendo entra logo abaixo dele, assinado por você."
+          : "Depois de assinado, o registro não se edita. Para corrigir, faça um adendo."
+      }
       testid="novo-folha-evolucao"
     >
       <div className="grid gap-5">
-        <div className="flex flex-wrap gap-2">
-          {TIPOS.map((t) => (
-            <button
-              key={t}
-              type="button"
-              className="n-chip"
-              aria-pressed={t === tipo}
-              onClick={() => {
-                setTipo(t);
-                setConteudo({});
-              }}
-            >
-              {ROTULO_DO_TIPO[t]}
-            </button>
-          ))}
-          {minhas.length > 1 && <span className="mx-1 w-px bg-[var(--n-linha)]" aria-hidden />}
-          {minhas.length > 1 &&
-            minhas.map((m) => (
+        {adendoDe ? (
+          <div className="rounded-[20px] bg-[var(--n-papel)] p-4" data-testid="novo-adendo-de">
+            <p className="text-sm font-bold">
+              {t("Adendo a")} {ROTULO_DO_TIPO[adendoDe.tipo].toLowerCase()}{" "}
+              <span className="n-fraco font-semibold">
+                · {ROTULO_DA_MODALIDADE[adendoDe.modalidade]} ·{" "}
+                {dataLonga(adendoDe.assinado_em, fuso, tag).split(",")[0]}
+              </span>
+            </p>
+            <p className="n-suave mt-1 text-xs">
+              {t("Assinado por")} {adendoDe.autor_nome}
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {TIPOS.map((t) => (
               <button
-                key={m}
+                key={t}
                 type="button"
                 className="n-chip"
-                aria-pressed={m === modalidade}
+                aria-pressed={t === tipo}
                 onClick={() => {
-                  setModalidade(m);
+                  setTipo(t);
                   setConteudo({});
                 }}
               >
-                {ROTULO_DA_MODALIDADE[m]}
+                {ROTULO_DO_TIPO[t]}
               </button>
             ))}
-        </div>
+            {minhas.length > 1 && <span className="mx-1 w-px bg-[var(--n-linha)]" aria-hidden />}
+            {minhas.length > 1 &&
+              minhas.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  className="n-chip"
+                  aria-pressed={m === modalidade}
+                  onClick={() => {
+                    setModalidade(m);
+                    setConteudo({});
+                  }}
+                >
+                  {ROTULO_DA_MODALIDADE[m]}
+                </button>
+              ))}
+          </div>
+        )}
 
         {ultimo && (
           <div className="rounded-[20px] bg-[var(--n-papel)] p-4" data-testid="novo-ultima-sessao">
@@ -206,12 +271,18 @@ export function FolhaDeEvolucao({
         ))}
 
         <label className="block">
-          <span className="n-rotulo">{t("Observações")}</span>
+          <span className="n-rotulo">{adendoDe ? t("Texto do adendo") : t("Observações")}</span>
           <textarea
             className="n-campo"
+            rows={adendoDe ? 5 : undefined}
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
-            placeholder={t("O que mais vale registrar desta sessão")}
+            placeholder={
+              adendoDe
+                ? t("O que corrigir ou acrescentar ao registro")
+                : t("O que mais vale registrar desta sessão")
+            }
+            data-testid="novo-texto-do-registro"
           />
         </label>
 
@@ -224,7 +295,7 @@ export function FolhaDeEvolucao({
           disabled={!algoEscrito || faltando.length > 0 || assinar.isPending}
           onClick={() => assinar.mutate()}
         >
-          Assinar {ROTULO_DO_TIPO[tipo].toLowerCase()}
+          {adendoDe ? t("Assinar o adendo") : `Assinar ${ROTULO_DO_TIPO[tipo].toLowerCase()}`}
         </button>
       </div>
     </Folha>

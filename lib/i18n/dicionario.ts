@@ -17784,6 +17784,16 @@ export const DICIONARIO: Traducoes = {
   Resta: { es: "Queda" },
   Restam: { es: "Quedan" },
   "sessões no pacote": { es: "sesiones en el paquete" },
+  // Anamnese e adendo no prontuário da interface nova
+  "Adendo a": { es: "Adenda a" },
+  "Assinar o adendo": { es: "Firmar la adenda" },
+  "O que corrigir ou acrescentar ao registro": { es: "Qué corregir o agregar al registro" },
+  // Gestão de quem não administra (Gerente, Financeiro, Jurídico)
+  Gestão: { es: "Gestión" },
+  "As telas de gestão do seu perfil.": { es: "Las pantallas de gestión de su perfil." },
+  "Anonimizações e solicitações de dados de titulares. Só o Administrador e o Jurídico.": {
+    es: "Anonimizaciones y solicitudes de datos de titulares. Solo el Administrador y el Jurídico.",
+  },
 };
 
 /**

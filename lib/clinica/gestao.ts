@@ -202,3 +202,43 @@ export function veRelatoriosDaGestao(role: string, cargos: readonly string[]): b
   if (role !== "manager") return false;
   return cargos.some((c) => c === "administrador" || c === "gerente" || c === "financeiro");
 }
+
+/**
+ * As telas de GESTÃO que cada perfil abre na interface nova sem ser Administrador. Na versão
+ * atual, Gerente, Financeiro e Jurídico tinham o menu inteiro do degrau `manager`; na nova, cada
+ * um ganha a porta "Gestão" com o que o perfil faz (Pedro, 2026-10-04: Financeiro = pagamentos e
+ * relatórios; Jurídico = auditoria, LGPD e "quem abriu", sem conteúdo clínico). Os endereços são
+ * os da versão atual (`AJUSTES_NA_INTERFACE_NOVA`), e cada tela continua checando o papel sozinha.
+ */
+export const TELAS_DO_PERFIL = {
+  gerente: [
+    "/app/comandas",
+    "/app/faturamento",
+    "/app/settings/tenant/financeiro",
+    "/app/metrics",
+    "/app/activities",
+    "/app/audit",
+  ],
+  financeiro: ["/app/comandas", "/app/faturamento", "/app/settings/tenant/financeiro"],
+  juridico: ["/app/audit", "/app/lgpd/requests"],
+} as const satisfies Record<string, readonly string[]>;
+
+/**
+ * LGPD e a trilha de quem abriu o prontuário: Administrador ou Jurídico. O Jurídico vê QUEM abriu
+ * e quando, nunca o conteúdo clínico (a trilha não tem conteúdo, e ele não é profissional).
+ */
+export function veLgpdEAcessos(role: string, cargos: readonly string[]): boolean {
+  if (role === "admin") return true;
+  return role === "manager" && cargos.includes("juridico");
+}
+
+/** As telas de gestão de quem não é Administrador; vazio para o Administrador e para quem não tem. */
+export function telasDaGestao(role: string, cargos: readonly string[]): string[] {
+  // Todas pedem o degrau `manager`; o Administrador já tem os Ajustes inteiros.
+  if (role !== "manager") return [];
+  const telas = new Set<string>();
+  for (const c of cargos) {
+    for (const href of TELAS_DO_PERFIL[c as keyof typeof TELAS_DO_PERFIL] ?? []) telas.add(href);
+  }
+  return [...telas];
+}

@@ -30,10 +30,11 @@ import {
   type ItemDoMenu,
 } from "@/lib/novo/cargo";
 import { useTheme, type Theme } from "@/lib/theme";
-import { veRelatoriosDaGestao } from "@/lib/clinica/gestao";
+import { telasDaGestao, veRelatoriosDaGestao } from "@/lib/clinica/gestao";
 import {
   CalendarBlank,
   ChartBar,
+  ClipboardText,
   Gear,
   IdentificationCard,
   Moon,
@@ -64,9 +65,25 @@ interface Contexto {
   veProntuario: boolean;
   /** O administrador está vendo como outra pessoa ("entrar como"): a tela é só para olhar. */
   soOlhar: boolean;
+  /**
+   * A versão atual está ao alcance? Só do Administrador, ou de todos com a chave "A equipe usa só a
+   * interface nova" desligada. Ligada, a atual devolve os outros para cá (`lib/novo/raiz.ts`), e
+   * um link para lá vira um laço.
+   */
+  podeIrParaAAtual: boolean;
+  /**
+   * Gerente, Financeiro e Jurídico sem ser Administrador: a porta "Gestão" (os Ajustes só com as
+   * telas do perfil, `telasDaGestao`). O Administrador tem os Ajustes inteiros.
+   */
+  veGestao: boolean;
 }
 
 const Ctx = React.createContext<Contexto | null>(null);
+
+/** O mesmo contexto, sem lançar fora da casca (peças que também se montam sozinhas, em teste). */
+export function useNovoSeHouver(): Contexto | null {
+  return React.useContext(Ctx);
+}
 
 export function useNovo(): Contexto {
   const c = React.useContext(Ctx);
@@ -134,6 +151,7 @@ export function Casca({
   const escolhido = React.useSyncExternalStore(assinarVisao, lerVisao, () => null);
   const cargo = escolhido && cargos.includes(escolhido) ? escolhido : cargoReal;
   const trocarCargo = gravarVisao;
+  const interfaceDaEquipe = useInterfaceDaEquipe();
 
   const meuNome =
     profissional?.nome_profissional ||
@@ -155,6 +173,8 @@ export function Casca({
     soAsMinhas: atende(cargo),
     veProntuario: veProntuario(cargo, profissional),
     soOlhar: Boolean(vendoComo),
+    podeIrParaAAtual: veConfiguracoes(role) || interfaceDaEquipe.data?.nova_principal === false,
+    veGestao: !veConfiguracoes(role) && telasDaGestao(role, eu.data?.cargos ?? []).length > 0,
   };
 
   const pathname = usePathname() ?? "/hoje";
@@ -203,6 +223,17 @@ export function Casca({
             >
               <Gear size={22} weight={ativo("/ajustes") ? "fill" : "regular"} />
               Ajustes
+            </Link>
+          )}
+          {contexto.veGestao && (
+            <Link
+              href="/ajustes"
+              className="n-porta"
+              aria-current={ativo("/ajustes") ? "page" : undefined}
+              data-testid="novo-porta-gestao"
+            >
+              <ClipboardText size={22} weight={ativo("/ajustes") ? "fill" : "regular"} />
+              {t("Gestão")}
             </Link>
           )}
           <MenuDaPessoa />
@@ -315,7 +346,7 @@ function Monograma({ marca }: { marca: { nome: string; logoUrl: string | null } 
 function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
   const t = useT();
   const { signOut } = useAuth();
-  const { meuNome, cargo, cargos, trocarCargo, role } = useNovo();
+  const { meuNome, cargo, cargos, trocarCargo, role, veGestao } = useNovo();
   const interfaceDaEquipe = useInterfaceDaEquipe();
   const [aberto, setAberto] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
@@ -396,6 +427,16 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
                 {t("Equipe")}
               </Link>
             )}
+            {veGestao && (
+              <Link
+                href="/ajustes"
+                onClick={() => setAberto(false)}
+                className="n-linha-clicavel px-2 py-2 text-sm"
+                data-testid="novo-menu-gestao"
+              >
+                {t("Gestão")}
+              </Link>
+            )}
             {veConfiguracoes(role) && (
               <Link
                 href="/ajustes"
@@ -409,7 +450,11 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
                 escolha da organização ligada, para os outros perfis a interface atual leva de
                 volta para cá (`lib/novo/raiz.ts`), e a porta sumiria num laço. */}
             {(veConfiguracoes(role) || interfaceDaEquipe.data?.nova_principal === false) && (
-              <a href="/app" className="n-linha-clicavel px-2 py-2 text-sm" data-testid="novo-voltar">
+              <a
+                href="/app"
+                className="n-linha-clicavel px-2 py-2 text-sm"
+                data-testid="novo-voltar"
+              >
                 {t("Voltar para a versão atual")}
               </a>
             )}
@@ -518,7 +563,9 @@ function InterfaceDaEquipe() {
         </span>
       </button>
       {gravar.isError && (
-        <p className="px-2 text-xs text-[var(--n-alerta)]">{t("Não deu para salvar. Tente de novo.")}</p>
+        <p className="px-2 text-xs text-[var(--n-alerta)]">
+          {t("Não deu para salvar. Tente de novo.")}
+        </p>
       )}
     </div>
   );

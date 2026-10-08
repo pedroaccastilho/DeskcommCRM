@@ -15,6 +15,7 @@ import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { moduloClinicaNaoInstalado } from "@/lib/clinica/api";
 import { cargosDoUsuario } from "@/lib/clinica/cargos";
+import { veLgpdEAcessos } from "@/lib/clinica/gestao";
 import { lerVerComo, verComoValido } from "@/lib/clinica/ver-como";
 import type { Role } from "@/lib/auth/types";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -90,8 +91,9 @@ export async function GET(): Promise<Response> {
 
   // Sessão de suporte nunca lê prontuário (a RLS garante); a tela já não oferece o formulário.
   const profissional = data && data.ativo && !authz.user.support ? data : null;
-  // A trilha de acessos é do administrador da clínica (RLS de `prontuario_acessos`), seja ele
-  // profissional de saúde ou não. Sessão de suporte não vê.
-  const ve_acessos = papel === "admin" && !authz.user.support;
+  // A trilha de acessos é do administrador da clínica, seja ele profissional de saúde ou não, e do
+  // perfil Jurídico (`veLgpdEAcessos`; a rota `/clinica/acessos` aplica a mesma regra). Sessão de
+  // suporte não vê.
+  const ve_acessos = veLgpdEAcessos(papel, cargos) && !authz.user.support;
   return ok({ instalado: true, profissional, ve_acessos, cargos, papel, vendo_como }, { requestId });
 }

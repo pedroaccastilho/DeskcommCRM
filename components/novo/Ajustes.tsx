@@ -26,7 +26,16 @@ function normal(texto: string): string {
   return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
-export function ListaDeAjustes({ grupos }: { grupos: GrupoDeAjustes[] }) {
+export function ListaDeAjustes({
+  grupos,
+  titulo,
+  subtitulo,
+}: {
+  grupos: GrupoDeAjustes[];
+  /** A Gestão de quem não administra usa a mesma lista, com o próprio nome. */
+  titulo?: string;
+  subtitulo?: string;
+}) {
   const t = useT();
   const [termo, setTermo] = useState("");
   const filtrados = useMemo(() => {
@@ -48,8 +57,12 @@ export function ListaDeAjustes({ grupos }: { grupos: GrupoDeAjustes[] }) {
   return (
     <div className="n-conteudo max-w-5xl" data-testid="novo-ajustes">
       <div className="n-entra">
-        <h1 className="n-titulo text-[44px] leading-tight sm:text-[52px]">{t("Ajustes")}</h1>
-        <p className="n-suave mt-1">{t("Tudo o que o administrador configura na clínica.")}</p>
+        <h1 className="n-titulo text-[44px] leading-tight sm:text-[52px]">
+          {titulo ?? t("Ajustes")}
+        </h1>
+        <p className="n-suave mt-1">
+          {subtitulo ?? t("Tudo o que o administrador configura na clínica.")}
+        </p>
       </div>
       <div className="n-entra relative mt-6">
         <input

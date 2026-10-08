@@ -1,6 +1,8 @@
 /**
  * TRILHA DE ACESSOS AO PRONTUÁRIO — quem abriu o prontuário de qual paciente, e quando.
- * Só o `admin` da clínica lê (RLS da migration 9001); ninguém edita nem apaga.
+ * Lê o `admin` da clínica e o perfil Jurídico (`recusaForaDoJuridico`); ninguém edita nem apaga.
+ * A RLS da migration 9001 é só do admin, então a leitura vai pelo cliente de serviço, com a
+ * organização da sessão.
  *
  * Quem abre prontuário é sempre profissional cadastrado (a RLS só deixa ele gravar a linha), então
  * o nome que a tela mostra vem do cadastro em `clinica_profissionais`, e não de `auth.users`.
@@ -13,21 +15,24 @@ import { z } from "zod";
 import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { MODULO_CLINICA_NAO_INSTALADO, moduloClinicaNaoInstalado } from "@/lib/clinica/api";
-import { createClient } from "@/lib/supabase/server";
+import { recusaForaDoJuridico } from "@/lib/clinica/gestao-servidor";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
-  const authz = await requireRole("admin", { requestId, resource: "prontuario_acessos" });
+  const authz = await requireRole("manager", { requestId, resource: "prontuario_acessos" });
   if (!authz.ok) return authz.response;
+  const foraDoJuridico = await recusaForaDoJuridico(authz, requestId, { plataforma: false });
+  if (foraDoJuridico) return foraDoJuridico;
 
   const contato = z.string().uuid().safeParse(new URL(req.url).searchParams.get("contact_id"));
   if (!contato.success) {
     return fail("validation_failed", "contact_id inválido", 422, { requestId });
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("prontuario_acessos")
     .select("id, user_id, acessado_em")
