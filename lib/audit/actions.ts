@@ -641,6 +641,8 @@ export const AUDIT_ACTIONS = [
   "clinica.cargo_definido",
   "clinica.convite_com_cargo",
   "clinica.cargo_do_convite_aplicado",
+  "clinica.ver_como_iniciado",
+  "clinica.ver_como_encerrado",
   "prontuario.registro_assinado",
   "prontuario.exportado",
   "fidelidade.ponto_dado",

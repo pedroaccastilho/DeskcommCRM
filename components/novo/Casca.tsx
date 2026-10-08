@@ -13,6 +13,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import * as React from "react";
 
+import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { useAuth } from "@/hooks/auth/AuthProvider";
 import { apiClient } from "@/lib/api/client";
 import type { Role } from "@/lib/auth/types";
@@ -61,6 +62,8 @@ interface Contexto {
   soAsMinhas: boolean;
   /** Prontuário na tela (ler e escrever evolução): profissional ativo, fora da tela da recepção. */
   veProntuario: boolean;
+  /** O administrador está vendo como outra pessoa ("entrar como"): a tela é só para olhar. */
+  soOlhar: boolean;
 }
 
 const Ctx = React.createContext<Contexto | null>(null);
@@ -120,8 +123,10 @@ export function Casca({
 }) {
   const t = useT();
   const { user, activeOrg } = useAuth();
-  const role: Role = activeOrg?.role ?? "viewer";
   const eu = useEu();
+  // No "entrar como", papel, cadastro e "quem sou eu" são os da pessoa vista (`/api/v1/clinica/eu`).
+  const vendoComo = eu.data?.vendo_como ?? null;
+  const role: Role = eu.data?.papel ?? activeOrg?.role ?? "viewer";
   const profissional = eu.data?.profissional ?? null;
   const cargoReal = cargoDe(role, profissional);
   const cargos = cargosParaVer(role, cargoReal);
@@ -131,7 +136,11 @@ export function Casca({
   const trocarCargo = gravarVisao;
 
   const meuNome =
-    profissional?.nome_profissional || user.full_name || user.email.split("@")[0] || "";
+    profissional?.nome_profissional ||
+    vendoComo?.nome ||
+    user.full_name ||
+    user.email.split("@")[0] ||
+    "";
   const contexto: Contexto = {
     fuso,
     cargo,
@@ -139,12 +148,13 @@ export function Casca({
     cargos,
     trocarCargo,
     role,
-    meuId: user.id,
+    meuId: vendoComo?.user_id ?? user.id,
     meuNome,
     eu: eu.data,
     modalidades: modalidadesDaVisao(cargo, profissional),
     soAsMinhas: atende(cargo),
     veProntuario: veProntuario(cargo, profissional),
+    soOlhar: Boolean(vendoComo),
   };
 
   const pathname = usePathname() ?? "/hoje";
@@ -200,6 +210,7 @@ export function Casca({
       </nav>
 
       <main className="n-palco">
+        {vendoComo && <FaixaDoVerComo nome={vendoComo.nome} />}
         {clinicaInstalada ? (
           children
         ) : (
@@ -237,6 +248,48 @@ export function Casca({
         <MenuDaPessoa compacto />
       </nav>
     </Ctx.Provider>
+  );
+}
+
+/**
+ * A faixa fixa do "entrar como": de quem é a tela e o caminho de volta, sempre à vista.
+ * Voltar recarrega a página para nenhuma tela ficar com dados da visão anterior.
+ */
+function FaixaDoVerComo({ nome }: { nome: string }) {
+  const t = useT();
+  const [voltando, setVoltando] = React.useState(false);
+  const voltar = async () => {
+    setVoltando(true);
+    try {
+      await apiClient.delete("/api/v1/clinica/ver-como");
+      window.location.assign("/equipe");
+    } catch (err) {
+      setVoltando(false);
+      showApiError(err);
+    }
+  };
+  return (
+    <div
+      role="status"
+      className="n-ver-como sticky top-0 z-40 flex flex-wrap items-center gap-3 px-4 py-2.5 text-sm"
+      data-testid="novo-faixa-ver-como"
+    >
+      <span className="flex-1">
+        <strong>{`${t("Você está vendo como")} ${nome}.`}</strong>{" "}
+        {t(
+          "Só olhar: nada pode ser alterado. O conteúdo clínico só aparece se você também for profissional de saúde.",
+        )}
+      </span>
+      <button
+        type="button"
+        className="n-botao n-botao-pequeno n-botao-escuro"
+        onClick={() => void voltar()}
+        disabled={voltando}
+        data-testid="novo-voltar-ao-administrador"
+      >
+        {t("Voltar para o administrador")}
+      </button>
+    </div>
   );
 }
 

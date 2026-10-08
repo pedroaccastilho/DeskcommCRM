@@ -28,14 +28,25 @@ export function supportWriteError(support: SupportContext | null | undefined, or
  * Sem cookie de usuário, workers/tokens seguem sua autorização própria.
  * targetOrganizationId é exclusivamente path ou registro confiável de administração.
  */
-export async function requireSupportWrite(targetOrganizationId?: string) {
+export async function requireSupportWrite(
+  targetOrganizationId?: string,
+  opcoes: { permitirVerComo?: boolean } = {},
+) {
   try {
     const { loadAuthUser } = await import("@/lib/auth/server");
     const user = await loadAuthUser();
     if (!user) return null;
     const support = user.support;
     const message = supportWriteError(support, targetOrganizationId);
-    return message ? fail("forbidden", message, 403) : null;
+    if (message) return fail("forbidden", message, 403);
+    // "Entrar como" do módulo clínica (fork TOQ): o administrador vendo como outra pessoa só
+    // olha. Só a rota que encerra o modo passa `permitirVerComo`.
+    if (!opcoes.permitirVerComo) {
+      const { escritaBloqueadaPeloVerComo } = await import("@/lib/clinica/ver-como");
+      const soOlhar = await escritaBloqueadaPeloVerComo(user);
+      if (soOlhar) return fail("forbidden", soOlhar, 403);
+    }
+    return null;
   } catch {
     return fail("upstream_unavailable", "Não foi possível confirmar a permissão de acompanhamento.", 503);
   }
