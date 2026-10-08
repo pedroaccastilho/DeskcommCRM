@@ -1,0 +1,147 @@
+name: Deploy na VPS da TOQ
+
+# Instala na VPS da clínica a versão que acabou de ser publicada, sem ninguém
+# precisar entrar na VPS para rodar o update.sh.
+#
+# Gatilho: o "Publicar imagem Docker (GHCR)" terminar VERDE para uma tag
+# vX.Y.Z (a tag nasce da Release criada na tela do GitHub). Nesse ponto as
+# imagens da versão e o `stable` já estão no ghcr. Também roda na mão
+# (workflow_dispatch) com a versão, para reinstalar ou voltar uma versão.
+#
+# Interruptor: a variável de repositório DEPLOY_VPS. Só faz deploy quando ela
+# vale `ligado`; sem ela o job sai com um aviso e não toca na VPS. Apagar a
+# variável é o botão de emergência.
+#
+# Segurança:
+#   - A chave SSH deste workflow é SÓ de deploy. Na VPS ela fica no
+#     authorized_keys com `command=` apontando para infra/toq-vps/deploy-por-ssh.sh
+#     e `restrict`: não abre shell, não encaminha porta, e o único pedido que
+#     aceita é "deploy vX.Y.Z".
+#   - O host key da VPS é fixado (secret VPS_KNOWN_HOSTS) e a conexão usa
+#     StrictHostKeyChecking=yes: um servidor no meio do caminho é recusado.
+#   - O .env da VPS nunca passa por aqui, e o log do update.sh fica na VPS
+#     (.deploy-actions.log); para cá só vêm as linhas de etapa.
+#   - Uma versão só é instalada se for Release publicada (nem rascunho nem
+#     pré-lançamento) — a mesma autoridade que o update.sh usa sem `--to`.
+#
+# Configuração (uma vez): infra/toq-vps/configurar-deploy-automatico.sh, rodado
+# no PC que já entra na VPS com `ssh toq-vps`.
+
+on:
+  workflow_run:
+    workflows: ["Publicar imagem Docker (GHCR)"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      versao:
+        description: "Versão a instalar (ex.: v1.74.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Um deploy por vez, e nunca cancelando um que já está no meio do update.sh.
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: producao
+      url: ${{ vars.CRM_URL || 'https://crm.pedrocastilho.tech' }}
+    env:
+      CRM_URL: ${{ vars.CRM_URL || 'https://crm.pedrocastilho.tech' }}
+    steps:
+      - name: Qual versão, e ela pode ir para a VPS?
+        id: alvo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LIGADO: ${{ vars.DEPLOY_VPS }}
+          PEDIDA: ${{ github.event.inputs.versao || github.event.workflow_run.head_branch }}
+          TEM_CHAVE: ${{ secrets.VPS_SSH_KEY != '' && secrets.VPS_KNOWN_HOSTS != '' && secrets.VPS_HOST != '' && secrets.VPS_USER != '' }}
+        run: |
+          set -euo pipefail
+          if [ "${LIGADO:-}" != "ligado" ]; then
+            echo "::warning::Deploy automático desligado (variável DEPLOY_VPS ≠ ligado). Nada foi feito na VPS."
+            echo "rodar=nao" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [ "$TEM_CHAVE" != "true" ]; then
+            echo "::error::DEPLOY_VPS está ligado mas faltam secrets (VPS_SSH_KEY, VPS_KNOWN_HOSTS, VPS_HOST, VPS_USER). Rode infra/toq-vps/configurar-deploy-automatico.sh."
+            exit 1
+          fi
+          if ! [[ "$PEDIDA" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'${PEDIDA}' não é uma versão no formato vX.Y.Z."
+            exit 1
+          fi
+          if ! rel=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${PEDIDA}" --jq '"\(.draft) \(.prerelease)"'); then
+            echo "::error::Não há Release publicada para ${PEDIDA}. Crie a Release na tela do GitHub antes."
+            exit 1
+          fi
+          if [ "$rel" != "false false" ]; then
+            echo "::error::A Release ${PEDIDA} é rascunho ou pré-lançamento (draft/prerelease = ${rel}). Não instalo."
+            exit 1
+          fi
+          echo "versao=${PEDIDA}" >> "$GITHUB_OUTPUT"
+          echo "rodar=sim" >> "$GITHUB_OUTPUT"
+          echo "vai instalar ${PEDIDA} em ${CRM_URL}"
+
+      - name: Preparar a chave de deploy
+        if: steps.alvo.outputs.rodar == 'sim'
+        env:
+          CHAVE: ${{ secrets.VPS_SSH_KEY }}
+          HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$CHAVE" > ~/.ssh/deploy_vps
+          chmod 600 ~/.ssh/deploy_vps
+          printf '%s\n' "$HOSTS" > ~/.ssh/known_hosts_vps
+
+      - name: Rodar o update.sh na VPS (backup antes, leva uns 13 minutos)
+        if: steps.alvo.outputs.rodar == 'sim'
+        env:
+          VERSAO: ${{ steps.alvo.outputs.versao }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_vps \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts_vps" \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
+            -o BatchMode=yes \
+            -p "$VPS_PORT" "${VPS_USER}@${VPS_HOST}" "deploy ${VERSAO}"
+
+      - name: O CRM está no ar na versão nova?
+        if: steps.alvo.outputs.rodar == 'sim'
+        env:
+          VERSAO: ${{ steps.alvo.outputs.versao }}
+        run: |
+          set -uo pipefail
+          esperada="${VERSAO#v}"
+          for i in $(seq 1 30); do
+            atual=$(curl -fsS --max-time 10 "${CRM_URL}/api/v1/health" | jq -r '.data.version' 2>/dev/null || true)
+            [ "$atual" = "$esperada" ] && break
+            echo "tentativa ${i}: versão no ar = '${atual:-sem resposta}', esperada ${esperada}"
+            sleep 10
+          done
+          [ "$atual" = "$esperada" ] || { echo "::error::Depois do update o CRM responde a versão '${atual:-nenhuma}', não ${esperada}."; exit 1; }
+          falhou=0
+          for caminho in / /novo; do
+            codigo=$(curl -sSL -o /dev/null -w '%{http_code}' --max-time 20 "${CRM_URL}${caminho}" || echo 000)
+            echo "${CRM_URL}${caminho} → ${codigo}"
+            [ "$codigo" = "200" ] || falhou=1
+          done
+          [ "$falhou" = 0 ] || { echo "::error::O site ou o /novo não respondeu 200 depois do update."; exit 1; }
+          echo "### ✓ ${VERSAO} instalada em ${CRM_URL}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Apagar a chave do runner
+        if: always()
+        run: rm -f ~/.ssh/deploy_vps ~/.ssh/known_hosts_vps

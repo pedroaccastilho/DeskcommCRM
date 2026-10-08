@@ -254,6 +254,17 @@ const GATILHO_ESPERADO: Record<string, { condicao: string | null; efeito: string
       "(`vars.RELOGIO_LIGADO`), não uma adaptação de fork — mas ela fica no mapa para " +
       "que trocar a variável por outra coisa continue passando por revisão.",
   },
+  "deploy-vps.yml::deploy": {
+    condicao:
+      "github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && " +
+      "github.event.workflow_run.event == 'push' && startsWith(github.event.workflow_run.head_branch, 'v'))",
+    efeito:
+      "Este job instala na VPS da TOQ a versão que acabou de ser publicada. A condição é DELIBERADA: " +
+      "o `workflow_run` dispara a cada execução do publish-image (PR e push na main inclusive), e só " +
+      "a publicação verde de uma TAG pode virar deploy. Pulado aqui não engana check obrigatório " +
+      "nenhum (este workflow não é check de PR); quem desliga o deploy de propósito é a variável " +
+      "`DEPLOY_VPS`, lida num passo e que deixa aviso visível na execução.",
+  },
 };
 
 interface JobLido {
@@ -274,7 +285,9 @@ interface JobLido {
 function lerJobs(): JobLido[] {
   const achados: JobLido[] = [];
 
-  for (const arquivo of readdirSync(DIR).filter((f) => /\.ya?ml$/.test(f)).sort()) {
+  for (const arquivo of readdirSync(DIR)
+    .filter((f) => /\.ya?ml$/.test(f))
+    .sort()) {
     const brutas = readFileSync(join(DIR, arquivo), "utf8").split("\n");
     // Comentário não conta em NENHUMA direção: um `#` falando de `if:` não pode
     // satisfazer o mapa, e um `#` na coluna 0 no meio de `jobs:` não pode
@@ -331,7 +344,10 @@ describe("nenhum job pode ser desligado por uma condição — `skipped` conta c
     // nada — o modo de falha mais comum desta classe de teste.
     expect(jobs.length, "jobs lidos em .github/workflows").toBeGreaterThanOrEqual(10);
     expect(
-      jobs.filter((j) => j.condicao !== null).map(chave).sort(),
+      jobs
+        .filter((j) => j.condicao !== null)
+        .map(chave)
+        .sort(),
       "o recorte de `if:` está cego — nenhuma condição foi lida, e o mapa passaria por vacuidade",
     ).not.toEqual([]);
     // E o inverso: se TUDO virasse condição, a comparação também seria inútil.
