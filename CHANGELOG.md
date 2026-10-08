@@ -8,6 +8,27 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.74.1] — 2026-10-08
+
+### Corrigido
+
+- **O Hoje da interface nova voltou a ter a chegada e o início do atendimento** Com a chave "A equipe usa só a interface nova" ligada, o Balcão e o Meu dia levam ao Hoje, que
+  não tinha o fluxo da chegada e do atendimento. Agora, na tela Hoje e na folha da sessão, a recepção marca "Chegou" (e desfaz, se errar), e o paciente aparece na seção
+  "Na clínica" com o selo "Na recepção". Quem atende toca "Iniciar atendimento", e a sessão passa a
+  "Em atendimento". As sessões em que o paciente não chegou ficam em "Passou do horário". A folha
+  mostra também quantas sessões restam no pacote e se o paciente tem multa em aberto. A evolução
+  mostra a última sessão do paciente, com um botão para repetir a conduta. Depois de assinar, a folha
+  pergunta "Qual o próximo passo?": marcar a próxima sessão num horário livre ou abrir o próximo
+  paciente do dia.
+
+- **A interface nova tem anamnese, adendo e as telas de gestão de cada perfil** Com a chave "A equipe usa só a interface nova" ligada, quem não administra ficava sem algumas telas
+  que só existiam na versão atual. Agora a ficha do paciente escreve a anamnese e corrige um registro
+  assinado com um adendo, e avisa quando a avaliação já marcou o retorno de reavaliação. Gerente,
+  Financeiro e Jurídico ganham a porta "Gestão", cada um com as telas do próprio perfil: o Financeiro
+  abre Comandas, Faturamento e Financeiro; o Gerente também abre Desempenho, Atividades e Auditoria; o
+  Jurídico abre a Auditoria e as solicitações LGPD e vê na ficha quem abriu o prontuário, sem conteúdo
+  clínico. O link para a ficha da versão atual só aparece para quem ainda pode voltar para ela.
+
 ## [1.74.0] — 2026-10-08
 
 ### Adicionado
@@ -9905,7 +9926,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.0...HEAD
+[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.1...HEAD
+[1.74.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.0...v1.74.1
 [1.74.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.73.0...v1.74.0
 [1.73.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.72.0...v1.73.0
 [1.72.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.71.0...v1.72.0
