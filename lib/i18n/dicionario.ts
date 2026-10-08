@@ -17803,6 +17803,9 @@ export const DICIONARIO: Traducoes = {
   "Horários de atendimento": { es: "Horarios de atención" },
   Esconder: { es: "Ocultar" },
   Mostrar: { es: "Mostrar" },
+  "Como ver as tarefas": { es: "Cómo ver las tareas" },
+  "tarefa sem prazo fica só na lista.": { es: "tarea sin plazo queda solo en la lista." },
+  "tarefas sem prazo ficam só na lista.": { es: "tareas sin plazo quedan solo en la lista." },
 };
 
 /**
