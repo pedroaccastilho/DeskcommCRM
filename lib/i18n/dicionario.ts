@@ -17801,6 +17801,8 @@ export const DICIONARIO: Traducoes = {
   "Visão da agenda": { es: "Vista de la agenda" },
   "Acessos e convites pendentes": { es: "Accesos e invitaciones pendientes" },
   "Horários de atendimento": { es: "Horarios de atención" },
+  Esconder: { es: "Ocultar" },
+  Mostrar: { es: "Mostrar" },
 };
 
 /**
