@@ -1,6 +1,8 @@
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
+import { redirecionamentosDoNovo } from "./lib/novo/rotas";
+
 /** Performance budget (EPIC-12 §S-12.05):
  *  - LCP < 2.5s p75
  *  - CLS < 0.1 p75
@@ -73,6 +75,10 @@ const nextConfig: NextConfig = {
     ],
   },
   reactStrictMode: true,
+  // Os endereços antigos da interface nova (`/novo/...`) levam aos da raiz (`lib/novo/rotas.ts`).
+  async redirects() {
+    return redirecionamentosDoNovo();
+  },
   poweredByHeader: false,
   // typedRoutes moved out of experimental in Next 15.5+
   typedRoutes: true,

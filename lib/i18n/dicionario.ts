@@ -17541,7 +17541,6 @@ export const DICIONARIO: Traducoes = {
   "Usar o tema escuro": { es: "Usar el tema oscuro" },
   "A interface nova mostra a agenda, os pacientes e o prontuário da clínica. Peça ao administrador para instalar o módulo em Configurações da instalação › Módulos.": { es: "La interfaz nueva muestra la agenda, los pacientes y la historia clínica. Pide al administrador que instale el módulo en Configuración de la instalación › Módulos." },
   "Abrir a ficha completa na versão atual": { es: "Abrir la ficha completa en la versión actual" },
-  "Configurações (abre na versão atual)": { es: "Configuración (se abre en la versión actual)" },
   "Confirmar ou lembrar": { es: "Confirmar o recordar" },
   "Dentro do prazo: sem multa.": { es: "Dentro del plazo: sin multa." },
   "Dia que passou": { es: "Día pasado" },
@@ -17666,6 +17665,16 @@ export const DICIONARIO: Traducoes = {
   "Ninguém com esse nome. Busque pelo telefone com DDD.": {
     es: "Nadie con ese nombre. Busca por el teléfono con código de área.",
   },
+  // A interface nova é a principal para quem não administra
+  "Abrir a interface nova": { es: "Abrir la interfaz nueva" },
+  "A equipe usa só a interface nova": { es: "El equipo usa solo la interfaz nueva" },
+  "Ligado: quem não é administrador não vê mais a versão atual.": {
+    es: "Activado: quien no es administrador ya no ve la versión actual.",
+  },
+  "Desligado: a equipe continua na versão atual.": {
+    es: "Desactivado: el equipo sigue en la versión actual.",
+  },
+  "Não deu para salvar. Tente de novo.": { es: "No se pudo guardar. Inténtalo de nuevo." },
   // Relatórios da gestão na interface nova (/novo/relatorios)
   paciente: { es: "paciente" },
   falta: { es: "ausencia" },
@@ -17739,6 +17748,18 @@ export const DICIONARIO: Traducoes = {
   "Tarefas de hoje": { es: "Tareas de hoy" },
   "Tirar": { es: "Quitar" },
   "Ver todas as tarefas": { es: "Ver todas las tareas" },
+  // Minha conta na interface nova (/conta)
+  Avisos: { es: "Avisos" },
+  "Minha conta": { es: "Mi cuenta" },
+  // Ajustes do administrador na interface nova (/ajustes)
+  Ajustes: { es: "Ajustes" },
+  "Ajustes são do administrador": { es: "Los ajustes son del administrador" },
+  "Buscar um ajuste": { es: "Buscar un ajuste" },
+  "Nenhum ajuste com esse nome.": { es: "Ningún ajuste con ese nombre." },
+  "Tudo o que o administrador configura na clínica.": {
+    es: "Todo lo que el administrador configura en la clínica.",
+  },
+  "versão atual": { es: "versión actual" },
 };
 
 /**

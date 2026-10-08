@@ -1,6 +1,6 @@
 import { InterfaceRefresh } from "@/hooks/auth/InterfaceRefresh";
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { isMfaEnrolled, loadAuthUser, requiresMfa, resolveActiveOrg } from "@/lib/auth/server";
 import { DEFAULT_VISIBILITY_MODE, roleAtLeast, type VisibilityMode } from "@/lib/auth/types";
 import { clientePelaAgendaLigado } from "@/lib/schemas/settings";
@@ -26,6 +26,8 @@ import { listarConexoesCaidas, type ConexaoCaida } from "@/lib/channels/health";
 import { VoiceCallProvider } from "@/components/voice/VoiceCallContext";
 import { ProvedorDaOcupacaoDoRodape } from "@/lib/ui/rodape-ocupado";
 import { acessoFoiRevogado } from "@/lib/auth/vinculo-revogado";
+import { destinoNaInterfaceNova, usaSoAInterfaceNova } from "@/lib/novo/raiz";
+import { interfaceNovaEhPrincipal } from "@/lib/novo/raiz-servidor";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await loadAuthUser();
@@ -122,6 +124,28 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // onboarding ia para `/onboarding` e escapava da tela da suspensão.
     if (!ehOperante(orgRow?.status)) redirect("/account-suspended");
     if (orgRow && !orgRow.onboarded_at && !user.support) redirect("/onboarding");
+    // Quem não administra trabalha na interface nova quando a organização escolheu assim
+    // (Pedro, 2026-10-04; o Administrador liga): a tela da atual que tem equivalente leva para
+    // lá. Nunca enquanto o segundo fator pendente segura a pessoa aqui, porque a nova manda de
+    // volta para esta tela cadastrá-lo (`app/(nova)/layout.tsx`). A escolha só é lida para quem
+    // seria levado: Administrador e organização sem o módulo não pagam a consulta.
+    if (
+      !(mfaRequired && !isEnrolled) &&
+      usaSoAInterfaceNova({
+        role: activeOrg.role,
+        isPlatformAdmin: user.is_platform_admin,
+        suporte: Boolean(user.support),
+        clinicaInstalada: modulos.includes("clinica"),
+      }) &&
+      (await interfaceNovaEhPrincipal(admin, activeOrg.orgId))
+    ) {
+      const cabecalhos = await headers();
+      const destino = destinoNaInterfaceNova(
+        cabecalhos.get("x-pathname") ?? "/app",
+        cabecalhos.get("x-search")?.replace(/^\?/, "") ?? "",
+      );
+      if (destino) redirect(destino);
+    }
     // G4-02: expõe visibility_mode ao client (inbox decide visões visíveis).
     // Fonte confiável (admin client, org do cookie validado) — nunca do body.
     const mode = (orgRow?.settings as { visibility_mode?: VisibilityMode } | null)

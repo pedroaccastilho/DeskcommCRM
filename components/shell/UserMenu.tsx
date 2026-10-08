@@ -15,7 +15,7 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { SeletorDeIdioma } from "@/components/shell/SeletorDeIdioma";
 import { useT } from "@/hooks/i18n/useT";
 import Link from "next/link";
-import { SignOut, ShieldCheck } from "@/lib/ui/icons";
+import { SignOut, ShieldCheck, Sparkle } from "@/lib/ui/icons";
 
 function initials(name: string | null, email: string): string {
   if (name && name.trim()) {
@@ -27,7 +27,11 @@ function initials(name: string | null, email: string): string {
 export function UserMenu() {
   const t = useT();
   const user = useUser();
-  const { signOut } = useAuth();
+  const { signOut, activeOrg } = useAuth();
+  // Só o Administrador alterna entre as interfaces; os outros perfis já trabalham só na nova
+  // (`lib/novo/raiz.ts`). Sem o módulo clínica a nova não tem o que mostrar.
+  const alternaParaANova =
+    activeOrg?.role === "admin" && Boolean(activeOrg.modulos_ligados?.includes("clinica"));
   const [isPending, startTransition] = useTransition();
 
   return (
@@ -83,6 +87,17 @@ export function UserMenu() {
                     </span>
                   </span>
                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
+          {alternaParaANova && (
+            <>
+              <DropdownMenuItem asChild>
+                <a href="/hoje" data-testid="porta-interface-nova">
+                  <Sparkle size={16} className="mr-2" aria-hidden />
+                  {t("Abrir a interface nova")}
+                </a>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
             </>

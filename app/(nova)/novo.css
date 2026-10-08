@@ -1,0 +1,673 @@
+/*
+ * A INTERFACE NOVA — estilos escopados em `.novo`.
+ *
+ * Nada aqui vaza para a interface de /app: todo seletor começa em `.novo`. A cor de ação segue a
+ * marca da organização (`--color-accent`, Configurações › Marca); o resto é a paleta própria da
+ * interface nova — papel quente, tinta verde-escura, cantos generosos e muito respiro.
+ */
+
+.novo {
+  --n-papel: #f3efe7;
+  --n-papel-2: #ebe5d9;
+  --n-cartao: #fffdf9;
+  --n-tinta: #18221d;
+  --n-tinta-2: #58615b;
+  --n-tinta-3: #8a918b;
+  --n-linha: #e3ddd0;
+  --n-acao: var(--color-accent, #4f7a60);
+  --n-acao-tinta: var(--color-accent-fg, #ffffff);
+  --n-acao-suave: color-mix(in oklab, var(--n-acao) 14%, transparent);
+  --n-alerta: #b8582f;
+  --n-alerta-suave: color-mix(in oklab, #b8582f 13%, transparent);
+  --n-aviso: #a8781f;
+  --n-aviso-suave: color-mix(in oklab, #a8781f 15%, transparent);
+  --n-ok: #3f7a52;
+  --n-ok-suave: color-mix(in oklab, #3f7a52 13%, transparent);
+  --n-sombra: 0 1px 0 rgba(24, 34, 29, 0.04), 0 10px 30px -14px rgba(24, 34, 29, 0.18);
+  --n-sombra-alta: 0 30px 80px -20px rgba(24, 34, 29, 0.35);
+  --n-raio: 22px;
+  /* Superfícies que invertem: o trilho/abas, o cartão do próximo e o "selecionado". Cada uma tem
+     o próprio par fundo/tinta, porque no escuro elas NÃO são o inverso do papel. */
+  --n-trilho-fundo: #18221d;
+  --n-trilho-tinta: #f3efe7;
+  --n-destaque: #18221d;
+  --n-destaque-tinta: #f3efe7;
+  --n-forte: #18221d;
+  --n-forte-tinta: #f3efe7;
+  --n-trilha-do-dia: var(--n-papel-2);
+
+  min-height: 100dvh;
+  background: var(--n-papel);
+  color: var(--n-tinta);
+  font-family: var(--novo-fonte-texto), ui-sans-serif, system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-theme="dark"] .novo {
+  --n-papel: #121815;
+  --n-papel-2: #1a221e;
+  --n-cartao: #1b2420;
+  --n-tinta: #eef0e9;
+  --n-tinta-2: #b4bbb3;
+  --n-tinta-3: #7f877f;
+  --n-linha: #2b3530;
+  --n-alerta: #e8916b;
+  --n-alerta-suave: color-mix(in oklab, #e8916b 16%, transparent);
+  --n-aviso: #dcae55;
+  --n-aviso-suave: color-mix(in oklab, #dcae55 16%, transparent);
+  --n-ok: #86c69a;
+  --n-ok-suave: color-mix(in oklab, #86c69a 15%, transparent);
+  --n-sombra: 0 1px 0 rgba(0, 0, 0, 0.2), 0 10px 30px -14px rgba(0, 0, 0, 0.6);
+  --n-sombra-alta: 0 30px 80px -20px rgba(0, 0, 0, 0.7);
+  --n-trilho-fundo: #1d2823;
+  --n-trilho-tinta: #e6eae3;
+  --n-destaque: #22312a;
+  --n-destaque-tinta: #eef0e9;
+  --n-forte: #e6eae3;
+  --n-forte-tinta: #121815;
+  --n-trilha-do-dia: #34413a;
+  color-scheme: dark;
+}
+
+.novo .n-titulo {
+  font-family: var(--novo-fonte-titulo), Georgia, serif;
+  font-variation-settings:
+    "SOFT" 100,
+    "WONK" 0;
+  letter-spacing: -0.02em;
+  font-weight: 450;
+}
+
+.novo .n-numero {
+  font-variant-numeric: tabular-nums;
+}
+
+.novo .n-suave {
+  color: var(--n-tinta-2);
+}
+
+.novo .n-fraco {
+  color: var(--n-tinta-3);
+}
+
+/* ─── Casca ─────────────────────────────────────────────────────────────── */
+
+.novo .n-trilho {
+  position: fixed;
+  inset: 16px auto 16px 16px;
+  width: 84px;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 0;
+  border-radius: 28px;
+  background: var(--n-trilho-fundo);
+  color: var(--n-trilho-tinta);
+  z-index: 30;
+}
+
+@media (min-width: 900px) {
+  .novo .n-trilho {
+    display: flex;
+  }
+  .novo .n-palco {
+    padding-left: 116px;
+  }
+}
+
+.novo .n-trilho .n-porta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 68px;
+  padding: 10px 0;
+  border-radius: 18px;
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in oklab, var(--n-trilho-tinta) 72%, transparent);
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.novo .n-trilho .n-porta:hover {
+  color: var(--n-trilho-tinta);
+  background: color-mix(in oklab, var(--n-trilho-tinta) 9%, transparent);
+}
+
+.novo .n-trilho .n-porta[aria-current="page"] {
+  color: var(--n-trilho-fundo);
+  background: var(--n-trilho-tinta);
+}
+
+[data-theme="dark"] .novo .n-trilho,
+[data-theme="dark"] .novo .n-abas {
+  box-shadow: inset 0 0 0 1px var(--n-linha);
+}
+
+.novo .n-palco {
+  min-height: 100dvh;
+  padding-bottom: 96px;
+}
+
+.novo .n-conteudo {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 18px 24px;
+}
+
+@media (min-width: 900px) {
+  .novo .n-conteudo {
+    padding: 40px 40px 48px;
+  }
+}
+
+.novo .n-abas {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: space-around;
+  padding: 8px;
+  border-radius: 26px;
+  background: var(--n-trilho-fundo);
+  box-shadow: var(--n-sombra-alta);
+  z-index: 30;
+}
+
+.novo .n-abas .n-porta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 0 6px;
+  border-radius: 18px;
+  font-size: 11px;
+  font-weight: 600;
+  color: color-mix(in oklab, var(--n-trilho-tinta) 68%, transparent);
+}
+
+.novo .n-abas .n-porta[aria-current="page"] {
+  color: var(--n-trilho-fundo);
+  background: var(--n-trilho-tinta);
+}
+
+@media (min-width: 900px) {
+  .novo .n-abas {
+    display: none;
+  }
+  .novo .n-palco {
+    padding-bottom: 0;
+  }
+}
+
+.novo span.n-inicial {
+  display: inline-block;
+}
+
+.novo .n-inicial::first-letter {
+  text-transform: uppercase;
+}
+
+/* Grade sem colunas declaradas: uma coluna que encolhe, nunca a largura do texto mais comprido. */
+.novo .grid:not([class*="grid-cols"]) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* ─── Peças ─────────────────────────────────────────────────────────────── */
+
+.novo .n-cartao {
+  background: var(--n-cartao);
+  border-radius: var(--n-raio);
+  box-shadow: var(--n-sombra);
+}
+
+.novo .n-botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-weight: 650;
+  font-size: 14.5px;
+  white-space: nowrap;
+  transition:
+    transform 120ms ease,
+    background 160ms ease,
+    opacity 160ms ease;
+  cursor: pointer;
+}
+
+.novo .n-botao:active {
+  transform: scale(0.97);
+}
+
+.novo .n-botao:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.novo .n-botao:focus-visible,
+.novo .n-chip:focus-visible,
+.novo .n-linha-clicavel:focus-visible {
+  outline: 3px solid color-mix(in oklab, var(--n-acao) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.novo .n-botao-principal {
+  background: var(--n-acao);
+  color: var(--n-acao-tinta);
+}
+
+.novo .n-botao-principal:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--n-acao) 88%, black);
+}
+
+.novo .n-botao-escuro {
+  background: var(--n-forte);
+  color: var(--n-forte-tinta);
+}
+
+.novo .n-botao-suave {
+  background: var(--n-papel-2);
+  color: var(--n-tinta);
+}
+
+.novo .n-botao-suave:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--n-papel-2) 80%, var(--n-tinta) 8%);
+}
+
+.novo .n-botao-perigo {
+  background: var(--n-alerta-suave);
+  color: var(--n-alerta);
+}
+
+.novo .n-botao-pequeno {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 13.5px;
+}
+
+.novo .n-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--n-papel-2);
+  color: var(--n-tinta-2);
+}
+
+.novo .n-chip[aria-pressed="true"],
+.novo .n-chip[aria-current="page"] {
+  background: var(--n-forte);
+  color: var(--n-forte-tinta);
+}
+
+.novo .n-selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.novo .n-selo-alerta {
+  background: var(--n-alerta-suave);
+  color: var(--n-alerta);
+}
+
+.novo .n-selo-aviso {
+  background: var(--n-aviso-suave);
+  color: var(--n-aviso);
+}
+
+.novo .n-selo-ok {
+  background: var(--n-ok-suave);
+  color: var(--n-ok);
+}
+
+.novo .n-selo-neutro {
+  background: var(--n-papel-2);
+  color: var(--n-tinta-2);
+}
+
+.novo .n-ponto {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex: none;
+}
+
+.novo .n-avatar {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  font-weight: 700;
+  flex: none;
+  /* O fundo é um pastel fixo (ou o papel, no avatar "claro"): a tinta é escura nos dois temas. */
+  color: #18221d;
+}
+
+[data-theme="dark"] .novo .n-avatar {
+  filter: saturate(0.8) brightness(0.92);
+}
+
+.novo .n-linha-clicavel {
+  display: flex;
+  width: 100%;
+  text-align: left;
+  border-radius: 18px;
+  transition: background 140ms ease;
+}
+
+.novo .n-linha-clicavel:hover {
+  background: color-mix(in oklab, var(--n-papel-2) 70%, transparent);
+}
+
+.novo .n-campo {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: var(--n-papel);
+  border: 1.5px solid transparent;
+  color: var(--n-tinta);
+  font-size: 15px;
+  outline: none;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease;
+}
+
+.novo .n-campo:focus {
+  border-color: var(--n-acao);
+  background: var(--n-cartao);
+}
+
+.novo textarea.n-campo {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.novo .n-rotulo {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--n-tinta-2);
+}
+
+/* ─── A linha do dia ────────────────────────────────────────────────────── */
+
+.novo .n-linha-do-dia {
+  position: relative;
+  height: 64px;
+}
+
+.novo .n-linha-do-dia .n-trilha {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 30px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--n-trilha-do-dia);
+}
+
+.novo .n-linha-do-dia .n-passado {
+  position: absolute;
+  left: 0;
+  top: 30px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--n-tinta);
+}
+
+.novo .n-linha-do-dia .n-bloco {
+  position: absolute;
+  top: 22px;
+  height: 20px;
+  min-width: 8px;
+  border-radius: 999px;
+  border: 3px solid var(--n-cartao);
+  transition: transform 140ms ease;
+}
+
+.novo .n-linha-do-dia .n-bloco:hover {
+  transform: scaleY(1.25);
+}
+
+.novo .n-linha-do-dia .n-agora {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--n-alerta);
+}
+
+.novo .n-linha-do-dia .n-agora::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--n-alerta);
+  animation: n-pulso 2.4s ease-in-out infinite;
+}
+
+@keyframes n-pulso {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--n-alerta) 45%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+
+/* ─── Folha (janela que sobe de baixo no celular e abre à direita no computador) ─ */
+
+.n-folha-fundo {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 20, 17, 0.42);
+  backdrop-filter: blur(3px);
+  z-index: 60;
+  animation: n-aparece 180ms ease;
+}
+
+.n-folha {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 92dvh;
+  overflow-y: auto;
+  border-radius: 28px 28px 0 0;
+  background: var(--n-cartao);
+  color: var(--n-tinta);
+  box-shadow: var(--n-sombra-alta);
+  z-index: 61;
+  padding: 10px 22px calc(24px + env(safe-area-inset-bottom));
+  animation: n-sobe 260ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  outline: none;
+}
+
+@media (min-width: 900px) {
+  .n-folha {
+    left: auto;
+    top: 16px;
+    right: 16px;
+    bottom: 16px;
+    width: 460px;
+    max-height: none;
+    border-radius: 28px;
+    padding: 24px 28px;
+    animation: n-desliza 260ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  }
+}
+
+.n-folha .n-pegador {
+  width: 44px;
+  height: 5px;
+  margin: 0 auto 14px;
+  border-radius: 999px;
+  background: var(--n-linha);
+}
+
+@media (min-width: 900px) {
+  .n-folha .grid:not([class*="grid-cols"]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .n-folha .n-pegador {
+    display: none;
+  }
+}
+
+@keyframes n-aparece {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes n-sobe {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
+
+@keyframes n-desliza {
+  from {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+}
+
+.novo .n-entra {
+  animation: n-entra 420ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+@keyframes n-entra {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .novo *,
+  .n-folha,
+  .n-folha-fundo {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/*
+ * O WHATSAPP (/whatsapp): a caixa de entrada da versão atual com a paleta da interface nova.
+ * As cores de lá são `--color-*` (lidas pelos utilitários) e as do shadcn (`--background`, …),
+ * que no `:root` já foram resolvidas — por isso as duas camadas são reapontadas aqui. Claro e
+ * escuro vêm de graça: `--n-*` já muda com o tema.
+ */
+.novo .n-inbox,
+.novo .n-vestida {
+  --color-bg: var(--n-papel);
+  --color-surface: var(--n-cartao);
+  --color-surface-elevated: var(--n-papel-2);
+  --color-text: var(--n-tinta);
+  --color-text-muted: var(--n-tinta-2);
+  --color-text-subtle: var(--n-tinta-3);
+  --color-border: var(--n-linha);
+  --color-border-strong: color-mix(in oklab, var(--n-tinta) 22%, var(--n-linha));
+  --background: var(--n-papel);
+  --foreground: var(--n-tinta);
+  --card: var(--n-cartao);
+  --card-foreground: var(--n-tinta);
+  --popover: var(--n-cartao);
+  --popover-foreground: var(--n-tinta);
+  --muted: var(--n-papel-2);
+  --muted-foreground: var(--n-tinta-2);
+  --border: var(--n-linha);
+  --input: var(--n-linha);
+  /* O fundo da conversa selecionada: na versão atual é um tom claro fixo, ilegível no escuro. */
+  --color-accent-50: color-mix(in oklab, var(--n-acao) 14%, var(--n-cartao));
+}
+
+.novo .n-inbox {
+  padding: 12px 12px 0;
+}
+
+/*
+ * MINHA CONTA (/conta): os formulários da versão atual com a paleta acima. Os cartões deles ganham
+ * os cantos e a sombra dos cartões da interface nova.
+ */
+.novo .n-vestida .rounded-lg.border.shadow-xs {
+  border-radius: var(--n-raio);
+  border-color: transparent;
+  background: var(--n-cartao);
+  box-shadow: var(--n-sombra);
+}
+
+/* Sem o cabeçalho de 3,5rem da versão atual; no celular, desconta a barra de abas. */
+.novo .n-inbox > .grid {
+  height: calc(100dvh - 12px - 108px);
+  overflow: hidden;
+  border-radius: var(--n-raio);
+  background: var(--n-cartao);
+  box-shadow: var(--n-sombra);
+}
+
+@media (min-width: 900px) {
+  .novo .n-inbox {
+    padding: 16px 16px 16px 0;
+  }
+  .novo .n-inbox > .grid {
+    height: calc(100dvh - 32px);
+  }
+}
+
+/* AJUSTES (/ajustes): cartões que levam a uma tela. */
+.novo .n-cartao-link {
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+.novo .n-cartao-link:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--n-sombra-alta);
+}
+.novo .n-cartao-link:focus-visible {
+  outline: 2px solid var(--n-acao);
+  outline-offset: 2px;
+}
+
+/*
+ * Uma tela da versão atual dentro da interface nova (`components/novo/CascaDoAjuste.tsx`): sem o
+ * respiro próprio de lá (a casca nova já tem o seu) e com o título na fonte daqui.
+ */
+.novo .n-ajuste > .p-6 {
+  padding: 0;
+}
+.novo .n-ajuste h1 {
+  font-family: var(--novo-fonte-titulo), Georgia, serif;
+  font-size: 2.25rem;
+  line-height: 1.15;
+  font-weight: 600;
+}

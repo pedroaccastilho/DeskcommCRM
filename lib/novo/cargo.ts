@@ -1,5 +1,5 @@
 /**
- * O CARGO de quem abre a interface nova (`/novo`, teste A/B da TOQ).
+ * O CARGO de quem abre a interface nova (teste A/B da TOQ).
  *
  * A interface atual mostra o CRM inteiro a todo mundo. A nova mostra a cada pessoa só o trabalho
  * dela, e o cargo é deduzido do que já está cadastrado, sem pedir nada a ninguém:
@@ -108,22 +108,22 @@ export interface ItemDoMenu {
 export function menuDoCargo(cargo: Cargo, veRelatorios = false): ItemDoMenu[] {
   const quemAtende = atende(cargo);
   return [
-    { href: "/novo", rotulo: quemAtende ? "Meu dia" : "Hoje", icone: "hoje" },
+    { href: "/hoje", rotulo: quemAtende ? "Meu dia" : "Hoje", icone: "hoje" },
     {
-      href: "/novo/agenda",
+      href: "/agenda",
       rotulo: quemAtende ? "Minha agenda" : "Agenda",
       icone: "agenda",
     },
     {
-      href: "/novo/pacientes",
+      href: "/pacientes",
       rotulo: cargo === "educador" ? "Alunos" : quemAtende ? "Meus pacientes" : "Pacientes",
       icone: "pacientes",
     },
     ...(quemAtende
       ? []
-      : [{ href: "/novo/whatsapp", rotulo: "WhatsApp", icone: "conversas" as const }]),
+      : [{ href: "/whatsapp", rotulo: "WhatsApp", icone: "conversas" as const }]),
     ...(veRelatorios
-      ? [{ href: "/novo/relatorios", rotulo: "Relatórios", icone: "relatorios" as const }]
+      ? [{ href: "/relatorios", rotulo: "Relatórios", icone: "relatorios" as const }]
       : []),
   ];
 }
