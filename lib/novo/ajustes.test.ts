@@ -5,7 +5,12 @@ import { describe, expect, it } from "vitest";
 
 import { NAV_CATALOG } from "@/lib/navigation/catalogo";
 
-import { AJUSTES_NA_INTERFACE_NOVA, enderecoDoAjuste } from "./ajustes";
+import {
+  AJUSTES_NA_INTERFACE_NOVA,
+  DETALHES_NA_INTERFACE_NOVA,
+  enderecoDoAjuste,
+  enderecoNaInterfaceNova,
+} from "./ajustes";
 
 const CATALOGO = new Set<string>(NAV_CATALOG.map((d) => d.href));
 
@@ -45,5 +50,33 @@ describe("os ajustes do administrador na interface nova", () => {
   it("nenhuma tela do catálogo ficou só na versão atual", () => {
     const fora = NAV_CATALOG.map((d) => d.href).filter((h) => !enderecoDoAjuste(h).naNova);
     expect(fora).toEqual([]);
+  });
+
+  it("cada tela de detalhe tem página aqui que monta a de lá (o negócio, que só redireciona, refaz o desvio)", () => {
+    for (const [atual, nova] of DETALHES_NA_INTERFACE_NOVA) {
+      const pagina = path.join(process.cwd(), "app", "(nova)", nova, "page.tsx");
+      expect(existsSync(pagina), `${nova} sem ${pagina}`).toBe(true);
+      const fonte = readFileSync(pagina, "utf8");
+      if (atual === "/app/leads/[id]") expect(fonte).toContain("redirect(`/ajustes/funis/");
+      else expect(fonte).toContain(`from "@/app${atual}/page"`);
+    }
+  });
+
+  it("um link de lá leva à tela daqui, com o id e a busca; o que não tem par segue para lá", () => {
+    const ID = "4c97628c-6540-4f09-8c32-1bc43e99098a";
+    expect(enderecoNaInterfaceNova(`/app/pipelines/${ID}?lead=7`)).toBe(
+      `/ajustes/funis/${ID}?lead=7`,
+    );
+    expect(enderecoNaInterfaceNova("/app/campaigns/new")).toBe("/ajustes/campanhas/nova");
+    expect(enderecoNaInterfaceNova(`/app/campaigns/${ID}/edit`)).toBe(
+      `/ajustes/campanhas/${ID}/editar`,
+    );
+    expect(enderecoNaInterfaceNova("/app/ai/agents/new")).toBe("/ajustes/ia/agentes/novo");
+    expect(enderecoNaInterfaceNova(`/app/ai/agents/${ID}`)).toBe(`/ajustes/ia/agentes/${ID}`);
+    expect(enderecoNaInterfaceNova("/app/settings/tags")).toBe("/ajustes/etiquetas");
+    expect(enderecoNaInterfaceNova(`/app/contacts/${ID}`)).toBe(`/pacientes/${ID}`);
+    expect(enderecoNaInterfaceNova("/app/crm")).toBeNull();
+    expect(enderecoNaInterfaceNova("/app/settings/tags#x")).toBeNull();
+    expect(enderecoNaInterfaceNova("https://exemplo.com/app/kanban")).toBeNull();
   });
 });
