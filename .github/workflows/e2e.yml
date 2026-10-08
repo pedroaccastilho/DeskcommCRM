@@ -1270,6 +1270,7 @@ jobs:
         clinica-hoje-chegada.spec.ts
         clinica-prontuario-adendo.spec.ts
         clinica-gestao-por-perfil.spec.ts
+        clinica-ficha-completa.spec.ts
 
       # ─── FORA_DO_CI — as que ficaram fora, e o motivo de cada uma ───
       #

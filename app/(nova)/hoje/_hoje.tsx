@@ -282,7 +282,8 @@ export function Hoje() {
               <PainelLateral
                 titulo="Evoluções para escrever"
                 vazio="Nenhuma evolução pendente. Tudo em dia."
-                itens={(pendencias.data ?? []).slice(0, 6).map((p) => ({
+                limite={6}
+                itens={(pendencias.data ?? []).map((p) => ({
                   id: p.appointment_id,
                   nome: p.paciente,
                   detalhe: `${dataLonga(p.inicio, fuso, tag).split(",")[0]} às ${hora(p.inicio, fuso)}`,
@@ -528,17 +529,24 @@ interface ItemLateral {
 
 function PainelLateral({
   titulo,
-  itens,
+  itens: todos,
   total,
   vazio,
   testid,
+  limite,
 }: {
   titulo: string;
   itens: ItemLateral[];
   total: number;
   vazio: string;
   testid?: string;
+  /** Mostra só os primeiros, com "Ver todas" para abrir o resto ali mesmo. */
+  limite?: number;
 }) {
+  const t = useT();
+  const [verTodas, setVerTodas] = React.useState(false);
+  const cortado = limite !== undefined && !verTodas && todos.length > limite;
+  const itens = cortado ? todos.slice(0, limite) : todos;
   return (
     <section className="n-cartao n-entra p-5" data-testid={testid}>
       <h2 className="mb-3 flex items-center justify-between text-[15px] font-bold">
@@ -587,6 +595,17 @@ function PainelLateral({
             );
           })}
         </ul>
+      )}
+      {limite !== undefined && todos.length > limite && (
+        <button
+          type="button"
+          className="n-botao n-botao-suave n-botao-pequeno mt-3 w-full"
+          onClick={() => setVerTodas((v) => !v)}
+          aria-expanded={verTodas}
+          data-testid={testid ? `${testid}-ver-todas` : undefined}
+        >
+          {verTodas ? t("Mostrar menos") : `${t("Ver todas")} (${todos.length})`}
+        </button>
       )}
     </section>
   );

@@ -6,8 +6,15 @@
  * profissional lê o histórico completo, de todas as áreas (decisão do Pedro, 2026-10-03), e
  * assina só o que é dele.
  */
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
+import { toast } from "sonner";
+
+import { showApiError } from "@/components/feedback/ApiErrorToast";
+import { apiClient } from "@/lib/api/client";
+import { atende } from "@/lib/novo/cargo";
 
 import {
   ROTULO_DA_MODALIDADE,
@@ -51,7 +58,7 @@ const SITUACAO: Record<string, { rotulo: string; classe: string }> = {
 export function Paciente({ contactId }: { contactId: string }) {
   const t = useT();
   const tag = useTagDeIdioma();
-  const { fuso, role, veProntuario, eu, podeIrParaAAtual } = useNovo();
+  const { fuso, role, cargo, veProntuario, eu, podeIrParaAAtual } = useNovo();
   const paciente = usePaciente(contactId);
   const sessoes = useSessoesDoPaciente(contactId);
   const pacotes = usePacotesDoPaciente(contactId);
@@ -62,6 +69,7 @@ export function Paciente({ contactId }: { contactId: string }) {
   const [agendar, setAgendar] = React.useState(false);
   const [escrever, setEscrever] = React.useState(false);
   const [adendoDe, setAdendoDe] = React.useState<RegistroDoProntuario | null>(null);
+  const [filtro, setFiltro] = React.useState<string>("");
   const minhasModalidades: string[] = eu?.profissional?.modalidades ?? [];
   const [editar, setEditar] = React.useState(false);
   const origem = useOrigemDoPaciente(contactId);
@@ -91,6 +99,12 @@ export function Paciente({ contactId }: { contactId: string }) {
   const futuras = sessoes.data?.futuras ?? [];
   const passadas = sessoes.data?.passadas ?? [];
   const realizadas = passadas.filter((s) => s.situacao === "completed").length;
+  const registros = prontuario.data ?? [];
+  const modalidadesDoProntuario = [...new Set(registros.map((r) => r.modalidade))];
+  const filtroValido = filtro === "" || modalidadesDoProntuario.includes(filtro as never);
+  const registrosVistos = filtroValido
+    ? registros.filter((r) => filtro === "" || r.modalidade === filtro)
+    : registros;
   const faltas = passadas.filter((s) => s.situacao === "no_show").length;
 
   return (
@@ -110,7 +124,15 @@ export function Paciente({ contactId }: { contactId: string }) {
           </p>
           <OrigemETags origem={origem.data ?? null} tags={c.tags ?? []} />
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
+          {!atende(cargo) && (
+            <BotaoDoWhatsapp
+              contactId={contactId}
+              telefone={c.phone_number ?? null}
+              conversa={c.conversa ?? null}
+              podeAbrir={role !== "viewer"}
+            />
+          )}
           {role !== "viewer" && (
             <button
               type="button"
@@ -141,6 +163,8 @@ export function Paciente({ contactId }: { contactId: string }) {
           )}
         </div>
       </header>
+
+      {c.is_blocked && <AvisoDeBloqueio contactId={contactId} podeDesbloquear={role === "admin"} />}
 
       {/* Números do paciente */}
       <div className="n-entra mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -186,9 +210,33 @@ export function Paciente({ contactId }: { contactId: string }) {
                 ) : null
               }
             >
+              {modalidadesDoProntuario.length > 1 && (
+                <div
+                  className="mb-4 flex flex-wrap gap-2"
+                  role="group"
+                  aria-label={t("Filtrar por modalidade")}
+                  data-testid="novo-prontuario-filtro"
+                >
+                  {["", ...modalidadesDoProntuario].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      aria-pressed={(filtroValido ? filtro : "") === m}
+                      onClick={() => setFiltro(m)}
+                      className={`n-botao n-botao-pequeno ${
+                        (filtroValido ? filtro : "") === m ? "n-botao-escuro" : "n-botao-suave"
+                      }`}
+                    >
+                      {m === ""
+                        ? t("Todas")
+                        : ROTULO_DA_MODALIDADE[m as keyof typeof ROTULO_DA_MODALIDADE]}
+                    </button>
+                  ))}
+                </div>
+              )}
               {prontuario.isLoading ? (
                 <Carregando linhas={2} />
-              ) : (prontuario.data ?? []).length === 0 ? (
+              ) : registros.length === 0 ? (
                 <Vazio
                   titulo="Prontuário em branco"
                   texto="A primeira avaliação ou evolução aparece aqui."
@@ -198,7 +246,7 @@ export function Paciente({ contactId }: { contactId: string }) {
                   className="relative grid gap-4 border-l-2 border-[var(--n-linha)] pl-6"
                   data-testid="novo-prontuario"
                 >
-                  {(prontuario.data ?? []).map((r) => (
+                  {registrosVistos.map((r) => (
                     <Registro
                       key={r.id}
                       registro={r}
@@ -326,6 +374,128 @@ export function Paciente({ contactId }: { contactId: string }) {
             setAdendoDe(null);
           }}
         />
+      )}
+    </div>
+  );
+}
+
+/**
+ * A conversa do paciente no WhatsApp, como o "Abrir conversa no Inbox" da ficha da versão atual.
+ * Sem conversa ainda, abre uma pelo telefone (a mesma rota que a folha da sessão usa para enviar).
+ */
+function BotaoDoWhatsapp({
+  contactId,
+  telefone,
+  conversa,
+  podeAbrir,
+}: {
+  contactId: string;
+  telefone: string | null;
+  conversa: { id: string; unread?: number | null } | null;
+  podeAbrir: boolean;
+}) {
+  const t = useT();
+  const router = useRouter();
+  const abrir = useMutation({
+    mutationFn: async () =>
+      (
+        await apiClient.post<{ data: { conversation_id: string } }>(
+          "/api/v1/conversations/open-with-contact",
+          { contact_id: contactId, phone_number: telefone },
+        )
+      ).data.conversation_id,
+    onSuccess: (id) => router.push(`/whatsapp?id=${encodeURIComponent(id)}`),
+    onError: (err) => showApiError(err),
+  });
+  if (conversa) {
+    return (
+      <Link
+        href={`/whatsapp?id=${encodeURIComponent(conversa.id)}`}
+        className="n-botao n-botao-suave"
+        data-testid="novo-paciente-whatsapp"
+      >
+        {t("WhatsApp")}
+        {conversa.unread ? (
+          <span className="n-selo n-selo-aviso ml-1.5">{conversa.unread}</span>
+        ) : null}
+      </Link>
+    );
+  }
+  if (!telefone || !podeAbrir) return null;
+  return (
+    <button
+      type="button"
+      className="n-botao n-botao-suave"
+      disabled={abrir.isPending}
+      onClick={() => abrir.mutate()}
+      data-testid="novo-paciente-whatsapp"
+    >
+      {t("WhatsApp")}
+    </button>
+  );
+}
+
+/**
+ * Quem mandou "parar" no WhatsApp fica bloqueado: nada sai para ele. Desbloquear é do
+ * Administrador, com a mesma confirmação e a mesma rota da ficha da versão atual (auditada).
+ */
+function AvisoDeBloqueio({
+  contactId,
+  podeDesbloquear,
+}: {
+  contactId: string;
+  podeDesbloquear: boolean;
+}) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const [confirmar, setConfirmar] = React.useState(false);
+  const desbloquear = useMutation({
+    mutationFn: async () =>
+      apiClient.post(`/api/v1/contacts/${encodeURIComponent(contactId)}/unblock`, {}),
+    onSuccess: () => {
+      toast.success(t("Contato desbloqueado."));
+      setConfirmar(false);
+      void queryClient.invalidateQueries({ queryKey: ["contacts", contactId] });
+    },
+    onError: (err) => showApiError(err),
+  });
+  return (
+    <div
+      className="n-entra mt-6 rounded-2xl bg-[var(--n-aviso-suave)] p-4 text-sm text-[var(--n-aviso)]"
+      role="status"
+      data-testid="novo-paciente-bloqueado"
+    >
+      <p>
+        <span className="n-selo n-selo-alerta mr-2">{t("Bloqueado")}</span>
+        {confirmar
+          ? t(
+              "Este contato pediu para não receber mais mensagens. Desbloquear volta a permitir campanhas, follow-ups e respostas da IA para ele, e a ação fica registrada na auditoria em seu nome.",
+            )
+          : t(
+              "Este contato pediu para não receber mensagens. Dá para entender o caso aqui, mas nada pode ser enviado a ele.",
+            )}
+      </p>
+      {podeDesbloquear && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {confirmar && (
+            <button
+              type="button"
+              className="n-botao n-botao-suave n-botao-pequeno"
+              onClick={() => setConfirmar(false)}
+            >
+              {t("Cancelar")}
+            </button>
+          )}
+          <button
+            type="button"
+            className="n-botao n-botao-escuro n-botao-pequeno"
+            disabled={desbloquear.isPending}
+            onClick={() => (confirmar ? desbloquear.mutate() : setConfirmar(true))}
+            data-testid={confirmar ? "novo-confirmar-desbloqueio" : "novo-desbloquear"}
+          >
+            {t("Desbloquear")}
+          </button>
+        </div>
       )}
     </div>
   );

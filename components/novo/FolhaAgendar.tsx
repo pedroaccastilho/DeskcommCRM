@@ -93,6 +93,7 @@ function Conteudo({
   }, [fuso]);
   const [indice, setIndice] = React.useState(0);
   const [slot, setSlot] = React.useState<string | null>(null);
+  const [observacao, setObservacao] = React.useState("");
   const dia = dias[indice]!;
   const seguinte = new Date(Date.UTC(dia.ano, dia.mes - 1, dia.dia + 1, 12));
   const filtro =
@@ -124,6 +125,7 @@ function Conteudo({
           starts_at: slot,
           owner_user_id: dono,
           contact_id: paciente!.id,
+          description: observacao.trim() || undefined,
         },
         { idempotencyKey: chave },
       ),
@@ -299,6 +301,23 @@ function Conteudo({
               </div>
             )}
           </div>
+        )}
+
+        {tipo && dono && (
+          <label className="block">
+            <span className="n-rotulo">
+              {t("Observação")} <span className="n-fraco font-normal">{t("(opcional)")}</span>
+            </span>
+            <textarea
+              className="n-campo"
+              rows={2}
+              maxLength={2000}
+              value={observacao}
+              onChange={(e) => setObservacao(e.target.value)}
+              placeholder={t("O que a equipe precisa lembrar neste horário")}
+              data-testid="novo-observacao-do-agendamento"
+            />
+          </label>
         )}
 
         <button
