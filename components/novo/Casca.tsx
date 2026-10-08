@@ -262,7 +262,7 @@ function FaixaDoVerComo({ nome }: { nome: string }) {
     setVoltando(true);
     try {
       await apiClient.delete("/api/v1/clinica/ver-como");
-      window.location.assign("/novo/equipe");
+      window.location.assign("/equipe");
     } catch (err) {
       setVoltando(false);
       showApiError(err);

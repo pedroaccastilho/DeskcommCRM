@@ -341,7 +341,7 @@ function FolhaDosPerfis({ membro, aoFechar }: { membro: Membro; aoFechar: () => 
   const entrarComo = useMutation({
     mutationFn: async () =>
       apiClient.post("/api/v1/clinica/ver-como", { user_id: membro.user_id }),
-    onSuccess: () => window.location.assign("/novo"),
+    onSuccess: () => window.location.assign("/hoje"),
     onError: (err) => showApiError(err),
   });
   return (

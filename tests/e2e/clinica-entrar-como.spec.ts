@@ -115,7 +115,7 @@ test.describe("Administrador entra como outra pessoa da equipe", () => {
       for (const r of semear) if (r.error) throw new Error(`semear: ${r.error.message}`);
 
       // ── 1. Na Equipe, o administrador abre a pessoa e entra como ela ──────────
-      await page.goto("/novo/equipe");
+      await page.goto("/equipe");
       await expect(page.getByTestId("novo-equipe")).toBeVisible({ timeout: ESPERA });
       await page.getByTestId("novo-equipe-membro").filter({ hasText: email }).click();
       const folha = page.getByTestId("novo-folha-perfis");
@@ -123,7 +123,7 @@ test.describe("Administrador entra como outra pessoa da equipe", () => {
       await folha.getByTestId("novo-entrar-como").click();
 
       // ── 2. A tela passa a ser a dela, com a faixa fixa ────────────────────────
-      await page.waitForURL(/\/novo$/, { timeout: ESPERA });
+      await page.waitForURL(/\/hoje$/, { timeout: ESPERA });
       const faixa = page.getByTestId("novo-faixa-ver-como");
       await expect(faixa).toContainText(`Você está vendo como ${nome}.`, { timeout: ESPERA });
       const trilho = page.locator("nav.n-trilho");
@@ -149,7 +149,7 @@ test.describe("Administrador entra como outra pessoa da equipe", () => {
 
       // ── 4. Volta para o administrador ─────────────────────────────────────────
       await faixa.getByTestId("novo-voltar-ao-administrador").click();
-      await page.waitForURL(/\/novo\/equipe$/, { timeout: ESPERA });
+      await page.waitForURL(/\/equipe$/, { timeout: ESPERA });
       await expect(page.getByTestId("novo-equipe")).toBeVisible({ timeout: ESPERA });
       await expect(page.getByTestId("novo-faixa-ver-como")).toHaveCount(0);
       await expect(page.getByTestId("novo-porta-equipe")).toBeVisible();
