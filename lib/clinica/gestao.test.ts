@@ -8,6 +8,9 @@ import {
   horaBr,
   linhasDoResumo,
   taxaDeFaltas,
+  TELAS_DO_PERFIL,
+  telasDaGestao,
+  veLgpdEAcessos,
   veRelatoriosDaGestao,
   type RelatorioDaGestao,
 } from "./gestao";
@@ -106,5 +109,58 @@ describe("quem vê os relatórios", () => {
     expect(veRelatoriosDaGestao("agent", ["recepcao"])).toBe(false);
     // Perfil gravado sem o papel que a rota exige: o menu não mostra a porta.
     expect(veRelatoriosDaGestao("agent", ["gerente"])).toBe(false);
+  });
+});
+
+describe("as telas da Gestão de quem não administra", () => {
+  it("cada perfil abre o que faz, e os perfis somam", () => {
+    expect(telasDaGestao("manager", ["financeiro"]).sort()).toEqual(
+      ["/app/comandas", "/app/faturamento", "/app/settings/tenant/financeiro"].sort(),
+    );
+    expect(telasDaGestao("manager", ["juridico"])).toEqual(["/app/audit", "/app/lgpd/requests"]);
+    expect(telasDaGestao("manager", ["financeiro", "juridico"]).sort()).toEqual(
+      [
+        "/app/audit",
+        "/app/comandas",
+        "/app/faturamento",
+        "/app/lgpd/requests",
+        "/app/settings/tenant/financeiro",
+      ].sort(),
+    );
+    expect(telasDaGestao("manager", ["gerente", "fisioterapeuta"])).toEqual([
+      ...TELAS_DO_PERFIL.gerente,
+    ]);
+  });
+
+  it("o Jurídico não vê dinheiro, e a recepção e quem atende não ganham a porta", () => {
+    const juridico = telasDaGestao("manager", ["juridico"]);
+    expect(juridico).not.toContain("/app/comandas");
+    expect(juridico).not.toContain("/app/faturamento");
+    expect(telasDaGestao("agent", ["recepcao"])).toEqual([]);
+    expect(telasDaGestao("agent", ["fisioterapeuta"])).toEqual([]);
+  });
+
+  it("o Administrador tem os Ajustes inteiros, e perfil sem o degrau não ganha porta", () => {
+    expect(telasDaGestao("admin", ["administrador"])).toEqual([]);
+    expect(telasDaGestao("agent", ["gerente"])).toEqual([]);
+  });
+
+  it("toda tela da Gestão já tem casa na interface nova", async () => {
+    const { AJUSTES_NA_INTERFACE_NOVA } = await import("@/lib/novo/ajustes");
+    for (const telas of Object.values(TELAS_DO_PERFIL)) {
+      for (const href of telas) expect(Object.keys(AJUSTES_NA_INTERFACE_NOVA)).toContain(href);
+    }
+  });
+});
+
+describe("LGPD e quem abriu o prontuário", () => {
+  it("Administrador e Jurídico; Gerente, Financeiro e quem atende não", () => {
+    expect(veLgpdEAcessos("admin", [])).toBe(true);
+    expect(veLgpdEAcessos("manager", ["juridico"])).toBe(true);
+    expect(veLgpdEAcessos("manager", ["gerente"])).toBe(false);
+    expect(veLgpdEAcessos("manager", ["financeiro"])).toBe(false);
+    expect(veLgpdEAcessos("agent", ["fisioterapeuta"])).toBe(false);
+    // Perfil gravado sem o degrau que as rotas exigem.
+    expect(veLgpdEAcessos("agent", ["juridico"])).toBe(false);
   });
 });

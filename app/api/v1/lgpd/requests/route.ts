@@ -11,7 +11,8 @@ import { z } from "zod";
 
 import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
-import { createClient } from "@/lib/supabase/server";
+import { recusaForaDoJuridico } from "@/lib/clinica/gestao-servidor";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { traduzir } from "@/lib/i18n/dicionario";
 
 export const dynamic = "force-dynamic";
@@ -47,17 +48,22 @@ function computeSlaBucket(dueAt: string | null, receivedAt: string): SlaBucket {
 export async function GET(req: NextRequest): Promise<Response> {
   const requestId = randomUUID();
 
-  const authz = await requireRole("admin", {
+  const authz = await requireRole("manager", {
     requestId,
     resource: "lgpd_requests",
     allowPlatformAdmin: "leitura",
     permiteOrgSuspensa: true,
   });
   if (!authz.ok) return authz.response;
+  // Administrador ou o perfil Jurídico; o degrau `manager` acima é o piso.
+  const foraDoJuridico = await recusaForaDoJuridico(authz, requestId, { plataforma: "leitura" });
+  if (foraDoJuridico) return foraDoJuridico;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const { org: activeOrg } = authz;
 
-  const supabase = await createClient();
+  // A RLS de `lgpd_requests` é só do admin; o Jurídico passou pela trava acima. O filtro de
+  // organização das duas consultas abaixo vem da sessão, nunca do pedido.
+  const supabase = createAdminClient();
 
   // Parse + validate query params
   const rawParams: Record<string, string> = {};

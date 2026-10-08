@@ -16,6 +16,7 @@ import { z } from "zod";
 import { ok, fail } from "@/lib/api/wrappers";
 import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
+import { recusaForaDoJuridico } from "@/lib/clinica/gestao-servidor";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { traduzir } from "@/lib/i18n/dicionario";
 
@@ -34,13 +35,16 @@ export async function POST(
 
   const requestId = randomUUID();
 
-  const authz = await requireRole("admin", {
+  const authz = await requireRole("manager", {
     requestId,
     resource: "lgpd_requests",
     allowPlatformAdmin: true,
     permiteOrgSuspensa: true,
   });
   if (!authz.ok) return authz.response;
+  // Administrador ou o perfil Jurídico; o degrau `manager` acima é o piso.
+  const foraDoJuridico = await recusaForaDoJuridico(authz, requestId, { plataforma: "escrita" });
+  if (foraDoJuridico) return foraDoJuridico;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const { user: authUser, org: activeOrg } = authz;
 

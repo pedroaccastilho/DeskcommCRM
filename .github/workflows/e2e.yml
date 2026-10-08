@@ -1268,6 +1268,8 @@ jobs:
         clinica-entrar-como.spec.ts
         clinica-plano-de-tratamento.spec.ts
         clinica-hoje-chegada.spec.ts
+        clinica-prontuario-adendo.spec.ts
+        clinica-gestao-por-perfil.spec.ts
 
       # ─── FORA_DO_CI — as que ficaram fora, e o motivo de cada uma ───
       #

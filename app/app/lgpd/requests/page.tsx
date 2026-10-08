@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
-import { ROLE_RANK } from "@/lib/auth/types";
+import { telaDeLgpdLiberada } from "@/lib/clinica/gestao-servidor";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { RequestsTable } from "./RequestsTable";
 
@@ -13,9 +13,8 @@ export default async function LgpdRequestsPage() {
 
   if (!activeOrg) redirect("/app");
 
-  // Permission: role >= admin OR platform_admin (lgpd:execute)
-  const isAllowed =
-    (user.is_platform_admin && !user.support) || ROLE_RANK[activeOrg.role] >= ROLE_RANK.admin;
+  // Administrador (ou platform admin) e o perfil Jurídico (`telaDeLgpdLiberada`).
+  const isAllowed = await telaDeLgpdLiberada(user, activeOrg);
   if (!isAllowed) redirect("/app");
 
   const idioma = user.idioma;
@@ -26,7 +25,7 @@ export default async function LgpdRequestsPage() {
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">{t("Solicitações LGPD")}</h1>
         <p className="text-sm text-muted-foreground">
-          {t("Anonimizações e solicitações de dados de titulares. Apenas admins.")}
+          {t("Anonimizações e solicitações de dados de titulares. Só o Administrador e o Jurídico.")}
         </p>
       </header>
       <RequestsTable />

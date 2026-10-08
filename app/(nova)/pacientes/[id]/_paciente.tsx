@@ -51,7 +51,7 @@ const SITUACAO: Record<string, { rotulo: string; classe: string }> = {
 export function Paciente({ contactId }: { contactId: string }) {
   const t = useT();
   const tag = useTagDeIdioma();
-  const { fuso, role, veProntuario, eu } = useNovo();
+  const { fuso, role, veProntuario, eu, podeIrParaAAtual } = useNovo();
   const paciente = usePaciente(contactId);
   const sessoes = useSessoesDoPaciente(contactId);
   const pacotes = usePacotesDoPaciente(contactId);
@@ -61,6 +61,8 @@ export function Paciente({ contactId }: { contactId: string }) {
   const grade = useGradeDoDia(diaLocalISO(new Date(), fuso), fuso);
   const [agendar, setAgendar] = React.useState(false);
   const [escrever, setEscrever] = React.useState(false);
+  const [adendoDe, setAdendoDe] = React.useState<RegistroDoProntuario | null>(null);
+  const minhasModalidades: string[] = eu?.profissional?.modalidades ?? [];
   const [editar, setEditar] = React.useState(false);
   const origem = useOrigemDoPaciente(contactId);
 
@@ -197,7 +199,16 @@ export function Paciente({ contactId }: { contactId: string }) {
                   data-testid="novo-prontuario"
                 >
                   {(prontuario.data ?? []).map((r) => (
-                    <Registro key={r.id} registro={r} fuso={fuso} />
+                    <Registro
+                      key={r.id}
+                      registro={r}
+                      fuso={fuso}
+                      aoAdendar={
+                        r.tipo !== "adendo" && minhasModalidades.includes(r.modalidade)
+                          ? () => setAdendoDe(r)
+                          : null
+                      }
+                    />
                   ))}
                 </ol>
               )}
@@ -283,12 +294,15 @@ export function Paciente({ contactId }: { contactId: string }) {
           <CartaoDeTarefas contactId={contactId} nome={nome} />
           {eu?.ve_acessos && <CartaoDeAcessos contactId={contactId} fuso={fuso} />}
 
-          <a
-            href={`/app/contacts/${contactId}`}
-            className="n-fraco px-1 text-sm font-semibold hover:underline"
-          >
-            {t("Abrir a ficha completa na versão atual")} ›
-          </a>
+          {podeIrParaAAtual && (
+            <a
+              href={`/app/contacts/${contactId}`}
+              className="n-fraco px-1 text-sm font-semibold hover:underline"
+              data-testid="novo-ficha-na-atual"
+            >
+              {t("Abrir a ficha completa na versão atual")} ›
+            </a>
+          )}
         </aside>
       </div>
 
@@ -299,13 +313,18 @@ export function Paciente({ contactId }: { contactId: string }) {
         pacienteInicial={{ id: contactId, nome }}
       />
       <FolhaDoPaciente aberta={editar} aoFechar={() => setEditar(false)} paciente={c} />
-      {escrever && (
+      {(escrever || adendoDe) && (
         <FolhaDeEvolucao
+          key={adendoDe?.id ?? "novo"}
           contactId={contactId}
           nomeDoPaciente={nome}
           appointmentId={null}
-          modalidadeSugerida={null}
-          aoFechar={() => setEscrever(false)}
+          modalidadeSugerida={adendoDe?.modalidade ?? null}
+          adendoDe={adendoDe}
+          aoFechar={() => {
+            setEscrever(false);
+            setAdendoDe(null);
+          }}
         />
       )}
     </div>
@@ -358,7 +377,17 @@ function Numero({
   );
 }
 
-function Registro({ registro: r, fuso }: { registro: RegistroDoProntuario; fuso: string }) {
+function Registro({
+  registro: r,
+  fuso,
+  aoAdendar,
+}: {
+  registro: RegistroDoProntuario;
+  fuso: string;
+  /** Só para o profissional da mesma área; adendo não recebe adendo. */
+  aoAdendar: (() => void) | null;
+}) {
+  const t = useT();
   const tag = useTagDeIdioma();
   const campos = camposParaMostrar(r.modalidade, r.tipo).filter(
     (c) => r.conteudo[c.chave] !== undefined && String(r.conteudo[c.chave]).trim() !== "",
@@ -380,6 +409,9 @@ function Registro({ registro: r, fuso }: { registro: RegistroDoProntuario; fuso:
             {dataCurta(r.assinado_em, fuso, tag)} · {hora(r.assinado_em, fuso)}
           </span>
         </header>
+        {r.adendo_de && (
+          <p className="n-fraco mt-1 text-xs">{t("Adendo a um registro anterior")}</p>
+        )}
         {campos.length > 0 && (
           <dl className="mt-3 grid gap-2 sm:grid-cols-2">
             {campos.map((c) => (
@@ -393,9 +425,21 @@ function Registro({ registro: r, fuso }: { registro: RegistroDoProntuario; fuso:
           </dl>
         )}
         {r.texto && <p className="mt-3 text-[14.5px] whitespace-pre-wrap">{r.texto}</p>}
-        <footer className="n-suave mt-3 text-xs">
-          Assinado por {r.autor_nome}
-          {r.autor_registro ? ` · ${r.autor_registro}` : ""}
+        <footer className="n-suave mt-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <span>
+            Assinado por {r.autor_nome}
+            {r.autor_registro ? ` · ${r.autor_registro}` : ""}
+          </span>
+          {aoAdendar && (
+            <button
+              type="button"
+              className="n-botao n-botao-suave n-botao-pequeno"
+              onClick={aoAdendar}
+              data-testid="novo-adicionar-adendo"
+            >
+              {t("Adicionar adendo")}
+            </button>
+          )}
         </footer>
       </article>
     </li>

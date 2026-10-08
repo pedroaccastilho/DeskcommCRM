@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { requireAuth, resolveActiveOrg } from "@/lib/auth/server";
-import { ROLE_RANK } from "@/lib/auth/types";
+import { telaDeLgpdLiberada } from "@/lib/clinica/gestao-servidor";
 import { LgpdRequestDetail } from "./_client";
 
 export const dynamic = "force-dynamic";
@@ -18,8 +18,8 @@ export default async function LgpdRequestDetailPage({
 
   if (!activeOrg) redirect("/app");
 
-  const isAllowed =
-    (user.is_platform_admin && !user.support) || ROLE_RANK[activeOrg.role] >= ROLE_RANK.admin;
+  // Administrador (ou platform admin) e o perfil Jurídico (`telaDeLgpdLiberada`).
+  const isAllowed = await telaDeLgpdLiberada(user, activeOrg);
   if (!isAllowed) redirect("/app");
 
   return (

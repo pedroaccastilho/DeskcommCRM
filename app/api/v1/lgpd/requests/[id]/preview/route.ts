@@ -15,6 +15,7 @@ import type { NextRequest } from "next/server";
 
 import { ok, fail } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
+import { recusaForaDoJuridico } from "@/lib/clinica/gestao-servidor";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { collectExportData } from "@/lib/lgpd/export-collector";
 import { maskEmail, maskPhone } from "@/lib/lgpd/mask";
@@ -30,13 +31,16 @@ export async function GET(
 ): Promise<Response> {
   const requestId = randomUUID();
 
-  const authz = await requireRole("admin", {
+  const authz = await requireRole("manager", {
     requestId,
     resource: "lgpd_requests",
     allowPlatformAdmin: "leitura",
     permiteOrgSuspensa: true,
   });
   if (!authz.ok) return authz.response;
+  // Administrador ou o perfil Jurídico; o degrau `manager` acima é o piso.
+  const foraDoJuridico = await recusaForaDoJuridico(authz, requestId, { plataforma: "leitura" });
+  if (foraDoJuridico) return foraDoJuridico;
   const t = (texto: string) => traduzir(texto, authz.user.idioma);
   const { org: activeOrg } = authz;
 
