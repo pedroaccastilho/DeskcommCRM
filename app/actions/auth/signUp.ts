@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClientQuePedeLinkPorEmail } from "@/lib/supabase/server";
 import {
   signupSchema,
   signupComConviteSchema,
@@ -134,6 +134,17 @@ export async function signUp(
     return { ok: false, error: "somente_convite" };
   }
 
+  // ?type=signup sobrevive ao redirect do GoTrue e é o que distingue este fluxo
+  // do de recovery quando a verificação chega via `code` (PKCE), não
+  // `token_hash`. O convite vai junto para `/auth/confirm` ter para onde mandar
+  // a pessoa quando abre o link noutro aparelho: ali não há verificador de
+  // PKCE, a sessão não fecha, mas o e-mail JÁ foi confirmado pelo GoTrue — o
+  // que falta é entrar com a senha e aceitar. O token não é segredo novo: é o
+  // mesmo que já chegou a este endereço no e-mail do convite.
+  const destinoDoLink = convite
+    ? `${origin}/auth/confirm?type=signup&convite=${encodeURIComponent(convite)}`
+    : `${origin}/auth/confirm?type=signup`;
+
   // ── O GoTrue com o cadastro público FECHADO (#1653) ──────────────────────────
   //
   // Com `disable_signup` ligado no GoTrue — é o que fecha `POST /auth/v1/signup`
@@ -152,7 +163,7 @@ export async function signUp(
       password: parsed.data.password,
       inviteToken: convite,
       fullName: (parsed.data as SignupComConviteInput).full_name,
-      emailRedirectTo: `${origin}/auth/confirm?type=signup`,
+      emailRedirectTo: destinoDoLink,
     });
 
     if (!criada.ok) {
@@ -186,15 +197,13 @@ export async function signUp(
     return { ok: true, sessao_ativa: criada.sessao_ativa };
   }
 
-  const supabase = await createClient();
+  // Lax só no verificador de PKCE — ver `createClientQuePedeLinkPorEmail`.
+  const supabase = await createClientQuePedeLinkPorEmail();
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      // Ver comentário equivalente em requestPasswordReset.ts: ?type=signup
-      // sobrevive ao redirect do GoTrue e é o que distingue este fluxo do de
-      // recovery quando a verificação chega via `code` (PKCE), não `token_hash`.
-      emailRedirectTo: `${origin}/auth/confirm?type=signup`,
+      emailRedirectTo: destinoDoLink,
       // O convite é revalidado no servidor mesmo tendo sido validado ao montar
       // a tela: o campo de e-mail do formulário é adulterável no cliente, e a
       // decisão que importa acontece com o e-mail JÁ confirmado pelo provedor.

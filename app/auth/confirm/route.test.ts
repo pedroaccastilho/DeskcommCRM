@@ -33,6 +33,9 @@ vi.mock("@/lib/auth/convite-no-signup", () => ({ decidirConviteDoSignup: vi.fn()
 vi.mock("@/lib/auth/provision", () => ({ ensureTenantForUser: vi.fn(async () => undefined) }));
 vi.mock("@/lib/auth/politica-de-cadastro", () => ({ modoDeCadastro: vi.fn(async () => "aberto") }));
 vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
+vi.mock("@/lib/auth/invite-token", () => ({
+  verifyInviteToken: vi.fn((t: string) => (t === "convite-assinado" ? { email: "convidado@example.com" } : null)),
+}));
 vi.mock("@/lib/env", () => ({ env: { NEXT_PUBLIC_APP_URL: "http://localhost:3000" } }));
 
 const USUARIO = { id: "11111111-1111-4111-8111-111111111111", email: "convidado@example.com" };
@@ -143,6 +146,54 @@ describe("GET /auth/confirm", () => {
     const res = await GET(requisicao("code=abc"));
 
     expect(destino(res)).toBe("/login?error=template_padrao");
+  });
+
+  // Plano grátis do Supabase com o remetente embutido: os modelos de e-mail
+  // não são editáveis (medido em 2026-10-05), e o link padrão chega com `code`.
+  // Noutro navegador não há verificador de PKCE e a sessão não fecha — mas o
+  // GoTrue já confirmou o e-mail. O caminho é entrar, não "configurar modelos".
+  describe("code sem sessão (link padrão aberto noutro navegador)", () => {
+    function semSessao() {
+      comSupabase({
+        verifyOtp: { data: { user: null }, error: { message: "PKCE code verifier not found in storage" } },
+        getUser: { data: { user: null } },
+      });
+    }
+
+    it("cadastro com convite assinado: entrar e cair no aceite", async () => {
+      semSessao();
+      const { GET } = await import("./route");
+      const res = await GET(requisicao("type=signup&convite=convite-assinado&code=abc"));
+
+      expect(destino(res)).toBe(
+        `/login?error=email_confirmado&next=${encodeURIComponent("/team/accept-invite/convite-assinado")}`,
+      );
+      expect(vi.mocked(aplicarConvite)).not.toHaveBeenCalled();
+    });
+
+    it("convite que não fecha a assinatura não vira destino", async () => {
+      semSessao();
+      const { GET } = await import("./route");
+      const res = await GET(requisicao("type=signup&convite=forjado&code=abc"));
+
+      expect(destino(res)).toBe("/login?error=email_confirmado");
+    });
+
+    it("cadastro sem convite: entrar", async () => {
+      semSessao();
+      const { GET } = await import("./route");
+      const res = await GET(requisicao("type=signup&code=abc"));
+
+      expect(destino(res)).toBe("/login?error=email_confirmado");
+    });
+
+    it("redefinir senha: explica que o link fecha no navegador que o pediu", async () => {
+      semSessao();
+      const { GET } = await import("./route");
+      const res = await GET(requisicao("type=recovery&code=abc"));
+
+      expect(destino(res)).toBe("/login?error=recuperacao_noutro_navegador");
+    });
   });
 
   it("vínculo falhou: degrada para a tela de aceite, nunca deixa sem saída", async () => {

@@ -6,6 +6,7 @@ import { ensureTenantForUser } from "@/lib/auth/provision";
 import { decidirConviteDoSignup } from "@/lib/auth/convite-no-signup";
 import { modoDeCadastro } from "@/lib/auth/politica-de-cadastro";
 import { aplicarConvite } from "@/lib/auth/aplicar-convite";
+import { verifyInviteToken } from "@/lib/auth/invite-token";
 import { audit } from "@/lib/audit";
 import { env } from "@/lib/env";
 
@@ -115,10 +116,9 @@ export async function GET(request: NextRequest) {
       requestId,
     });
     // Dois códigos porque são duas causas e dois consertos. `link_invalido`
-    // continua sendo "peça outro link". `template_padrao` diz o que a tela
-    // antes escondia: o link veio do modelo padrão, pedir outro não adianta, e
-    // o conserto é configurar os templates (hostgator-setup-kit/marca-emails.sh).
-    return redirectTo(viaTokenHash ? "/login?error=link_invalido" : "/login?error=template_padrao");
+    // continua sendo "peça outro link".
+    if (viaTokenHash) return redirectTo("/login?error=link_invalido");
+    return redirectTo(destinoDoCodeSemSessao(type, url.searchParams.get("convite")));
   }
 
   if (sessaoPreservada) {
@@ -233,4 +233,33 @@ export async function GET(request: NextRequest) {
   });
 
   return redirectTo("/onboarding/welcome");
+}
+
+/**
+ * Para onde vai quem chegou com `code` (o link do modelo PADRÃO do Supabase) e
+ * não saiu com sessão — quase sempre porque abriu o e-mail noutro navegador ou
+ * aparelho, onde o verificador de PKCE não existe.
+ *
+ * O `code` só nasce DEPOIS que o `/auth/v1/verify` do GoTrue aceitou o token
+ * do e-mail: num cadastro, o e-mail já está confirmado quando a pessoa chega
+ * aqui. Falta só a sessão, e a senha ela tem. Mandá-la para "configure os
+ * modelos de e-mail" era apontar um conserto que, no plano grátis do Supabase
+ * com o remetente embutido, nem existe (medido em 2026-10-05).
+ *
+ * - cadastro com convite válido → entrar e cair no aceite do convite;
+ * - cadastro sem convite        → entrar;
+ * - redefinir senha             → o link só fecha no navegador que o pediu;
+ * - sem `type`                  → o diagnóstico antigo, de modelo padrão.
+ *
+ * O `convite` da URL é revalidado aqui: ele só vira destino se a assinatura
+ * fechar, e o aceite revalida tudo de novo (e-mail incluso) depois do login.
+ */
+function destinoDoCodeSemSessao(type: string | null, convite: string | null): string {
+  if (type === "recovery") return "/login?error=recuperacao_noutro_navegador";
+  if (type !== "signup") return "/login?error=template_padrao";
+  if (convite && verifyInviteToken(convite)) {
+    const next = encodeURIComponent(`/team/accept-invite/${convite}`);
+    return `/login?error=email_confirmado&next=${next}`;
+  }
+  return "/login?error=email_confirmado";
 }

@@ -121,5 +121,9 @@ describe("/auth/confirm nomeia a causa da recusa", () => {
     );
     expect(fonte).toContain('error === "template_padrao"');
     expect(fonte).toContain("marca-emails.sh");
+    // Os dois códigos do link padrão aberto noutro navegador (ver
+    // `destinoDoCodeSemSessao` na rota) — mesmo risco de aviso mudo.
+    expect(fonte).toContain('error === "email_confirmado"');
+    expect(fonte).toContain('error === "recuperacao_noutro_navegador"');
   });
 });

@@ -45,7 +45,7 @@
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
+import { createClientQuePedeLinkPorEmail } from "@/lib/supabase/server";
 import { urlDoSupabaseNoServidor } from "@/lib/supabase/url-do-servidor";
 
 /** O que o GoTrue conta de si no endpoint público de settings. */
@@ -146,7 +146,8 @@ export async function criarContaDeConvite(params: {
 
   // Mesmo cliente anônimo de sempre: quem manda no `/resend` é a chave pública,
   // igualzinho ao `supabase.auth.signUp()` que este caminho substitui.
-  const supabase = await createClient();
+  // Lax só no verificador de PKCE — ver `createClientQuePedeLinkPorEmail`.
+  const supabase = await createClientQuePedeLinkPorEmail();
   const { error: erroResend } = await supabase.auth.resend({
     type: "signup",
     email: params.email,
