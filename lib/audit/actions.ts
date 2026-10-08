@@ -1041,6 +1041,7 @@ export const AUDIT_ACTIONS = [
   // Plano de tratamento (migration 9006): o retorno de reavaliação que o sistema marcou sozinho
   // na agenda do avaliador, e se o paciente foi avisado.
   "clinica.retorno_marcado",
+  "clinica.interface_principal_definida",
   // Relatório da gestão (migration 9009): a planilha que sai para a contabilidade leva nome e
   // telefone de paciente; quem exportou, qual tipo e qual período fica registrado.
   "clinica.relatorio_exportado",

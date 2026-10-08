@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import { fetchDoServidor } from "@/lib/supabase/fetch-do-servidor";
 import { urlDoSupabaseNoServidor } from "@/lib/supabase/url-do-servidor";
 import { isPublicPath } from "@/lib/auth/public-paths";
+import { ehDaInterfaceNova } from "@/lib/novo/rotas";
 import {
   verifyImpersonateCookieEdge,
   IMPERSONATE_COOKIE_NAME_EDGE,
@@ -13,6 +14,12 @@ import {
 const COOKIE_NAME = "sb-deskcomm-auth";
 
 export async function proxy(request: NextRequest) {
+  // Os cabeçalhos que os Server Components leem vão para o pedido ANTES do `NextResponse.next`:
+  // ele copia os cabeçalhos do pedido no momento em que é criado, e o que se põe depois não
+  // chega ao servidor. A busca (`?id=` da conversa) só passou a chegar assim — o layout de `/app`
+  // a usa para levar quem não administra à mesma conversa na interface nova (`lib/novo/raiz.ts`).
+  request.headers.set("x-pathname", request.nextUrl.pathname);
+  request.headers.set("x-search", request.nextUrl.search);
   const response = NextResponse.next({ request: { headers: request.headers } });
 
   // Inject X-Request-Id for downstream correlation (audit log, error wrappers).
@@ -36,7 +43,6 @@ export async function proxy(request: NextRequest) {
   }
   // Expose pathname to Server Components via header (used by onboarding layout).
   response.headers.set("x-pathname", pathname);
-  request.headers.set("x-pathname", pathname);
 
   // EPIC-11: the admin surface is reached by PATH (`/admin/*`) — the self-host kit
   // points `NEXT_PUBLIC_ADMIN_URL` at the same host as the app and maps no `admin.`
@@ -113,11 +119,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // EPIC-11 S-11.07: validate impersonate cookie on /app/* paths. Middleware
+  // EPIC-11 S-11.07: validate impersonate cookie on /app/* paths (and on the new interface,
+  // which lives at the root: `lib/novo/rotas.ts`). Middleware
   // runs in Edge — no DB access, only HMAC + expiry. On any failure we delete
   // the presentation cookie. The database support session remains authoritative:
   // expired/revoked support still blocks the app until explicit exit.
-  if (pathname.startsWith("/app")) {
+  if (pathname.startsWith("/app") || ehDaInterfaceNova(pathname)) {
     const impCookie = request.cookies.get(IMPERSONATE_COOKIE_NAME_EDGE)?.value;
     if (impCookie) {
       const result = await verifyImpersonateCookieEdge(
