@@ -1275,6 +1275,7 @@ jobs:
         clinica-equipe-completa.spec.ts
         clinica-ficha-linha-do-tempo.spec.ts
         clinica-tarefas-calendario.spec.ts
+        clinica-pacientes-duplicados.spec.ts
 
       # ─── FORA_DO_CI — as que ficaram fora, e o motivo de cada uma ───
       #
