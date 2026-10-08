@@ -81,7 +81,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   const { data, error } = await supabase
     .from("calendar_appointments")
     .select(
-      "id, title, starts_at, ends_at, status, owner_user_id, event_type_id, contact_id, contacts(name, display_name, phone_number)",
+      "id, title, starts_at, ends_at, status, owner_user_id, event_type_id, contact_id, description, contacts(name, display_name, phone_number)",
     )
     .eq("organization_id", org)
     .eq("status", "pending")

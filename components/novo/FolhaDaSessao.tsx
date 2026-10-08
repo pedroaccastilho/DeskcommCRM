@@ -239,6 +239,13 @@ export function FolhaDaSessao({
                     : `${t("Chegou às")} ${hora(sessao.chegou_em, fuso)}. ${t("Aguardando na recepção.")}`}
                 </p>
               )}
+              {sessao.observacao && (
+                <p className="text-sm whitespace-pre-wrap" data-testid="novo-observacao-da-sessao">
+                  <span className="n-fraco text-xs font-bold">{t("Observação")}</span>
+                  <br />
+                  {sessao.observacao}
+                </p>
+              )}
               {sessao.paciente && sessao.modalidade && pacotes.data && (
                 <p className="n-suave text-sm" data-testid="novo-pacote-da-sessao">
                   {pacote

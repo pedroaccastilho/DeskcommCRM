@@ -174,6 +174,8 @@ export interface SessaoDaGrade {
   chegou_em: string | null;
   /** Quando o atendimento começou (migration 9007); `null` = ainda não começou. */
   atendimento_iniciado_em: string | null;
+  /** A "Observação" de quem marcou (`calendar_appointments.description`): o que lembrar no horário. */
+  observacao?: string | null;
 }
 
 /** A etapa do dia de uma sessão, como `clinica_sessao_etapas` a guarda (migration 9007). */
@@ -240,6 +242,7 @@ export interface LinhaDoCompromisso {
   owner_user_id: string | null;
   event_type_id: string | null;
   contact_id: string | null;
+  description?: string | null;
   contacts: { name: string | null; display_name: string | null; phone_number: string | null } | null;
 }
 
@@ -279,5 +282,6 @@ export function sessaoDaGrade(
       : null,
     chegou_em: etapa?.chegou_em ?? null,
     atendimento_iniciado_em: etapa?.atendimento_iniciado_em ?? null,
+    observacao: linha.description?.trim() || null,
   };
 }

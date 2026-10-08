@@ -17794,6 +17794,8 @@ export const DICIONARIO: Traducoes = {
   "Anonimizações e solicitações de dados de titulares. Só o Administrador e o Jurídico.": {
     es: "Anonimizaciones y solicitudes de datos de titulares. Solo el Administrador y el Jurídico.",
   },
+  "Contato desbloqueado.": { es: "Contacto desbloqueado." },
+  "Ver todas": { es: "Ver todas" },
 };
 
 /**
