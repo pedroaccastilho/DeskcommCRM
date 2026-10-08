@@ -8,6 +8,7 @@
  * folha. Substitui, na interface nova, a tela antiga Configurações › Profissionais de saúde.
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
 
@@ -118,6 +119,22 @@ export function Equipe() {
           Cadastrar pessoa
         </button>
       </div>
+      <p className="n-entra mt-4 flex flex-wrap gap-2">
+        <Link
+          href="/ajustes/equipe-completa"
+          className="n-botao n-botao-suave n-botao-pequeno"
+          data-testid="novo-equipe-acessos"
+        >
+          {t("Acessos e convites pendentes")}
+        </Link>
+        <Link
+          href="/ajustes/equipe-completa?aba=atendimento"
+          className="n-botao n-botao-suave n-botao-pequeno"
+          data-testid="novo-equipe-horarios"
+        >
+          {t("Horários de atendimento")}
+        </Link>
+      </p>
 
       <div className="mt-8 grid gap-8">
         {equipe.isLoading ? (
@@ -339,8 +356,7 @@ function FolhaDosPerfis({ membro, aoFechar }: { membro: Membro; aoFechar: () => 
   });
   // "Entrar como": a tela inteira passa a ser a dessa pessoa, só para olhar (`lib/clinica/ver-como.ts`).
   const entrarComo = useMutation({
-    mutationFn: async () =>
-      apiClient.post("/api/v1/clinica/ver-como", { user_id: membro.user_id }),
+    mutationFn: async () => apiClient.post("/api/v1/clinica/ver-como", { user_id: membro.user_id }),
     onSuccess: () => window.location.assign("/hoje"),
     onError: (err) => showApiError(err),
   });

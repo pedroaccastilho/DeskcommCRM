@@ -25,7 +25,14 @@ import { useNovoSeHouver } from "./Casca";
  * campanha, `router.replace` ao limpar a busca): ela recebe aqui um roteador que traduz o endereço
  * antes de navegar, então quem salva um agente continua na interface nova.
  */
-export function CascaDoAjuste({ children }: { children: React.ReactNode }) {
+export function CascaDoAjuste({
+  children,
+  voltar,
+}: {
+  children: React.ReactNode;
+  /** Para onde o "‹" leva, quando a tela não sai dos Ajustes (a Equipe completa volta à Equipe). */
+  voltar?: { href: Route; rotulo: string };
+}) {
   const router = useRouter();
   // Quem não administra chega aqui pela Gestão (`telasDaGestao`), que é a mesma lista.
   const role = useNovoSeHouver()?.role;
@@ -55,8 +62,8 @@ export function CascaDoAjuste({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="n-conteudo max-w-6xl" data-testid="novo-ajuste">
-      <Link href="/ajustes" className="n-suave text-sm font-semibold">
-        ‹ {!role || veConfiguracoes(role) ? t("Ajustes") : t("Gestão")}
+      <Link href={voltar?.href ?? "/ajustes"} className="n-suave text-sm font-semibold">
+        ‹ {voltar ? t(voltar.rotulo) : !role || veConfiguracoes(role) ? t("Ajustes") : t("Gestão")}
       </Link>
       <div className="n-vestida n-ajuste mt-3" onClickCapture={aoClicar}>
         <AppRouterContext.Provider value={roteador}>{children}</AppRouterContext.Provider>

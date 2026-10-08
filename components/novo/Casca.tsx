@@ -179,7 +179,9 @@ export function Casca({
 
   const pathname = usePathname() ?? "/hoje";
   const menu = menuDoCargo(cargo, veRelatoriosDaGestao(role, eu.data?.cargos ?? []));
-  const ativo = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  // A Equipe completa (revogar, convites, horários) mora em /ajustes, mas é continuação da Equipe.
+  const caminho = pathname.startsWith("/ajustes/equipe-completa") ? "/equipe" : pathname;
+  const ativo = (href: string) => caminho === href || caminho.startsWith(`${href}/`);
 
   return (
     <Ctx.Provider value={contexto}>
