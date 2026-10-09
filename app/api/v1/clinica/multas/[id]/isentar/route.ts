@@ -1,8 +1,10 @@
 /**
  * ISENTAR UMA MULTA, COM MOTIVO (módulo clínica, migration 9002).
  *
- * POST { motivo } — a recepção (`agent`+) isenta quando há razão (atestado, imprevisto aceito).
- * Só multa `pendente`. O motivo, quem isentou e quando ficam na linha e na auditoria.
+ * POST { motivo? } — Administrador, Gerente ou Recepção isentam quando o paciente não vai pagar
+ * (atestado, imprevisto aceito). Motivo curto e opcional; sem ele, fica o padrão. Só multa
+ * `pendente`. O motivo, quem isentou e quando ficam na linha e na auditoria. Voltar a cobrar é
+ * `POST .../cobrar`.
  *
  * ⚠️ CLIENT DE SERVIÇO: `clinica_multas` não tem policy de escrita para a sessão, de propósito
  * (ninguém fabrica nem apaga multa pela API do Supabase). A organização vem do cookie validado e
@@ -17,6 +19,8 @@ import { audit } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/require-role";
 import { isentarMultaSchema } from "@/lib/clinica/agenda-schemas";
 import { MODULO_CLINICA_NAO_INSTALADO, moduloClinicaNaoInstalado } from "@/lib/clinica/api";
+import { recusaDaMulta } from "@/lib/clinica/gestao-servidor";
+import { motivoDaIsencao } from "@/lib/clinica/multas";
 import { requireSupportWrite } from "@/lib/impersonate/support";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -32,6 +36,8 @@ export async function POST(
 
   const authz = await requireRole("agent", { requestId, resource: "clinica_multas" });
   if (!authz.ok) return authz.response;
+  const recusa = await recusaDaMulta(authz.org.orgId, authz.user.id, authz.org.role, requestId);
+  if (recusa) return recusa;
 
   const { id } = await context.params;
   if (!z.string().uuid().safeParse(id).success) {
@@ -44,13 +50,14 @@ export async function POST(
     });
   }
 
+  const motivo = motivoDaIsencao(lido.data.motivo);
   const admin = createAdminClient();
   const org = authz.org.orgId;
   const { data, error } = await admin
     .from("clinica_multas")
     .update({
       status: "isenta",
-      isencao_motivo: lido.data.motivo,
+      isencao_motivo: motivo,
       isenta_por_user_id: authz.user.id,
       isenta_em: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -77,7 +84,7 @@ export async function POST(
     resourceType: "clinica_multa",
     resourceId: id,
     requestId,
-    metadata: { motivo: lido.data.motivo },
+    metadata: { motivo },
   });
 
   return ok(data, { requestId });

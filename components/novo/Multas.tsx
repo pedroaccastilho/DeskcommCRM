@@ -2,9 +2,11 @@
 
 /**
  * MULTAS na interface nova: o cartão da ficha (as multas do paciente, com a sessão que as gerou)
- * e a folha de ISENTAR, com motivo. Quem cria a multa é o servidor, ao cancelar em cima da hora;
- * a recepção isenta quando há razão (atestado, imprevisto aceito). As rotas são as da versão
- * atual (`GET /api/v1/clinica/multas`, `POST /api/v1/clinica/multas/{id}/isentar`).
+ * e a folha de ISENTAR, com motivo curto opcional. Quem cria a multa é o servidor, ao cancelar em
+ * cima da hora, e ela nasce "a cobrar". Administrador, Gerente e Recepção decidem se o paciente
+ * paga: isentam (atestado, imprevisto aceito) ou voltam a cobrar uma isenta
+ * (`lib/clinica/multas.ts`). Rotas: `GET /api/v1/clinica/multas`,
+ * `POST /api/v1/clinica/multas/{id}/isentar` e `POST /api/v1/clinica/multas/{id}/cobrar`.
  *
  * "Somente leitura" não vê: o valor é financeiro, e a rota responde 403.
  */
@@ -18,6 +20,7 @@ import { apiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/types";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
 import { useT } from "@/lib/i18n/IdiomaProvider";
+import { decideMulta } from "@/lib/clinica/multas";
 import { formatCents } from "@/lib/money";
 
 import { useNovo } from "./Casca";
@@ -49,8 +52,22 @@ export function valorDaMulta(m: MultaDaClinica, t: (s: string) => string): strin
 export function CartaoDeMultas({ contactId, fuso }: { contactId: string; fuso: string }) {
   const t = useT();
   const tag = useTagDeIdioma();
-  const { role } = useNovo();
+  const qc = useQueryClient();
+  const recarregar = useRecarregar();
+  const { role, eu, soOlhar } = useNovo();
+  const decide = !soOlhar && decideMulta(role, eu?.cargos ?? []);
   const [isentar, setIsentar] = React.useState<MultaDaClinica | null>(null);
+  const cobrar = useMutation({
+    mutationFn: async (m: MultaDaClinica) =>
+      apiClient.post(`/api/v1/clinica/multas/${encodeURIComponent(m.id)}/cobrar`, {}),
+    onSuccess: () => {
+      toast.success(t("A multa voltou a ser cobrada."));
+      void qc.invalidateQueries({ queryKey: ["clinica", "multas"] });
+      void qc.invalidateQueries({ queryKey: ["agenda", "clinica-multas"] });
+      recarregar();
+    },
+    onError: (e) => showApiError(e),
+  });
   const multas = useQuery({
     queryKey: ["clinica", "multas", "paciente", contactId],
     enabled: role !== "viewer",
@@ -96,7 +113,7 @@ export function CartaoDeMultas({ contactId, fuso }: { contactId: string; fuso: s
                   className={`n-selo ${m.status === "pendente" ? "n-selo-aviso" : "n-selo-neutro"}`}
                 >
                   {m.status === "pendente"
-                    ? t("Pendente")
+                    ? t("A cobrar")
                     : m.status === "isenta"
                       ? t("Isenta")
                       : t("Paga")}
@@ -111,14 +128,25 @@ export function CartaoDeMultas({ contactId, fuso }: { contactId: string; fuso: s
                   {t("Motivo")}: {m.isencao_motivo}
                 </p>
               )}
-              {m.status === "pendente" && (
+              {decide && m.status === "pendente" && (
                 <button
                   type="button"
                   className="n-botao n-botao-suave n-botao-pequeno mt-2"
                   onClick={() => setIsentar(m)}
                   data-testid="novo-isentar-multa"
                 >
-                  {t("Isentar multa")}
+                  {t("Não cobrar (isentar)")}
+                </button>
+              )}
+              {decide && m.status === "isenta" && (
+                <button
+                  type="button"
+                  className="n-botao n-botao-suave n-botao-pequeno mt-2"
+                  disabled={cobrar.isPending}
+                  onClick={() => cobrar.mutate(m)}
+                  data-testid="novo-cobrar-multa"
+                >
+                  {t("Voltar a cobrar")}
                 </button>
               )}
             </li>
@@ -169,7 +197,7 @@ export function FolhaIsentarMulta({
     >
       <div className="grid gap-5">
         <label className="grid gap-1.5">
-          <span className="n-rotulo !mb-0">{t("Motivo da isenção")}</span>
+          <span className="n-rotulo !mb-0">{t("Motivo da isenção (opcional)")}</span>
           <textarea
             className="n-campo min-h-[96px] py-3"
             value={motivo}
@@ -179,13 +207,15 @@ export function FolhaIsentarMulta({
             data-testid="novo-motivo-isencao"
           />
           <span className="n-fraco text-xs">
-            {t("O motivo, quem isentou e quando ficam registrados.")}
+            {t(
+              "O paciente não paga esta multa. O motivo, quem isentou e quando ficam registrados.",
+            )}
           </span>
         </label>
         <button
           type="button"
           className="n-botao n-botao-principal w-full"
-          disabled={motivo.trim().length < 3 || isentar.isPending}
+          disabled={(motivo.trim().length > 0 && motivo.trim().length < 3) || isentar.isPending}
           onClick={() => isentar.mutate()}
           data-testid="novo-confirmar-isencao"
         >

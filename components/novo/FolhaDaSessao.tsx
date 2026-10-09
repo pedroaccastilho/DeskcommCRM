@@ -22,6 +22,7 @@ import { instanteDe, partesNoFuso } from "@/lib/agenda/fuso";
 import { apiClient } from "@/lib/api/client";
 import type { PoliticaDaAgenda, SessaoDaGrade } from "@/lib/clinica/agenda";
 import { faltaLiberada, previaDaMulta } from "@/lib/clinica/balcao";
+import { decideMulta } from "@/lib/clinica/multas";
 import { DIAS_ATE_A_PROXIMA_SUGERIDA, proximaJaMarcada } from "@/lib/clinica/meu-dia";
 import { pacoteDaSessao } from "@/lib/clinica/pacotes-na-ficha";
 import { ROTULO_DA_MODALIDADE } from "@/lib/clinica/vocabulario";
@@ -273,7 +274,16 @@ export function FolhaDaSessao({
                       : ""}
                     .
                   </span>{" "}
-                  {t("Cobrar no próximo pagamento.")}
+                  {t("Cobrar no próximo pagamento.")}{" "}
+                  {sessao.paciente && !soOlhar && decideMulta(role, eu?.cargos ?? []) && (
+                    <Link
+                      href={`/pacientes/${sessao.paciente.id}`}
+                      className="font-semibold underline"
+                      data-testid="novo-multa-decidir-na-ficha"
+                    >
+                      {t("Cobrar ou isentar na ficha")}
+                    </Link>
+                  )}
                 </p>
               )}
             </div>
@@ -786,28 +796,46 @@ function PassoCancelar({
   const t = useT();
   const moeda = moedaServidaOu(useActiveOrg()?.currency);
   const recarregar = useRecarregar();
+  const { role, eu, soOlhar } = useNovo();
+  // Administrador, Gerente e Recepção já dizem aqui se o paciente paga a multa
+  // (`lib/clinica/multas.ts`); para os outros ela nasce "a cobrar", e a recepção decide depois.
+  const decide = !soOlhar && decideMulta(role, eu?.cargos ?? []);
   const [pelaClinica, setPelaClinica] = React.useState(false);
   const [motivo, setMotivo] = React.useState("");
+  const [cobrarMulta, setCobrarMulta] = React.useState(true);
+  const [motivoDaIsencao, setMotivoDaIsencao] = React.useState("");
   const previa = previaDaMulta({ sessao, agora: new Date(), politica, precoCents, pelaClinica });
+  const isentar = Boolean(previa) && decide && !cobrarMulta;
+  const motivoDaIsencaoCurto =
+    isentar && motivoDaIsencao.trim().length > 0 && motivoDaIsencao.trim().length < 3;
 
   const cancelar = useMutation({
     mutationFn: async () =>
       apiClient.post<{
-        data: { multa: { valor_cents: number | null; percentual: number } | null };
+        data: {
+          multa: { valor_cents: number | null; percentual: number; status: string } | null;
+        };
       }>(`/api/v1/clinica/agenda/${sessao.id}/cancelar`, {
         motivo: motivo.trim(),
         pela_clinica: pelaClinica,
+        ...(isentar ? { multa: "isentar", motivo_isencao: motivoDaIsencao.trim() } : {}),
       }),
     onSuccess: (r) => {
       const multa = r.data.multa;
+      const valor = multa
+        ? multa.valor_cents != null
+          ? formatCents(multa.valor_cents, moeda)
+          : `${multa.percentual}%`
+        : "";
       toast.success(
-        multa
-          ? `Sessão cancelada. Multa de ${
-              multa.valor_cents != null
-                ? formatCents(multa.valor_cents, moeda)
-                : `${multa.percentual}%`
-            } lançada.`
-          : "Sessão cancelada sem custo.",
+        !multa
+          ? t("Sessão cancelada sem custo.")
+          : multa.status === "isenta"
+            ? t("Sessão cancelada. Multa de {valor} isentada: o paciente não paga.").replace(
+                "{valor}",
+                valor,
+              )
+            : t("Sessão cancelada. Multa de {valor} lançada, a cobrar.").replace("{valor}", valor),
       );
       recarregar();
       aoConcluir();
@@ -860,8 +888,39 @@ function PassoCancelar({
           </p>
         )}
       </div>
+      {previa && decide && (
+        <div data-testid="novo-decidir-multa">
+          <p className="n-rotulo">{t("O paciente vai pagar a multa?")}</p>
+          <div className="grid grid-cols-2 gap-2">
+            {[true, false].map((cobrar) => (
+              <button
+                key={String(cobrar)}
+                type="button"
+                aria-pressed={cobrarMulta === cobrar}
+                onClick={() => setCobrarMulta(cobrar)}
+                className={`n-botao ${cobrarMulta === cobrar ? "n-botao-escuro" : "n-botao-suave"}`}
+                data-testid={cobrar ? "novo-multa-cobrar" : "novo-multa-isentar"}
+              >
+                {cobrar ? t("Sim, cobrar") : t("Não, isentar")}
+              </button>
+            ))}
+          </div>
+          {isentar && (
+            <label className="mt-3 block">
+              <span className="n-rotulo">{t("Motivo da isenção (opcional)")}</span>
+              <input
+                className="n-campo"
+                value={motivoDaIsencao}
+                onChange={(e) => setMotivoDaIsencao(e.target.value)}
+                placeholder={t("Ex.: trouxe atestado médico")}
+                data-testid="novo-motivo-isencao-ao-cancelar"
+              />
+            </label>
+          )}
+        </div>
+      )}
       <label className="block">
-        <span className="n-rotulo">Motivo</span>
+        <span className="n-rotulo">{t("Motivo do cancelamento")}</span>
         <textarea
           className="n-campo"
           value={motivo}
@@ -874,7 +933,7 @@ function PassoCancelar({
         <button
           type="button"
           className="n-botao n-botao-perigo"
-          disabled={motivo.trim().length < 3 || cancelar.isPending}
+          disabled={motivo.trim().length < 3 || motivoDaIsencaoCurto || cancelar.isPending}
           onClick={() => cancelar.mutate()}
         >
           {t("Cancelar a sessão")}

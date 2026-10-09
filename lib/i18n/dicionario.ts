@@ -17264,6 +17264,25 @@ export const DICIONARIO: Traducoes = {
   "Multa paga": { es: "Multa pagada" },
   "Motivo da isenção": { es: "Motivo de la exención" },
   "Isentar multa": { es: "Eximir multa" },
+  // Cobrar ou isentar a multa (Pedro, 2026-10-09).
+  "A multa voltou a ser cobrada.": { es: "La multa volvió a cobrarse." },
+  "A cobrar": { es: "Por cobrar" },
+  "Não cobrar (isentar)": { es: "No cobrar (eximir)" },
+  "Voltar a cobrar": { es: "Volver a cobrar" },
+  "Motivo da isenção (opcional)": { es: "Motivo de la exención (opcional)" },
+  "O paciente não paga esta multa. O motivo, quem isentou e quando ficam registrados.": {
+    es: "El paciente no paga esta multa. El motivo, quién la eximió y cuándo quedan registrados.",
+  },
+  "Sessão cancelada. Multa de {valor} isentada: o paciente não paga.": {
+    es: "Sesión cancelada. Multa de {valor} eximida: el paciente no paga.",
+  },
+  "Sessão cancelada. Multa de {valor} lançada, a cobrar.": {
+    es: "Sesión cancelada. Multa de {valor} registrada, por cobrar.",
+  },
+  "O paciente vai pagar a multa?": { es: "¿El paciente pagará la multa?" },
+  "Sim, cobrar": { es: "Sí, cobrar" },
+  "Não, isentar": { es: "No, eximir" },
+  "Cobrar ou isentar na ficha": { es: "Cobrar o eximir en la ficha" },
   Anamnese: { es: "Anamnesis" },
   Avaliação: { es: "Evaluación" },
   Evolução: { es: "Evolución" },

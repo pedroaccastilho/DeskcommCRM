@@ -1,7 +1,8 @@
 /**
  * As travas por PERFIL no servidor, além do degrau que a rota já exige:
  *  - o relatório da gestão: Administrador, Gerente ou Financeiro;
- *  - LGPD e a trilha de quem abriu o prontuário: Administrador ou Jurídico.
+ *  - LGPD e a trilha de quem abriu o prontuário: Administrador ou Jurídico;
+ *  - isentar ou voltar a cobrar multa: Administrador, Gerente ou Recepção.
  */
 import { fail } from "@/lib/api/wrappers";
 import { cargosDoUsuario } from "@/lib/clinica/cargos";
@@ -10,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 
 import { moduloClinicaNaoInstalado } from "./api";
 import { veLgpdEAcessos, veRelatoriosDaGestao } from "./gestao";
+import { RECUSA_DA_MULTA, decideMulta } from "./multas";
 
 /** Os perfis de quem chama (os gravados ou, sem nenhum, os calculados), ou a resposta de erro. */
 async function cargosDoChamador(
@@ -62,6 +64,20 @@ export async function recusaDoRelatorio(
     403,
     { requestId },
   );
+}
+
+/** Isentar ou voltar a cobrar multa (`lib/clinica/multas.ts`). */
+export async function recusaDaMulta(
+  orgId: string,
+  userId: string,
+  role: Role,
+  requestId: string,
+): Promise<Response | null> {
+  if (role === "admin") return null;
+  const lidos = await cargosDoChamador(orgId, userId, role, requestId);
+  if ("erro" in lidos) return lidos.erro;
+  if (decideMulta(role, lidos.cargos)) return null;
+  return fail("forbidden", RECUSA_DA_MULTA, 403, { requestId });
 }
 
 /**

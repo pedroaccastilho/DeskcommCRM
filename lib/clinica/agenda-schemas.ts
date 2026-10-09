@@ -11,7 +11,14 @@ export const JANELA_MAXIMA_DA_GRADE_DIAS = 31;
 const separadaPorVirgula = z
   .string()
   .optional()
-  .transform((v) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : []));
+  .transform((v) =>
+    v
+      ? v
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [],
+  );
 
 export const gradeQuerySchema = z
   .object({
@@ -70,14 +77,30 @@ export const multasQuerySchema = z.object({
   contact_id: z.string().uuid().optional(),
 });
 
+/** Motivo curto e opcional: o banco exige um, e sem ele fica `MOTIVO_PADRAO_DA_ISENCAO`. */
+const motivoDaIsencaoSchema = z
+  .string()
+  .trim()
+  .max(1000)
+  .refine((v) => v.length === 0 || v.length >= 3, {
+    message: "Escreva ao menos 3 letras no motivo, ou deixe em branco.",
+  })
+  .optional();
+
 export const isentarMultaSchema = z.object({
-  motivo: z.string().trim().min(3).max(1000),
+  motivo: motivoDaIsencaoSchema,
 });
 
 export const cancelarSessaoSchema = z.object({
   motivo: z.string().trim().min(3).max(500),
   /** `true` quando a clínica desmarcou (profissional doente, sala indisponível): não gera multa. */
   pela_clinica: z.boolean().default(false),
+  /**
+   * `"isentar"` quando a recepção já decide, ao cancelar, que o paciente não paga a multa que o
+   * cancelamento gerar. Sem ele (ou `"cobrar"`), a multa nasce pendente, a cobrar.
+   */
+  multa: z.enum(["cobrar", "isentar"]).default("cobrar"),
+  motivo_isencao: motivoDaIsencaoSchema,
   revision: z.number().int().positive().optional(),
 });
 
