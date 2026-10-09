@@ -98,7 +98,7 @@ async function http(metodo, caminho, corpo, extra = {}) {
 }
 const sel = (tabela, q) => http("GET", `/rest/v1/${tabela}?${q}`);
 const ins = (tabela, linhas, q = "") =>
-  http("POST", `/rest/v1/${tabela}${q ? `?${q}` : ""}`, linhas, { Prefer: "return=representation" });
+  http("POST", `/rest/v1/${tabela}${q ? `?${q}` : ""}`, linhas, { Prefer: "return=representation,missing=default" });
 const upd = (tabela, q, val) => http("PATCH", `/rest/v1/${tabela}?${q}`, val, { Prefer: "return=minimal" });
 async function contar(tabela, q) {
   const r = await fetch(`${URL_BASE}/rest/v1/${tabela}?${q}&select=*`, {
@@ -201,7 +201,8 @@ async function criar() {
   if (pol) await upd("clinica_politicas", naOrg, { interface_nova_principal: true });
   else await ins("clinica_politicas", { organization_id: O, interface_nova_principal: true });
 
-  if (await contar("contacts", naOrg)) return console.log("dados fictícios já semeados; nada mais a fazer");
+  if (await contar("contacts", naOrg)) console.log("primeiro lote já semeado");
+  else {
 
   const tipo = {};
   for (const [i, t] of TIPOS.entries()) {
@@ -285,7 +286,250 @@ async function criar() {
     });
   }
   console.log("✓ tarefas");
+  }
+  await ampliar(O, ids);
   console.log(`pronto: ${EQUIPE.length} logins, senha ${SENHA}`);
+}
+
+// ── segundo lote: volume para a agenda, o prontuário e os relatórios ─────────
+// Gerado por sorteio com semente fixa: rodar de novo dá os mesmos nomes. A marca do lote é a
+// etiqueta `demo-lote-2` nos pacientes; com ela presente, nada se repete.
+function sorteio(semente) {
+  let a = semente >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const PRIMEIROS = ["Lucas", "Mariana", "Pedro", "Juliana", "Rafael", "Beatriz", "Thiago", "Larissa", "Gustavo", "Camila",
+  "Felipe", "Patrícia", "Rodrigo", "Aline", "Marcelo", "Vanessa", "André", "Renata", "Diego", "Fernanda",
+  "Leonardo", "Tatiane", "Vinícius", "Priscila", "Eduardo", "Carolina", "Fábio", "Simone", "Ricardo", "Luana",
+  "Mateus", "Isabela", "Caio", "Bruna", "Henrique", "Natália", "Otávio", "Sabrina", "Igor", "Débora"];
+const SOBRENOMES = ["Almeida", "Barbosa", "Cardoso", "Duarte", "Esteves", "Farias", "Gomes", "Henriques", "Lima", "Machado",
+  "Nogueira", "Oliveira", "Pereira", "Queiroz", "Rezende", "Santos", "Teixeira", "Vasconcelos", "Xavier", "Zanetti"];
+const DETALHE = { Instagram: ["Anúncio pago", "Influenciadora fictícia", "Post orgânico"], "Indicação": ["Indicado por paciente", "Amigo da equipe"],
+  "Encaminhamento médico": ["Ortopedista fictício", "Clínico geral fictício"], WhatsApp: [null] };
+const QUEIXAS = ["Dor lombar ao ficar sentado", "Dor no joelho ao subir escadas", "Rigidez no ombro direito", "Dor cervical no fim do dia",
+  "Recuperação pós-cirurgia de LCA", "Tendinite no punho", "Entorse de tornozelo", "Dor no quadril ao caminhar", "Postura e fortalecimento"];
+const CONDUTAS = ["Mobilidade e alongamento", "Fortalecimento de core", "Liberação miofascial e exercícios", "Treino de equilíbrio",
+  "Exercícios resistidos progressivos", "Terapia manual e orientação postural"];
+
+async function emLotes(tabela, linhas, q = "") {
+  const saida = [];
+  for (let i = 0; i < linhas.length; i += 250) saida.push(...(await ins(tabela, linhas.slice(i, i + 250), q)));
+  return saida;
+}
+
+async function ampliar(O, ids) {
+  const naOrg = `organization_id=eq.${O}`;
+  if (await contar("contacts", `${naOrg}&tags=cs.%7Bdemo-lote-2%7D`)) return console.log("segundo lote já semeado");
+  const r = sorteio(20261009);
+  const um = (lista) => lista[Math.floor(r() * lista.length)];
+  const DIA = 86400e3;
+
+  // A jornada de quem atende e da recepção: a Agenda só oferece horário depois dela.
+  const semana = (ini, fim, sabado) => [1, 2, 3, 4, 5].map((dow) => ({ dow, start: ini, end: fim }))
+    .concat(sabado ? [{ dow: 6, start: "08:00", end: "12:00" }] : []);
+  for (const chave of ["recepcao", "medico", "fisio", "gerfisio", "enfermeiro", "educador"]) {
+    const linha = { organization_id: O, user_id: ids[chave], is_available: true, capacity: 5,
+      schedule: { timezone: "America/Sao_Paulo", windows: semana("08:00", "18:00", chave !== "recepcao" && chave !== "medico") } };
+    const [ex] = await sel("attendant_availability", `${naOrg}&user_id=eq.${ids[chave]}&select=id`);
+    if (ex) await upd("attendant_availability", `id=eq.${ex.id}`, { schedule: linha.schedule, is_available: true });
+    else await ins("attendant_availability", linha);
+  }
+  console.log("✓ jornada publicada para quem atende");
+
+  // Pacientes novos, chegando ao longo dos últimos 90 dias.
+  const tipos = Object.fromEntries((await sel("calendar_event_types", `${naOrg}&select=id,slug,name,duration_minutes,default_price_cents`)).map((t) => [t.slug, t]));
+  const origens = Object.fromEntries((await sel("clinica_origens", `${naOrg}&select=id,nome`)).map((o) => [o.nome, o.id]));
+  const novos = [];
+  const usados = new Set();
+  while (novos.length < 40) {
+    const nome = `${um(PRIMEIROS)} ${um(SOBRENOMES)}`;
+    if (usados.has(nome)) continue;
+    usados.add(nome);
+    const n = novos.length + 1;
+    novos.push({ nome: `${nome} (demo)`, tel: `+55119000002${String(n).padStart(2, "0")}`, origem: um(Object.keys(DETALHE)),
+      criado: new Date(Date.now() - Math.floor(r() * 90) * DIA).toISOString() });
+  }
+  const contatos = await emLotes("contacts", novos.map((p, i) => ({
+    organization_id: O, name: p.nome, phone_number: p.tel, source: "manual", created_at: p.criado,
+    email: `paciente${i + 7}@${DOMINIO}`, tags: ["paciente", "demo-lote-2"], custom_fields: { demonstracao: true },
+  })));
+  await emLotes("clinica_pacientes_origem", contatos.map((c, i) => ({
+    organization_id: O, contact_id: c.id, origem_id: origens[novos[i].origem], detalhe: um(DETALHE[novos[i].origem]),
+    registrado_por_user_id: ids.recepcao, created_at: novos[i].criado,
+  })));
+  const todos = (await sel("contacts", `${naOrg}&select=id,name&order=created_at`)).map((c) => c.id);
+  console.log(`✓ ${contatos.length} pacientes a mais (${todos.length} no total)`);
+
+  // Agenda: seis semanas para trás e três para frente, dias úteis, um horário cheio por vez.
+  // Ninguém fica em dois lugares na mesma hora: nem o profissional, nem o paciente.
+  const existentes = await sel("calendar_appointments", `${naOrg}&select=owner_user_id,contact_id,starts_at`);
+  const ocupado = new Set(existentes.flatMap((a) => [`${a.owner_user_id}|${a.starts_at.slice(0, 13)}`, `${a.contact_id}|${a.starts_at.slice(0, 13)}`]));
+  const QUEM = [
+    { chave: "medico", tipos: ["consulta-medica", "consulta-medica", "consulta-medica"], mod: "medicina", porDia: [3, 5] },
+    { chave: "fisio", tipos: ["sessao-fisio", "sessao-fisio", "sessao-fisio", "avaliacao-fisio", "aula-pilates"], mod: null, porDia: [5, 7] },
+    { chave: "gerfisio", tipos: ["sessao-fisio", "sessao-fisio", "aula-pilates", "avaliacao-fisio"], mod: null, porDia: [2, 4] },
+    { chave: "enfermeiro", tipos: ["enfermagem"], mod: "enfermagem", porDia: [2, 4] },
+    { chave: "educador", tipos: ["aula-pilates"], mod: "pilates", porDia: [4, 6] },
+  ];
+  // Cada profissional tem a sua carteira de pacientes, para o histórico fazer sentido.
+  const carteira = Object.fromEntries(QUEM.map((q) => [q.chave, Array.from({ length: 14 }, () => um(todos))]));
+  const agora = Date.now();
+  const novas = [];
+  for (let d = -42; d <= 21; d++) {
+    const dia = emBrasilia(d, 0);
+    const dow = new Date(dia.getTime() - 3 * 3600e3).getUTCDay();
+    if (dow === 0 || dow === 6 || d === 0) continue; // hoje já tem a agenda do primeiro lote
+    for (const q of QUEM) {
+      const quantos = q.porDia[0] + Math.floor(r() * (q.porDia[1] - q.porDia[0] + 1));
+      const horas = [8, 9, 10, 11, 13, 14, 15, 16, 17].sort(() => r() - 0.5).slice(0, quantos);
+      for (const h of horas) {
+        const ini = emBrasilia(d, h);
+        const chaveHora = ini.toISOString().slice(0, 13);
+        const pac = um(carteira[q.chave]);
+        if (ocupado.has(`${ids[q.chave]}|${chaveHora}`) || ocupado.has(`${pac}|${chaveHora}`)) continue;
+        ocupado.add(`${ids[q.chave]}|${chaveHora}`);
+        ocupado.add(`${pac}|${chaveHora}`);
+        const t = tipos[um(q.tipos)];
+        const passado = ini.getTime() < agora;
+        const x = r();
+        const status = passado
+          ? x < 0.78 ? "completed" : x < 0.87 ? "no_show" : x < 0.97 ? "cancelled" : "confirmed"
+          : x < 0.68 ? "confirmed" : x < 0.95 ? "pending" : "cancelled";
+        const cancelado = status === "cancelled" ? new Date(ini.getTime() - (2 + Math.floor(r() * 46)) * 3600e3) : null;
+        novas.push({
+          organization_id: O, event_type_id: t.id, title: t.name, starts_at: ini.toISOString(),
+          ends_at: new Date(ini.getTime() + t.duration_minutes * 60000).toISOString(), status,
+          owner_user_id: ids[q.chave], contact_id: pac, created_by_kind: "system", source: "ui", location_kind: "in_person",
+          cancelled_at: cancelado?.toISOString() ?? null,
+          cancellation_reason: cancelado ? um(["Paciente avisou que não poderia vir", "Imprevisto no trabalho", "Paciente doente"]) : null,
+          created_at: new Date(Math.min(ini.getTime() - 3 * DIA, agora)).toISOString(),
+        });
+      }
+    }
+  }
+  const agenda = await emLotes("calendar_appointments", novas);
+  console.log(`✓ ${agenda.length} agendamentos de ${QUEM.length} profissionais (6 semanas atrás, 3 à frente)`);
+
+  // Multa: cancelamento com menos de 24h de antecedência (30%), em situações variadas.
+  const multas = [];
+  for (const a of agenda) {
+    if (a.status !== "cancelled") continue;
+    const horas = (new Date(a.starts_at) - new Date(a.cancelled_at)) / 3600e3;
+    if (horas >= 24) continue;
+    const t = Object.values(tipos).find((x) => x.id === a.event_type_id);
+    const sit = r();
+    multas.push({
+      organization_id: O, appointment_id: a.id, contact_id: a.contact_id, percentual: 30,
+      antecedencia_horas: Number(horas.toFixed(2)), valor_cents: Math.round((t.default_price_cents ?? 0) * 0.3), created_at: a.cancelled_at,
+      status: sit < 0.5 ? "pendente" : sit < 0.8 ? "paga" : "isenta",
+      isencao_motivo: sit >= 0.8 ? "Atestado médico apresentado" : null,
+      isenta_em: sit >= 0.8 ? a.cancelled_at : null,
+      isenta_por_user_id: sit >= 0.8 ? ids.gerente : null,
+    });
+  }
+  if (multas.length) await emLotes("clinica_multas", multas);
+  console.log(`✓ ${multas.length} multas por cancelamento em cima da hora`);
+
+  // Pacotes: quem faz fisioterapia ou pilates com frequência comprou um, e as sessões gastaram.
+  const [produtoFisio] = await sel("clinica_produtos", `${naOrg}&modalidade=eq.fisioterapia&select=id,nome,sessoes,valor_cents`);
+  const [produtoPilates] = await sel("clinica_produtos", `${naOrg}&modalidade=eq.pilates&select=id,nome,sessoes,valor_cents`);
+  const jaTemPacote = new Set((await sel("clinica_pacotes", `${naOrg}&select=contact_id`)).map((p) => p.contact_id));
+  const modDoTipo = { "sessao-fisio": "fisioterapia", "avaliacao-fisio": "fisioterapia", "aula-pilates": "pilates" };
+  const porPaciente = new Map();
+  for (const a of agenda) {
+    const slug = Object.values(tipos).find((x) => x.id === a.event_type_id)?.slug;
+    const mod = modDoTipo[slug];
+    if (!mod || slug === "avaliacao-fisio") continue;
+    const k = `${a.contact_id}|${mod}`;
+    if (!porPaciente.has(k)) porPaciente.set(k, []);
+    porPaciente.get(k).push(a);
+  }
+  let vendidos = 0, consumos = 0;
+  for (const [k, sessoes] of porPaciente) {
+    const [contato, mod] = k.split("|");
+    if (sessoes.length < 4 || jaTemPacote.has(contato) || r() < 0.25) continue;
+    const prod = mod === "fisioterapia" ? produtoFisio : produtoPilates;
+    sessoes.sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+    const compra = new Date(new Date(sessoes[0].starts_at).getTime() - DIA);
+    const cancelar = vendidos === 3;
+    const [pac] = await ins("clinica_pacotes", {
+      organization_id: O, contact_id: contato, produto_id: prod.id, nome: prod.nome, modalidade: mod, sessoes_total: prod.sessoes,
+      valor_cents: prod.valor_cents, comprado_em: compra.toISOString(), valido_ate: new Date(compra.getTime() + 60 * DIA).toISOString(),
+      aceite_politica_em: compra.toISOString(), aceite_multa_pct: 30, aceite_antecedencia_horas: 24, vendido_por_user_id: ids.recepcao,
+      created_at: compra.toISOString(),
+      ...(cancelar ? { status: "cancelado", cancelado_em: new Date(compra.getTime() + 20 * DIA).toISOString(), cancelamento_motivo: "Paciente mudou de cidade" } : {}),
+    });
+    vendidos++;
+    jaTemPacote.add(contato);
+    const gastas = sessoes.filter((s) => (s.status === "completed" || s.status === "no_show")
+      && (!cancelar || new Date(s.starts_at) < new Date(compra.getTime() + 20 * DIA))).slice(0, prod.sessoes);
+    if (gastas.length) {
+      await ins("clinica_pacote_consumos", gastas.map((s) => ({
+        organization_id: O, pacote_id: pac.id, appointment_id: s.id, motivo: s.status === "completed" ? "realizada" : "falta",
+        sessao_em: s.starts_at, consumido_em: s.ends_at,
+      })));
+      consumos += gastas.length;
+    }
+    if (cancelar) {
+      const restantes = prod.sessoes - gastas.length;
+      await ins("clinica_pacote_eventos", { organization_id: O, pacote_id: pac.id, tipo: "cancelamento", motivo: "Paciente mudou de cidade",
+        valor_cents: Math.round((prod.valor_cents / prod.sessoes) * restantes), por_user_id: ids.gerente, registrado_em: pac.cancelado_em });
+    }
+  }
+  console.log(`✓ ${vendidos} pacotes vendidos, ${consumos} sessões gastas`);
+
+  // Prontuário: avaliação no primeiro atendimento, evolução nos seguintes. Uns 15% ficam sem
+  // evolução de propósito, para a lista de evoluções pendentes ter o que mostrar.
+  const profs = Object.fromEntries((await sel("clinica_profissionais", `${naOrg}&select=user_id,nome_profissional,conselho,registro_numero,registro_uf`))
+    .map((p) => [p.user_id, p]));
+  const modDoAtendimento = { "consulta-medica": "medicina", enfermagem: "enfermagem", "aula-pilates": "pilates", "sessao-fisio": "fisioterapia", "avaliacao-fisio": "fisioterapia", reavaliacao: "fisioterapia" };
+  const vistos = new Set();
+  const registros = [];
+  for (const a of [...agenda].sort((x, y) => x.starts_at.localeCompare(y.starts_at))) {
+    if (a.status !== "completed") continue;
+    const slug = Object.values(tipos).find((x) => x.id === a.event_type_id)?.slug;
+    const mod = modDoAtendimento[slug];
+    const p = profs[a.owner_user_id];
+    if (!mod || !p) continue;
+    const primeira = !vistos.has(`${a.contact_id}|${mod}`);
+    vistos.add(`${a.contact_id}|${mod}`);
+    if (!primeira && r() < 0.15) continue;
+    const dor = 2 + Math.floor(r() * 7);
+    const conteudo = mod === "medicina"
+      ? { queixa: um(QUEIXAS), exame_fisico: "Sem alterações agudas", hipotese: "Quadro musculoesquelético", conduta: "Encaminhar para fisioterapia" }
+      : mod === "enfermagem"
+        ? { pressao: um(["12x8", "11x7", "13x8"]), frequencia_cardiaca: 60 + Math.floor(r() * 30), saturacao: 96 + Math.floor(r() * 4), procedimento: "Aferição de sinais vitais" }
+        : { queixa: um(QUEIXAS), dor, conduta: um(CONDUTAS) };
+    registros.push({
+      organization_id: O, contact_id: a.contact_id, appointment_id: a.id, modalidade: mod,
+      tipo: primeira && mod !== "enfermagem" ? "avaliacao" : "evolucao", conteudo,
+      texto: primeira ? null : `Paciente relata dor ${dor}/10. Evolução dentro do esperado.`,
+      autor_user_id: a.owner_user_id, autor_nome: p.nome_profissional,
+      autor_registro: `${p.conselho}-${p.registro_uf} ${p.registro_numero}`, assinado_em: a.ends_at, created_at: a.ends_at,
+    });
+  }
+  await emLotes("prontuario_registros", registros);
+  console.log(`✓ ${registros.length} registros de prontuário assinados`);
+
+  // Tarefas para a equipe toda, abertas, em andamento e concluídas.
+  const TAREFAS = ["Confirmar presença de amanhã", "Ligar sobre a falta", "Oferecer renovação do pacote", "Enviar recibo para reembolso",
+    "Cobrar multa pendente", "Agendar reavaliação", "Atualizar cadastro do paciente", "Retornar mensagem do WhatsApp"];
+  const DONOS = ["recepcao", "recepcao", "recepcao", "fisio", "medico", "financeiro", "gerente", "enfermeiro", "educador"];
+  await emLotes("crm_tasks", Array.from({ length: 24 }, (_, i) => {
+    const d = -10 + Math.floor(r() * 20);
+    return {
+      organization_id: O, title: um(TAREFAS), contact_id: um(todos), assigned_to: ids[um(DONOS)], created_by: ids.admin,
+      due_date: emBrasilia(d, 17).toISOString(), priority: um(["low", "medium", "medium", "high"]),
+      status: d < 0 ? um(["done", "done", "pending"]) : um(["pending", "pending", "in_progress"]),
+    };
+  }));
+  console.log("✓ 24 tarefas a mais");
 }
 
 // ── apagar ──────────────────────────────────────────────────────────────────
@@ -295,7 +539,9 @@ async function apagar() {
   if (org) {
     const naOrg = `organization_id=eq.${org.id}`;
     // Chaves `restrict` primeiro, depois a organização leva o resto em cascata.
-    for (const t of ["clinica_pacote_consumos", "clinica_pacote_eventos", "clinica_pacotes", "calendar_appointments", "crm_tasks"]) {
+    // O prontuário é imutável e prende os compromissos e os pacientes: só a cascata da própria
+    // organização o leva. Por isso os compromissos não são apagados antes, e sim junto.
+    for (const t of ["clinica_pacote_consumos", "clinica_pacote_eventos", "clinica_pacotes", "clinica_multas", "crm_tasks"]) {
       await del(t, naOrg).catch((e) => console.log(`  ${t}: ${e.message}`));
     }
     await del("organizations", `id=eq.${org.id}&slug=eq.${SLUG}`);
