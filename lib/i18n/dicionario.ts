@@ -12407,6 +12407,7 @@ export const DICIONARIO: Traducoes = {
   },
   "Escolha quem vai resolver esta tarefa.": { es: "Elige quién va a resolver esta tarea." },
   "passou de": { es: "pasó de" },
+  "passou para": { es: "pasó a" },
   "Criada por": { es: "Creada por" },
   "Criada pelo sistema": { es: "Creada por el sistema" },
 

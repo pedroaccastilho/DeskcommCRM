@@ -639,7 +639,9 @@ function RepassesDaTarefa({ tarefa }: { tarefa: Tarefa }) {
     <div className="grid gap-1 text-xs" data-testid="novo-tarefa-repasses">
       {lista.map((r) => (
         <p key={`${r.em}-${r.para}`} className="n-suave">
-          {quando(r.em)} · {nomeDoMembro(r.por)} {t("passou de")} {nomeDoMembro(r.de)} {t("para")}{" "}
+          {/* Tarefa que estava sem responsável (antiga, ou do sistema) foi "passada para", não "de". */}
+          {quando(r.em)} · {nomeDoMembro(r.por)}{" "}
+          {r.de ? `${t("passou de")} ${nomeDoMembro(r.de)} ${t("para")}` : t("passou para")}{" "}
           <strong>{nomeDoMembro(r.para)}</strong>
         </p>
       ))}
