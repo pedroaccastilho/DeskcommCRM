@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { useT } from "@/hooks/i18n/useT";
+import { MagnifyingGlass } from "@/lib/ui/icons";
 
 export interface ItemDeAjuste {
   href: string;
@@ -73,12 +74,11 @@ export function ListaDeAjustes({
           aria-label={t("Buscar um ajuste")}
           data-testid="novo-ajustes-busca"
         />
-        <span
-          className="n-fraco pointer-events-none absolute top-1/2 left-5 -translate-y-1/2 text-xl"
+        <MagnifyingGlass
+          size={22}
+          className="n-fraco pointer-events-none absolute top-1/2 left-5 -translate-y-1/2"
           aria-hidden
-        >
-          ⌕
-        </span>
+        />
       </div>
 
       {filtrados.length === 0 && (
