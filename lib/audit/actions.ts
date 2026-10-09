@@ -1022,6 +1022,7 @@ export const AUDIT_ACTIONS = [
   "clinica.tipo_atendimento_atualizado",
   "clinica.multa_registrada",
   "clinica.multa_isenta",
+  "clinica.multa_cobrada",
   // Pacotes de sessões (fork TOQ, migration 9004). Saldo de pacote é dinheiro pago adiantado:
   // venda, sessão gasta ou devolvida, congelamento, prorrogação e cancelamento ficam registrados.
   "clinica.produto_cadastrado",
