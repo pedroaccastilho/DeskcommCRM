@@ -48,6 +48,7 @@ import { serviceFromMessage } from "@/lib/atendimento/origem-mensagem";
 import { espacarEnvio } from "@/lib/automation/throttle";
 import { triggerHandoff } from "@/lib/ai/handoff/orchestrator";
 import { multaDoCancelamento } from "@/lib/clinica/agenda";
+import { cruzaComAlguma, type SessaoDoPaciente } from "@/lib/clinica/choque-do-paciente";
 import { politicaDaOrganizacao, precoDoTipo, tipoDaClinica } from "@/lib/clinica/regras-da-agenda";
 import type { EventRow } from "@/lib/event-log/dispatcher";
 import { humanoNoComando } from "@/lib/followup/gatilho-retorno";
@@ -327,7 +328,11 @@ const NAO_CONSEGUI = "Não consegui fazer isso por aqui agora.";
 
 function falhaDaAgenda(e: unknown): { ok: false; mensagem: string; horarioTomado?: boolean } {
   if (!(e instanceof ApiError)) throw e;
-  if (e.code === "agenda_horario_indisponivel" || e.code === "agenda_fora_da_jornada") {
+  if (
+    e.code === "agenda_horario_indisponivel" ||
+    e.code === "agenda_fora_da_jornada" ||
+    e.code === "agenda_paciente_ocupado"
+  ) {
     return { ok: false, mensagem: NAO_CONSEGUI, horarioTomado: true };
   }
   return { ok: false, mensagem: NAO_CONSEGUI };
@@ -336,11 +341,46 @@ function falhaDaAgenda(e: unknown): { ok: false; mensagem: string; horarioTomado
 /** Um horário livre como o paciente lê: "Ter 06/10 às 09:00", no fuso da agenda. */
 function horarioDoSlot(
   inicio: Date,
+  fim: Date,
   fuso: string,
-): { inicio: string; rotulo: string; dia: string } {
+): { inicio: string; fim: string; rotulo: string; dia: string } {
   const rotulo = rotuloLocal(inicio, fuso);
   // "Ter 06/10" — o rótulo começa pelo dia; é por ele que a lista se espalha.
-  return { inicio: inicio.toISOString(), rotulo, dia: rotulo.slice(0, 9) };
+  return { inicio: inicio.toISOString(), fim: fim.toISOString(), rotulo, dia: rotulo.slice(0, 9) };
+}
+
+/**
+ * As sessões do paciente na janela de busca, para o chatbot não oferecer horário que cruza uma
+ * delas (o handler recusaria com `agenda_paciente_ocupado`). Não conseguir ler não trava a oferta:
+ * a recusa do handler continua sendo a guarda.
+ */
+async function sessoesDoPaciente(
+  admin: SupabaseClient,
+  org: string,
+  contatoId: string,
+  de: Date,
+  ate: Date,
+): Promise<SessaoDoPaciente[]> {
+  const { data, error } = await admin
+    .from("calendar_appointments")
+    .select("id, starts_at, ends_at, status")
+    .eq("organization_id", org)
+    .eq("contact_id", contatoId)
+    .lt("starts_at", ate.toISOString())
+    .gt("ends_at", de.toISOString())
+    .limit(200);
+  if (error) {
+    logger.warn("[clinica.chatbot] sessões do paciente não lidas", { error: error.message });
+    return [];
+  }
+  return (
+    (data ?? []) as Array<{ id: string; starts_at: string; ends_at: string; status: string }>
+  ).map((l) => ({
+    id: l.id,
+    status: l.status,
+    inicio: new Date(l.starts_at),
+    fim: new Date(l.ends_at),
+  }));
 }
 
 /**
@@ -422,9 +462,17 @@ function depsReais(
 
       // Remarcar fica com quem já atende o paciente; marcar usa o responsável do tipo.
       const primeira = await consultar(remarcando?.donoId ?? null);
-      let candidatos: Array<{ inicio: string; rotulo: string; dia: string; donoId?: string }>;
+      let candidatos: Array<{
+        inicio: string;
+        fim: string;
+        rotulo: string;
+        dia: string;
+        donoId?: string;
+      }>;
       if (primeira.ok) {
-        candidatos = primeira.slots.map((s) => horarioDoSlot(s.inicio, primeira.fusoDaRegra));
+        candidatos = primeira.slots.map((s) =>
+          horarioDoSlot(s.inicio, s.fim, primeira.fusoDaRegra),
+        );
       } else if (primeira.codigo === "sem_responsavel" && !remarcando) {
         // Tipo sem responsável padrão (clínica com vários profissionais na mesma modalidade):
         // junta a agenda de quem atende a modalidade, e cada horário leva o nome de quem atende.
@@ -435,7 +483,7 @@ function depsReais(
         candidatos = porProfissional.flatMap(({ p, r }) =>
           r.ok
             ? r.slots.map((s) => {
-                const h = horarioDoSlot(s.inicio, r.fusoDaRegra);
+                const h = horarioDoSlot(s.inicio, s.fim, r.fusoDaRegra);
                 return { ...h, rotulo: `${h.rotulo} com ${p.primeiroNome}`, donoId: p.userId };
               })
             : [],
@@ -446,6 +494,23 @@ function depsReais(
       } else {
         return { ok: false, mensagem: "Não consegui ver os horários livres agora." };
       }
+      // O paciente não está em dois lugares ao mesmo tempo: some o horário que cruza uma sessão dele.
+      const doPaciente = await sessoesDoPaciente(
+        admin,
+        c.org,
+        c.contatoId,
+        agora,
+        new Date(agora.getTime() + (DIAS_DE_BUSCA + 1) * 86_400_000),
+      );
+      const ignorar = remarcando?.ignorarCompromissoId ?? null;
+      candidatos = candidatos.filter(
+        (h) =>
+          !cruzaComAlguma(
+            doPaciente,
+            { inicio: new Date(h.inicio), fim: new Date(h.fim) },
+            ignorar,
+          ),
+      );
       const horarios: HorarioOferecido[] = espalharPorDia(
         [...candidatos].sort((a, b) => a.inicio.localeCompare(b.inicio)),
         HORARIOS_POR_VEZ,

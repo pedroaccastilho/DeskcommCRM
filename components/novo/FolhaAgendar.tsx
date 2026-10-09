@@ -20,6 +20,7 @@ import {
   useBuscaDePacientes,
   useHorariosLivresDaFolha,
   useRecarregar,
+  useSessoesDoPacienteNoPeriodo,
   useTiposDeAtendimento,
   type ProfissionalDaGrade,
 } from "./dados";
@@ -115,6 +116,22 @@ function Conteudo({
   const livres = useHorariosLivresDaFolha(filtro);
   const [agora] = React.useState(() => Date.now());
   const slots = (livres.data?.slots ?? []).filter((s) => new Date(s.inicio).getTime() > agora);
+  // O paciente não está em dois lugares ao mesmo tempo: o horário que cruza uma sessão dele (com
+  // qualquer profissional) aparece riscado, e a sessão que ele já tem fica dita acima dos horários.
+  const doPaciente = useSessoesDoPacienteNoPeriodo(
+    paciente?.id ?? null,
+    filtro?.de ?? null,
+    filtro?.ate ?? null,
+  );
+  const jaMarcadas = doPaciente.data ?? [];
+  const sessaoQueCruza = (s: { inicio: string; fim: string }) =>
+    jaMarcadas.find(
+      (m) =>
+        new Date(m.iniciaEm).getTime() < new Date(s.fim).getTime() &&
+        new Date(m.terminaEm).getTime() > new Date(s.inicio).getTime(),
+    ) ?? null;
+  const nomeDoDono = (id: string | null) =>
+    (id && profissionais.find((p) => p.user_id === id)?.nome) || null;
 
   const marcar = useMutation({
     mutationFn: async () =>
@@ -270,6 +287,24 @@ function Conteudo({
                 );
               })}
             </div>
+            {paciente && jaMarcadas.length > 0 && (
+              <div
+                className="mb-3 rounded-2xl bg-[var(--n-aviso-suave)] p-3 text-sm text-[var(--n-aviso)]"
+                role="status"
+                data-testid="novo-paciente-ja-tem-sessao"
+              >
+                {jaMarcadas.map((m) => {
+                  const dono = nomeDoDono(m.donoId);
+                  return (
+                    <p key={m.id}>
+                      {`${primeiroNome(paciente.nome)} já tem ${m.tipo?.nome ?? m.titulo}${
+                        dono ? ` com ${primeiroNome(dono)}` : ""
+                      } das ${hora(m.iniciaEm, fuso)} às ${hora(m.terminaEm, fuso)}.`}
+                    </p>
+                  );
+                })}
+              </div>
+            )}
             {livres.isLoading ? (
               <p className="n-fraco text-sm">{t("Procurando horários…")}</p>
             ) : livres.isError ? (
@@ -283,21 +318,33 @@ function Conteudo({
               <p className="n-suave text-sm">{t("Nenhum horário livre neste dia.")}</p>
             ) : (
               <div className="grid grid-cols-4 gap-2">
-                {slots.map((s) => (
-                  <button
-                    key={s.inicio}
-                    type="button"
-                    aria-pressed={slot === s.inicio}
-                    onClick={() => setSlot(s.inicio)}
-                    className={`n-numero rounded-xl py-2.5 text-sm font-semibold ${
-                      slot === s.inicio
-                        ? "bg-[var(--n-acao)] text-[var(--n-acao-tinta)]"
-                        : "bg-[var(--n-papel)]"
-                    }`}
-                  >
-                    {hora(s.inicio, fuso)}
-                  </button>
-                ))}
+                {slots.map((s) => {
+                  const cruza = sessaoQueCruza(s);
+                  return (
+                    <button
+                      key={s.inicio}
+                      type="button"
+                      aria-pressed={slot === s.inicio}
+                      disabled={cruza !== null}
+                      title={
+                        cruza
+                          ? `${primeiroNome(paciente?.nome ?? "")} já tem ${cruza.tipo?.nome ?? cruza.titulo} nesse horário`
+                          : undefined
+                      }
+                      onClick={() => setSlot(s.inicio)}
+                      className={`n-numero rounded-xl py-2.5 text-sm font-semibold ${
+                        cruza
+                          ? "cursor-not-allowed bg-[var(--n-papel)] line-through opacity-40"
+                          : slot === s.inicio
+                            ? "bg-[var(--n-acao)] text-[var(--n-acao-tinta)]"
+                            : "bg-[var(--n-papel)]"
+                      }`}
+                      data-testid={cruza ? "novo-horario-do-paciente-ocupado" : undefined}
+                    >
+                      {hora(s.inicio, fuso)}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

@@ -52,7 +52,7 @@ import { resolveActiveLeadForContact, type LeadCandidate } from "@/lib/leads/act
 import { emitLeadActivity } from "@/lib/leads/activity-emitter";
 import { registraFalhaDeAtividade } from "@/lib/leads/activity-write-failure";
 import { moverLeadParaEtapaDeAgendamento } from "@/lib/leads/appointment-stage-move";
-import { antesDoDesfecho, depoisDaMudanca } from "@/lib/agenda/regras-de-modulo";
+import { antesDeOcupar, antesDoDesfecho, depoisDaMudanca } from "@/lib/agenda/regras-de-modulo";
 import { logger } from "@/lib/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -397,6 +397,13 @@ async function executarCriacaoDeAgendamento(
     inicio,
     fim,
   });
+  // A agenda de quem atende é dele; a do PACIENTE é uma só na clínica (módulo).
+  await antesDeOcupar(supabase, ctx, {
+    eventTypeId: tipo.id,
+    contactId: input.contact_id ?? null,
+    inicio,
+    fim,
+  });
 
   const booking = tipo.location_kind === "google_meet" ? ctx.meetingBooking : undefined;
   if (booking && (booking.boundary.organization_id !== ctx.organization_id || booking.boundary.contact_id !== input.contact_id || ctx.actor.type !== "ai_agent")) {
@@ -548,6 +555,13 @@ export async function alterarAgendamentoHandler(
       const consulta = await exigeHorarioLivre(supabase, ctx, {
         eventTypeId: tipo.id,
         donoId: atual.owner_user_id as string,
+        inicio: novoInicio,
+        fim: novoFim,
+        ignorarAgendamentoId: atual.id as string,
+      });
+      await antesDeOcupar(supabase, ctx, {
+        eventTypeId: tipo.id,
+        contactId: (atual.contact_id as string | null) ?? null,
         inicio: novoInicio,
         fim: novoFim,
         ignorarAgendamentoId: atual.id as string,

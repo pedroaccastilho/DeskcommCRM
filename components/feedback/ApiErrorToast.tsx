@@ -97,6 +97,8 @@ const COPY: Record<string, { variant: Variant; msg?: string }> = {
   agenda_fora_da_jornada: { variant: "warning" },
   agenda_tipo_desativado: { variant: "warning" },
   agenda_sem_responsavel: { variant: "warning" },
+  // O paciente já tem outra sessão nesse horário; a rota diz qual e com quem.
+  agenda_paciente_ocupado: { variant: "warning" },
   // Esta é da CONFIGURAÇÃO e não de quem está marcando — erro mesmo, e a rota
   // já diz qual campo está errado.
   agenda_disponibilidade_invalida: { variant: "error" },

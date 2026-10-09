@@ -375,6 +375,43 @@ export function useSessoesDoPaciente(contactId: string) {
   });
 }
 
+export interface SessaoDoPacienteNoDia {
+  id: string;
+  iniciaEm: string;
+  terminaEm: string;
+  situacao: string;
+  donoId: string | null;
+  tipo: { nome: string } | null;
+  titulo: string;
+}
+
+/**
+ * As sessões do paciente num período (qualquer profissional), para a folha de agendar mostrar o
+ * horário que ele já tem e não oferecer um que cruza. A guarda de verdade é o servidor
+ * (`agenda_paciente_ocupado`); isto só evita o clique que seria recusado.
+ */
+export function useSessoesDoPacienteNoPeriodo(
+  contactId: string | null,
+  de: string | null,
+  ate: string | null,
+) {
+  return useQuery({
+    queryKey: ["agenda", "paciente", "periodo", contactId, de, ate],
+    enabled: contactId !== null && de !== null && ate !== null,
+    queryFn: async () => {
+      const qs = new URLSearchParams({ contact_id: contactId!, de: de!, ate: ate!, limite: "50" });
+      const linhas =
+        (
+          await apiClient.get<{ data: SessaoDoPacienteNoDia[] }>(
+            `/api/v1/agenda/agendamentos?${qs.toString()}`,
+          )
+        ).data ?? [];
+      return linhas.filter((s) => s.situacao !== "cancelled" && s.situacao !== "no_show");
+    },
+    retry: false,
+  });
+}
+
 export interface FiltroDeHorarios {
   event_type_id: string;
   owner_user_id?: string;
