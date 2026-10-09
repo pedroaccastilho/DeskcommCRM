@@ -11,4 +11,4 @@ agente de IA e para o chatbot do WhatsApp, que deixa de oferecer esses horários
 A agenda de cada profissional continua individual: o médico pode atender outro
 paciente no mesmo horário em que a fisioterapeuta atende. Na interface nova, a
 folha de agendar risca o horário em que o paciente já está ocupado, e quem
-atende ganha "Ver a agenda da clínica" para olhar a agenda de toda a equipe.
+atende ganha "Ver agenda da equipe toda" para olhar a agenda de toda a equipe.

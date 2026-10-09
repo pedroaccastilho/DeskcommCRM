@@ -86,7 +86,7 @@ export function Agenda() {
   const [agendar, setAgendar] = React.useState(false);
 
   const todos = grade.data?.profissionais ?? [];
-  // "Ver a agenda da clínica": todas as colunas, a minha primeiro. Mexer na sessão de um colega
+  // "Ver agenda da equipe toda": todas as colunas, a minha primeiro. Mexer na sessão de um colega
   // segue a regra de sempre (a opção "Atendentes podem mexer na agenda dos colegas", no servidor).
   const colunas: ProfissionalDaGrade[] = soAsMinhas
     ? daEquipe
@@ -188,7 +188,7 @@ export function Agenda() {
               aria-pressed={daEquipe}
               onClick={() => setDaEquipe((v) => !v)}
             >
-              {daEquipe ? t("Ver só a minha") : t("Ver a agenda da clínica")}
+              {daEquipe ? t("Ver só a minha") : t("Ver agenda da equipe toda")}
             </button>
           )}
           {role !== "viewer" && (

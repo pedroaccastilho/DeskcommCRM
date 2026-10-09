@@ -17601,7 +17601,7 @@ export const DICIONARIO: Traducoes = {
       es: "Solo un profesional de salud registrado escribe en la historia clínica. El registro está en Configuración › Profesionales de salud.",
     },
   "Toda a clínica": { es: "Toda la clínica" },
-  "Ver a agenda da clínica": { es: "Ver la agenda de la clínica" },
+  "Ver agenda da equipe toda": { es: "Ver la agenda de todo el equipo" },
   "Ver só a minha": { es: "Ver solo la mía" },
   "Você não tem sessões hoje.": { es: "No tienes sesiones hoy." },
   "Voltar para a versão atual": { es: "Volver a la versión actual" },
