@@ -36,6 +36,7 @@ import {
   type QuemCancelou,
 } from "./agenda";
 import { moduloClinicaNaoInstalado } from "./api";
+import { fraseDoChoque, sessaoQueChoca } from "./choque-do-paciente";
 import { consumoDaTransicao, type MotivoDoConsumo } from "./pacotes";
 import { lancarSessaoNoPacote, valorDaSessaoPeloPacote } from "./pacotes-servidor";
 
@@ -84,7 +85,8 @@ export async function precoDoTipo(
     .eq("id", eventTypeId)
     .maybeSingle();
   if (error) throw error;
-  const bruto = (data as { default_price_cents: number | string | null } | null)?.default_price_cents;
+  const bruto = (data as { default_price_cents: number | string | null } | null)
+    ?.default_price_cents;
   if (bruto === null || bruto === undefined) return null;
   return { valor_cents: Number(bruto), currency: await moedaDaOrganizacao(db, organizationId) };
 }
@@ -311,7 +313,9 @@ async function sessaoNoPacote(
     if (!lancamento || lancamento.acao === "ja_lancada") return;
     await audit({
       action:
-        lancamento.acao === "lancada" ? "clinica.pacote_sessao_lancada" : "clinica.pacote_sessao_estornada",
+        lancamento.acao === "lancada"
+          ? "clinica.pacote_sessao_lancada"
+          : "clinica.pacote_sessao_estornada",
       actorUserId: ctx.actor.type === "user" ? ctx.actor.id : null,
       organizationId: ctx.organization_id,
       resourceType: "clinica_pacote",
@@ -327,4 +331,108 @@ async function sessaoNoPacote(
       error: mensagemDoErro(err),
     });
   }
+}
+
+/** Até quantas sessões do paciente a conferência lê numa janela (uma sessão já basta para recusar). */
+const LIMITE_DO_CHOQUE = 20;
+
+/**
+ * O PACIENTE JÁ TEM SESSÃO NESSE HORÁRIO? Recusa com 422 `agenda_paciente_ocupado`.
+ *
+ * Chamada por `lib/agenda/regras-de-modulo.ts` (`antesDeOcupar`) ao MARCAR e ao REMARCAR, no
+ * handler que a tela, o agente de IA e o chatbot do WhatsApp usam. A agenda de quem atende segue
+ * individual (o núcleo cuida dela); aqui a pergunta é só sobre o paciente: com QUALQUER
+ * profissional, uma sessão viva que cruza o pedido recusa.
+ *
+ * Vale só quando o compromisso novo é sessão da clínica (tipo com modalidade) e tem paciente. O
+ * que já está na agenda do paciente conta inteiro, seja de qual tipo for.
+ */
+export async function pacienteLivreNaClinica(
+  db: SB,
+  ctx: HandlerCtx,
+  pedido: {
+    eventTypeId: string | null;
+    contactId: string | null;
+    inicio: Date;
+    fim: Date;
+    ignorarAgendamentoId?: string;
+  },
+): Promise<void> {
+  if (!pedido.contactId) return;
+  const daClinica = await tipoDaClinica(db, ctx.organization_id, pedido.eventTypeId);
+  if (!daClinica) return;
+
+  const { data, error } = await db
+    .from("calendar_appointments")
+    .select("id, starts_at, ends_at, status, time_zone, owner_user_id, event_type_id, title")
+    .eq("organization_id", ctx.organization_id)
+    .eq("contact_id", pedido.contactId)
+    .lt("starts_at", pedido.fim.toISOString())
+    .gt("ends_at", pedido.inicio.toISOString())
+    .order("starts_at")
+    .limit(LIMITE_DO_CHOQUE);
+  if (error) throw error;
+
+  type Linha = {
+    id: string;
+    starts_at: string;
+    ends_at: string;
+    status: string;
+    time_zone: string | null;
+    owner_user_id: string | null;
+    event_type_id: string | null;
+    title: string | null;
+  };
+  const linhas = (data ?? []) as Linha[];
+  const choque = sessaoQueChoca(
+    linhas.map((l) => ({
+      ...l,
+      inicio: new Date(l.starts_at),
+      fim: new Date(l.ends_at),
+    })),
+    { inicio: pedido.inicio, fim: pedido.fim, ignorarId: pedido.ignorarAgendamentoId },
+  );
+  if (!choque) return;
+
+  const [tipo, profissional] = await Promise.all([
+    choque.event_type_id
+      ? db
+          .from("calendar_event_types")
+          .select("name")
+          .eq("organization_id", ctx.organization_id)
+          .eq("id", choque.event_type_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    choque.owner_user_id
+      ? db
+          .from("clinica_profissionais")
+          .select("nome_profissional")
+          .eq("organization_id", ctx.organization_id)
+          .eq("user_id", choque.owner_user_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const nomeDoTipo = (tipo.data as { name?: string } | null)?.name ?? choque.title ?? null;
+  const nomeDoProfissional =
+    (profissional.data as { nome_profissional?: string } | null)?.nome_profissional ?? null;
+
+  throw new ApiError(
+    422,
+    "agenda_paciente_ocupado",
+    {
+      appointment_id: choque.id,
+      starts_at: choque.starts_at,
+      ends_at: choque.ends_at,
+      owner_user_id: choque.owner_user_id,
+    },
+    ctx.requestId,
+    fraseDoChoque({
+      tipo: nomeDoTipo,
+      profissional: nomeDoProfissional,
+      inicio: choque.inicio,
+      fim: choque.fim,
+      fuso: choque.time_zone ?? "America/Sao_Paulo",
+      tag: tagDeIdioma(ctx.idioma ?? IDIOMA_PADRAO),
+    }),
+  );
 }

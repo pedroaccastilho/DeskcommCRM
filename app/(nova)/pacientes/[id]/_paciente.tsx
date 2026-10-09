@@ -119,7 +119,7 @@ export function Paciente({ contactId }: { contactId: string }) {
       <header className="n-entra mt-4 flex flex-wrap items-center gap-5">
         <Avatar nome={nome} tamanho={84} />
         <div className="min-w-0 flex-1">
-          <h1 className="n-titulo text-[38px] leading-tight sm:text-[48px]">{nome}</h1>
+          <h1 className="n-titulo text-[30px] leading-tight break-words sm:text-[48px]">{nome}</h1>
           <p className="n-suave mt-1 flex flex-wrap gap-x-4 text-[15px]">
             {c.phone_number && <span>{c.phone_number}</span>}
             {nascimento !== null && <span>{nascimento} anos</span>}

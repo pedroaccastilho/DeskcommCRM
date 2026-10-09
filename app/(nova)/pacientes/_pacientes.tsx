@@ -15,6 +15,7 @@ import { FolhaDoPaciente } from "@/components/novo/FolhaDoPaciente";
 import { Avatar, Carregando, Vazio } from "@/components/novo/pecas";
 import { useT } from "@/lib/i18n/IdiomaProvider";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
+import { MagnifyingGlass } from "@/lib/ui/icons";
 
 export function Pacientes() {
   const t = useT();
@@ -70,12 +71,11 @@ export function Pacientes() {
           aria-label={`Buscar ${rotulo.toLowerCase()}`}
           autoFocus
         />
-        <span
-          className="n-fraco pointer-events-none absolute top-1/2 left-5 -translate-y-1/2 text-xl"
+        <MagnifyingGlass
+          size={22}
+          className="n-fraco pointer-events-none absolute top-1/2 left-5 -translate-y-1/2"
           aria-hidden
-        >
-          ⌕
-        </span>
+        />
       </div>
       <div className="mt-6">
         {lista.isLoading ? (

@@ -41,7 +41,15 @@
   color: var(--n-tinta);
   font-family: var(--novo-fonte-texto), ui-sans-serif, system-ui, sans-serif;
   font-feature-settings: "ss01", "cv11";
+  /* O espaço da Plus Jakarta é estreito (0,17em): em texto miúdo as palavras colavam
+     ("Emaberto", "anoteaqui"). Um respiro pequeno devolve a separação sem mudar o desenho. */
+  word-spacing: 0.06em;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Botão e campo voltam a `word-spacing: normal` pela folha do navegador; herdam o respiro acima. */
+.novo :is(button, input, textarea, select) {
+  word-spacing: inherit;
 }
 
 [data-theme="dark"] .novo {
@@ -121,16 +129,27 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   width: 68px;
-  padding: 10px 0;
+  /* Uma ou duas palavras, o item tem a mesma altura e o rótulo fica no centro, quebrando em
+     linhas equilibradas ("Minha / agenda"), nunca encostado à esquerda. */
+  padding: 8px 4px;
   border-radius: 18px;
   font-size: 11px;
   font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
   color: color-mix(in oklab, var(--n-trilho-tinta) 72%, transparent);
   transition:
     background 160ms ease,
     color 160ms ease;
+}
+
+.novo .n-trilho > .n-porta {
+  /* Os destinos do menu têm todos a mesma altura, com uma palavra ou duas, ativos ou não. */
+  height: 68px;
 }
 
 .novo .n-trilho .n-porta:hover {
@@ -189,14 +208,21 @@
 
 .novo .n-abas .n-porta {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  padding: 8px 0 6px;
+  padding: 8px 1px 6px;
   border-radius: 18px;
-  font-size: 11px;
+  /* Com seis abas (gestão), cada uma tem ~58px num celular de 390: a 11px "Relatórios" e
+     "WhatsApp" se encostavam. A 10px cabem com folga. */
+  font-size: 10px;
+  letter-spacing: -0.01em;
   font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  text-wrap: balance;
   color: color-mix(in oklab, var(--n-trilho-tinta) 68%, transparent);
 }
 
@@ -291,6 +317,15 @@
 
 .novo .n-botao-suave:hover:not(:disabled) {
   background: color-mix(in oklab, var(--n-papel-2) 80%, var(--n-tinta) 8%);
+}
+
+/* No escuro, o papel-2 quase some no fundo: o botão suave ganha um véu da tinta para ser visto. */
+[data-theme="dark"] .novo .n-botao-suave {
+  background: color-mix(in oklab, var(--n-tinta) 11%, transparent);
+}
+
+[data-theme="dark"] .novo .n-botao-suave:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--n-tinta) 17%, transparent);
 }
 
 .novo .n-botao-perigo {
@@ -648,6 +683,14 @@
   }
   .novo .n-inbox > .grid {
     height: calc(100dvh - 32px);
+  }
+}
+
+/* A coluna da lista de 272px foi pensada para a tela cheia da versão atual; ao lado do menu da
+   interface nova ela cortava a busca ("Bus") e apertava os filtros. */
+@media (min-width: 1280px) {
+  .novo .n-inbox > .grid {
+    grid-template-columns: 330px 1fr 296px;
   }
 }
 

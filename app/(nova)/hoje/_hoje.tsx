@@ -476,7 +476,9 @@ function LinhaDoDia({
   const janela = janelaDoDia(horas);
   const agoraH = horaDecimal(agora.toISOString(), fuso);
   const marcas: number[] = [];
-  for (let h = janela.de; h <= janela.ate; h += h < janela.ate - 1 ? 2 : 1) marcas.push(h);
+  // De duas em duas horas e o fim da janela, sem a marca vizinha a uma hora dele ("19h20h").
+  for (let h = janela.de; h <= janela.ate - 2; h += 2) marcas.push(h);
+  marcas.push(janela.ate);
   return (
     <div className="n-cartao n-entra mt-6 px-5 pt-4 pb-3 sm:px-7" data-testid="novo-linha-do-dia">
       <div className="n-linha-do-dia">
