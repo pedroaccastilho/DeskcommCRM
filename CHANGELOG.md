@@ -8,6 +8,27 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.75.1] — 2026-10-09
+
+### Adicionado
+
+- **Na clínica, a recepção diz se o paciente paga a multa de cancelamento** Ao cancelar uma sessão com multa, a folha da interface nova pergunta "O paciente vai pagar a
+  multa?": "Sim, cobrar" deixa a multa a cobrar, e "Não, isentar" já a registra isenta, com motivo
+  curto opcional. Na ficha do paciente, uma multa a cobrar pode ser isentada e uma isenta pode
+  voltar a ser cobrada. Isentar e voltar a cobrar são de Administrador, Gerente e Recepção, e quem
+  decidiu, quando e por quê fica na auditoria. Multa isenta não entra em "a receber" nos relatórios.
+
+### Alterado
+
+- **Na clínica, cada profissional registra só as sessões da própria agenda** Confirmar, marcar chegada, iniciar o atendimento, registrar "Realizado" ou "Faltou" numa sessão
+  da clínica passa a ser só do profissional dono da sessão. Administrador, Gerente e Recepção seguem
+  registrando as sessões de todos. A regra vale no servidor, e a interface nova esconde os botões
+  das sessões de outro profissional.
+
+### Corrigido
+
+- **Leads no menu da interface nova** Os funis de venda (os leads) ganharam a porta "Leads" no menu da interface nova, para a Recepção e a Gestão. Antes eles só apareciam nos Ajustes do administrador, e quem não administra não tinha como chegar a eles pelo layout novo. O quadro de cada funil e cada negócio abrem sem sair da interface nova, e os endereços antigos levam aos novos. No celular da Gestão, que já tem seis portas, Leads fica no menu de "Você".
+
 ## [1.75.0] — 2026-10-09
 
 ### Adicionado
@@ -9979,7 +10000,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.75.0...HEAD
+[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.75.1...HEAD
+[1.75.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.75.0...v1.75.1
 [1.75.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.2...v1.75.0
 [1.74.2]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.1...v1.74.2
 [1.74.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.0...v1.74.1
