@@ -21,7 +21,8 @@ export function iniciais(nome: string): string {
     .replace(/\(.*?\)/g, " ")
     .trim()
     .split(/\s+/)
-    .filter((p) => /\p{L}/u.test(p));
+    // "Cliente Anonimizado #5471a1df" vira "CA", nunca "C#": só conta parte que começa por letra.
+    .filter((p) => /^\p{L}/u.test(p));
   if (partes.length === 0) return "?";
   const primeira = partes[0]!.charAt(0);
   const ultima = partes.length > 1 ? partes[partes.length - 1]!.charAt(0) : "";
