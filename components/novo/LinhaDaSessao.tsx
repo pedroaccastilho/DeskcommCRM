@@ -29,7 +29,9 @@ export function LinhaDaSessao({
   nomeDoProfissional: string | null;
   aoAbrir: () => void;
 }) {
-  const { fuso, role, soAsMinhas } = useNovo();
+  const { fuso, role, soAsMinhas, marcaASessao } = useNovo();
+  // A sessão de outro profissional: o fisioterapeuta não marca a do médico, e vice-versa.
+  const marca = role !== "viewer" && marcaASessao(sessao.profissional_user_id);
   const recarregar = useRecarregar();
   const momento = momentoDa(sessao, agora);
   const selo = seloDa(sessao, agora);
@@ -50,8 +52,7 @@ export function LinhaDaSessao({
 
   // O atalho da linha: o mesmo passo principal do Balcão (quem vê a clínica marca "Chegou") e do
   // Meu dia (quem atende inicia o atendimento de quem já chegou). O resto fica na folha.
-  const acao =
-    role === "viewer"
+  const acao = !marca
       ? null
       : momento === "sem_confirmacao"
         ? { rotulo: "Confirmar", status: "confirmed" as const }
@@ -59,7 +60,7 @@ export function LinhaDaSessao({
           ? { rotulo: "Realizado", status: "completed" as const }
           : null;
   const passo =
-    role === "viewer" || !sessao.modalidade
+    !marca || !sessao.modalidade
       ? null
       : !soAsMinhas && (momento === "confirmada" || momento === "atrasado")
         ? { rotulo: "Chegou", etapa: "chegou" as const }

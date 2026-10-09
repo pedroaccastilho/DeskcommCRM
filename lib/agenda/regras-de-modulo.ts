@@ -5,8 +5,8 @@
  * mais nada do módulo. Sem o módulo instalado, as três não fazem nada: a agenda do núcleo segue
  * inteira (DoD 18, destino "ambos": o núcleo ganha o ponto, o módulo é o consumidor).
  *
- * - `antesDoDesfecho` e `antesDeOcupar` podem RECUSAR (ApiError com código próprio). São as
- *   únicas que podem.
+ * - `antesDeMarcarPresenca`, `antesDoDesfecho` e `antesDeOcupar` podem RECUSAR (ApiError com
+ *   código próprio). São as únicas que podem.
  * - `depoisDaMudanca` nunca lança: o compromisso já está gravado, e falhar aqui não pode
  *   devolver erro a quem cancelou ou remarcou.
  */
@@ -17,12 +17,33 @@ import {
   antesDoDesfechoNaClinica,
   depoisDaMudancaNaClinica,
   pacienteLivreNaClinica,
+  presencaNaClinica,
   type MudancaNaAgenda,
 } from "@/lib/clinica/regras-da-agenda";
 import { ApiError } from "@/lib/api/types";
 import { logger } from "@/lib/logger";
 
 export type { MudancaNaAgenda };
+
+/**
+ * Antes de MUDAR O STATUS (confirmar, realizado, falta, ou desfazer um desses): na clínica, só o
+ * profissional da sessão, a recepção, a gerência e o administrador.
+ */
+export async function antesDeMarcarPresenca(
+  db: SupabaseClient,
+  ctx: HandlerCtx,
+  compromisso: { eventTypeId: string | null; donoId: string | null },
+): Promise<void> {
+  try {
+    await presencaNaClinica(db, ctx, compromisso);
+  } catch (err) {
+    if (err instanceof ApiError) throw err;
+    logger.error("[agenda] regra de módulo antes de marcar presença não pôde ser lida", {
+      organization_id: ctx.organization_id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
 
 export async function antesDoDesfecho(
   db: SupabaseClient,

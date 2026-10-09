@@ -43,6 +43,8 @@ import {
   WhatsappLogo,
 } from "@/lib/ui/icons";
 
+import { podeMarcarASessao } from "@/lib/clinica/presenca";
+
 import { useEu, type Eu } from "./dados";
 import { Avatar } from "./pecas";
 import { useT } from "@/lib/i18n/IdiomaProvider";
@@ -65,6 +67,12 @@ interface Contexto {
   veProntuario: boolean;
   /** O administrador está vendo como outra pessoa ("entrar como"): a tela é só para olhar. */
   soOlhar: boolean;
+  /**
+   * Pode confirmar, marcar chegada, iniciar, realizado e falta nesta sessão? Só a da própria
+   * agenda, salvo Administrador, Gerente e Recepção (`lib/clinica/presenca.ts`). A rota recusa
+   * do mesmo jeito; aqui só esconde o botão.
+   */
+  marcaASessao: (donoId: string | null) => boolean;
   /**
    * A versão atual está ao alcance? Só do Administrador, ou de todos com a chave "A equipe usa só a
    * interface nova" desligada. Ligada, a atual devolve os outros para cá (`lib/novo/raiz.ts`), e
@@ -173,6 +181,13 @@ export function Casca({
     soAsMinhas: atende(cargo),
     veProntuario: veProntuario(cargo, profissional),
     soOlhar: Boolean(vendoComo),
+    marcaASessao: (donoId) =>
+      podeMarcarASessao({
+        role,
+        cargos: eu.data?.cargos ?? [],
+        userId: vendoComo?.user_id ?? user.id,
+        donoId,
+      }),
     podeIrParaAAtual: veConfiguracoes(role) || interfaceDaEquipe.data?.nova_principal === false,
     veGestao: !veConfiguracoes(role) && telasDaGestao(role, eu.data?.cargos ?? []).length > 0,
   };
