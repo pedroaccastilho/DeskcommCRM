@@ -28,6 +28,7 @@ const ORG = "22222222-2222-4222-8222-222222222222";
 const OUTRA_ORG = "99999999-9999-4999-8999-999999999999";
 const ANA = "11111111-1111-4111-8111-111111111111";
 const BIA = "55555555-5555-4555-8555-555555555555";
+const CARLA = "66666666-6666-4666-8666-666666666666";
 const SESSAO = "33333333-3333-4333-8333-333333333333";
 const TIPO = "44444444-4444-4444-8444-444444444444";
 
@@ -58,6 +59,12 @@ function clienteFalso() {
             filtros.push([k, v]);
             return cadeia;
           },
+          is: (k: string, v: unknown) => {
+            filtros.push([k, v]);
+            return cadeia;
+          },
+          then: (ok: (r: { data: Linha[]; error: null }) => unknown) =>
+            Promise.resolve({ data: filtra(tabela, filtros), error: null }).then(ok),
           maybeSingle: async () => {
             const erro = erroDaTabela[tabela];
             if (erro) return { data: null, error: erro };
@@ -110,8 +117,27 @@ beforeEach(() => {
   erroDaTabela = {};
   tabelas = {
     calendar_appointments: [
-      { id: SESSAO, organization_id: ORG, status: "confirmed", event_type_id: TIPO },
+      {
+        id: SESSAO,
+        organization_id: ORG,
+        status: "confirmed",
+        event_type_id: TIPO,
+        owner_user_id: ANA,
+      },
     ],
+    // ANA é a fisioterapeuta dona da sessão; BIA é da recepção; CARLA é médica.
+    user_organizations: [ANA, BIA, CARLA].map((user_id) => ({
+      organization_id: ORG,
+      user_id,
+      role: "agent",
+      revoked_at: null,
+    })),
+    clinica_cargos_membro: [
+      { organization_id: ORG, user_id: ANA, cargo: "fisioterapeuta" },
+      { organization_id: ORG, user_id: BIA, cargo: "recepcao" },
+      { organization_id: ORG, user_id: CARLA, cargo: "medico" },
+    ],
+    clinica_profissionais: [],
     clinica_tipos_atendimento: [
       { organization_id: ORG, event_type_id: TIPO, modalidade: "fisioterapia" },
     ],
@@ -194,6 +220,22 @@ describe("POST /api/v1/clinica/agenda/[id]/etapa", () => {
     expect(status).toBe(200);
     expect(upserts).toHaveLength(0);
     expect(audit).not.toHaveBeenCalled();
+  });
+
+  it("a médica não marca a chegada do paciente da fisioterapeuta: 403 e nada gravado", async () => {
+    quem(CARLA);
+    const { status, corpo } = await chamar({ etapa: "chegou" });
+    expect(status).toBe(403);
+    expect(corpo.error.code).toBe("clinica_sessao_de_outro_profissional");
+    expect(upserts).toHaveLength(0);
+    expect(audit).not.toHaveBeenCalled();
+  });
+
+  it("a recepção marca a chegada da sessão de qualquer profissional", async () => {
+    quem(BIA);
+    const { status } = await chamar({ etapa: "chegou" });
+    expect(status).toBe(200);
+    expect(upserts[0]).toMatchObject({ chegou_por_user_id: BIA });
   });
 
   it("etapa desconhecida: 422", async () => {

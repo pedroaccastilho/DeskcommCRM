@@ -1,7 +1,9 @@
 /**
  * MARCAR A ETAPA DO DIA DE UMA SESSÃO: "chegou" e "em atendimento" (módulo clínica, migration 9007).
  *
- * POST { etapa: "chegou" | "em_atendimento" | "desfazer" } — a recepção (`agent`+).
+ * POST { etapa: "chegou" | "em_atendimento" | "desfazer" } — papel `agent`+, e só quem pode registrar
+ * a sessão (`lib/clinica/presenca.ts`): o profissional dela, a Recepção, o Gerente e o
+ * Administrador. A fisioterapeuta não marca a chegada do paciente do médico.
  *
  * - "chegou" grava a hora da chegada, se ainda não havia;
  * - "em_atendimento" grava a chegada (se faltava) e o início do atendimento, se ainda não havia;
@@ -36,6 +38,8 @@ import {
 } from "@/lib/clinica/agenda";
 import { etapaDaSessaoSchema } from "@/lib/clinica/agenda-schemas";
 import { MODULO_CLINICA_NAO_INSTALADO, moduloClinicaNaoInstalado } from "@/lib/clinica/api";
+import { exigePodeMarcarASessao } from "@/lib/clinica/presenca-servidor";
+import { ApiError } from "@/lib/api/types";
 import { requireSupportWrite } from "@/lib/impersonate/support";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -84,7 +88,7 @@ export async function POST(
 
   const sessao = await admin
     .from("calendar_appointments")
-    .select("id, status, event_type_id")
+    .select("id, status, event_type_id, owner_user_id")
     .eq("organization_id", org)
     .eq("id", id)
     .maybeSingle();
@@ -116,6 +120,21 @@ export async function POST(
       409,
       { requestId },
     );
+  }
+
+  try {
+    await exigePodeMarcarASessao(
+      org,
+      authz.user.id,
+      (sessao.data.owner_user_id as string | null) ?? null,
+      requestId,
+    );
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return fail(err.code, err.message, err.status, { requestId });
+    }
+    const mensagem = (err as { message?: string } | null)?.message ?? String(err);
+    return fail("internal_error", mensagem, 500, { requestId });
   }
 
   const status = sessao.data.status as string;

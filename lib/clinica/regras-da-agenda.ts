@@ -37,6 +37,7 @@ import {
 } from "./agenda";
 import { moduloClinicaNaoInstalado } from "./api";
 import { fraseDoChoque, sessaoQueChoca } from "./choque-do-paciente";
+import { exigePodeMarcarASessao } from "./presenca-servidor";
 import { consumoDaTransicao, type MotivoDoConsumo } from "./pacotes";
 import { lancarSessaoNoPacote, valorDaSessaoPeloPacote } from "./pacotes-servidor";
 
@@ -147,6 +148,27 @@ export async function antesDoDesfechoNaClinica(
         `A falta pode ser registrada a partir das ${horaParaQuemLe(liberada, ctx)}.`,
     );
   }
+}
+
+/**
+ * ANTES de mudar o status de uma sessão da clínica: quem não é Administrador, Gerente nem
+ * Recepção só registra a sessão da própria agenda (`lib/clinica/presenca.ts`). Só gente: o agente
+ * de IA e o webhook seguem governados pelo papel do token.
+ */
+export async function presencaNaClinica(
+  db: SB,
+  ctx: HandlerCtx,
+  compromisso: { eventTypeId: string | null; donoId: string | null },
+): Promise<void> {
+  if (ctx.actor.type !== "user") return;
+  const tipo = await tipoDaClinica(db, ctx.organization_id, compromisso.eventTypeId);
+  if (!tipo) return;
+  await exigePodeMarcarASessao(
+    ctx.organization_id,
+    ctx.actor.id,
+    compromisso.donoId,
+    ctx.requestId,
+  );
 }
 
 export interface MudancaNaAgenda {

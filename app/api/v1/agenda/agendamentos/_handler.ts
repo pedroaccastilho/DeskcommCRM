@@ -52,7 +52,12 @@ import { resolveActiveLeadForContact, type LeadCandidate } from "@/lib/leads/act
 import { emitLeadActivity } from "@/lib/leads/activity-emitter";
 import { registraFalhaDeAtividade } from "@/lib/leads/activity-write-failure";
 import { moverLeadParaEtapaDeAgendamento } from "@/lib/leads/appointment-stage-move";
-import { antesDeOcupar, antesDoDesfecho, depoisDaMudanca } from "@/lib/agenda/regras-de-modulo";
+import {
+  antesDeMarcarPresenca,
+  antesDeOcupar,
+  antesDoDesfecho,
+  depoisDaMudanca,
+} from "@/lib/agenda/regras-de-modulo";
 import { logger } from "@/lib/logger";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -574,6 +579,12 @@ export async function alterarAgendamentoHandler(
   }
 
   if (input.status && input.status !== atual.status) {
+    // Na clínica, a sessão de um profissional só é registrada por ele, pela recepção, pela
+    // gerência e pelo administrador (pedido do dono do fork, 2026-10-09).
+    await antesDeMarcarPresenca(supabase, ctx, {
+      eventTypeId: (atual.event_type_id as string | null) ?? null,
+      donoId: (atual.owner_user_id as string | null) ?? null,
+    });
     // ⚠️ DESFECHO É SOBRE O PASSADO. `completed` e `no_show` respondem "o que
     // aconteceu?", e num compromisso que ainda não começou não aconteceu nada.
     //

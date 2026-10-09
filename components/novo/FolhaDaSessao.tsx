@@ -112,7 +112,7 @@ export function FolhaDaSessao({
 }) {
   const t = useT();
   const tag = useTagDeIdioma();
-  const { fuso, role, eu, cargo, soOlhar, soAsMinhas } = useNovo();
+  const { fuso, role, eu, cargo, soOlhar, soAsMinhas, marcaASessao } = useNovo();
   const [passo, setPasso] = React.useState<Passo>("inicio");
   const [evolucao, setEvolucao] = React.useState(false);
   const recarregar = useRecarregar();
@@ -149,19 +149,23 @@ export function FolhaDaSessao({
   const aberta = momento !== "encerrada";
   const podeFaltar = faltaLiberada(sessao, agora);
   const recepcao = role !== "viewer";
+  // Confirmar, "Chegou", iniciar, realizado e falta: só na sessão da própria agenda, salvo
+  // Administrador, Gerente e Recepção. Remarcar e WhatsApp seguem como estavam.
+  const marca = recepcao && marcaASessao(sessao.profissional_user_id);
   const profissional = eu?.profissional ?? null;
   const selo = seloDa(sessao, agora);
   // A tela de quem vê a clínica (recepção e gestão) faz o Balcão; a de quem atende, o Meu dia.
-  const balcao = recepcao && !soAsMinhas;
+  const balcao = marca && !soAsMinhas;
   const temEtapa = Boolean(sessao.modalidade);
   const dentro = naClinica(momento);
   const podeChegar = balcao && aberta && temEtapa && !sessao.chegou_em && momento !== "para_fechar";
   const podeIniciar =
-    recepcao && soAsMinhas && aberta && temEtapa && !sessao.atendimento_iniciado_em;
+    marca && soAsMinhas && aberta && temEtapa && !sessao.atendimento_iniciado_em;
   const podeFechar =
-    dentro || momento === "agora" || momento === "atrasado" || momento === "para_fechar";
+    marca &&
+    (dentro || momento === "agora" || momento === "atrasado" || momento === "para_fechar");
   const principal: "iniciar" | "confirmar" | "chegou" | "realizado" | null =
-    !aberta || !recepcao
+    !aberta || !marca
       ? null
       : podeIniciar
         ? "iniciar"
@@ -301,7 +305,7 @@ export function FolhaDaSessao({
                     {t("Iniciar atendimento")}
                   </button>
                 )}
-                {momento === "sem_confirmacao" && (
+                {marca && momento === "sem_confirmacao" && (
                   <button
                     type="button"
                     className={`n-botao w-full ${principal === "confirmar" ? "n-botao-principal" : "n-botao-suave"}`}
@@ -322,7 +326,7 @@ export function FolhaDaSessao({
                     {t("Chegou")}
                   </button>
                 )}
-                {dentro && (
+                {marca && dentro && (
                   <button
                     type="button"
                     className={`n-botao w-full ${principal === "realizado" ? "n-botao-principal" : "n-botao-suave"}`}
