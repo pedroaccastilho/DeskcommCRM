@@ -8,6 +8,36 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.74.2] — 2026-10-08
+
+### Corrigido
+
+- **A agenda da interface nova tem as visões Semana e Mês** A agenda nova mostrava um dia por vez. Agora ela tem Dia, Semana e Mês, como a da versão atual. A
+  Semana desenha uma coluna por dia, de segunda a domingo, e põe lado a lado as sessões que se
+  sobrepõem. O Mês mostra o calendário com as sessões de cada dia; tocar no dia abre o Dia, tocar na
+  sessão abre a folha dela. A visão escolhida fica guardada no navegador.
+
+- **A Equipe da interface nova leva a acessos, convites e horários de atendimento** A Equipe nova cadastra pessoas e escolhe os perfis. O que só a Equipe da versão atual fazia agora
+  abre dentro da interface nova, pelos atalhos "Acessos e convites pendentes" e "Horários de
+  atendimento": revogar e devolver o acesso de quem sai, reenviar e revogar convites e publicar os
+  horários de cada profissional, que são o que libera horário livre na agenda.
+
+- **A ficha e o Hoje da interface nova ganharam o que ainda faltava da versão atual** Ao agendar, dá para escrever a Observação ("o que a equipe precisa lembrar neste horário"), e ela
+  aparece na folha da sessão. A ficha do paciente tem o botão de WhatsApp, que abre a conversa dele
+  (ou começa uma pelo telefone), mostra quando o contato pediu para não receber mensagens e deixa o
+  Administrador desbloqueá-lo, e filtra o prontuário por modalidade. No Hoje de quem atende, as
+  evoluções pendentes passam de seis com "Ver todas".
+
+- **A ficha da interface nova tem a linha do tempo e a anonimização (LGPD)** A ficha do paciente na interface nova ganhou a "Linha do tempo" (mensagens, tarefas e mudanças do
+  contato, aberta quando se pede) e, só para o Administrador, o cartão "Direito ao esquecimento
+  (LGPD)" com o mesmo diálogo de duas etapas da versão atual para anonimizar o contato.
+
+- **Os Pacientes da interface nova juntam cadastros duplicados** A tela Pacientes da interface nova ganhou o botão "Duplicados", o mesmo da versão atual: mostra os cadastros que são a mesma pessoa lado a lado, deixa escolher quem fica e pede confirmação antes de juntar. Aparece só para gerente e administrador.
+
+- **As Tarefas da interface nova têm a visão de Calendário** A tela de Tarefas da interface nova ganhou o Calendário da versão atual, ao lado da Lista: cada
+  tarefa aparece no dia do prazo (as atrasadas em vermelho), tocar nela abre a folha, e tocar num dia
+  abre uma tarefa nova já com aquele prazo. No celular, cada dia mostra quantas tarefas vencem nele.
+
 ## [1.74.1] — 2026-10-08
 
 ### Corrigido
@@ -9926,7 +9956,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.1...HEAD
+[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.2...HEAD
+[1.74.2]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.1...v1.74.2
 [1.74.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.0...v1.74.1
 [1.74.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.73.0...v1.74.0
 [1.73.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.72.0...v1.73.0
