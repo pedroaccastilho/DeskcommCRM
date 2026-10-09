@@ -3,8 +3,8 @@
 /**
  * AGENDA da interface nova, nas três visões da versão atual: Dia (uma coluna por profissional),
  * Semana (uma coluna por dia) e Mês (o calendário), com blocos na cor da modalidade. Quem atende
- * abre na própria agenda e pode ver a equipe da MESMA área (a fisioterapeuta vê fisioterapia, não
- * medicina); recepção e gestão veem todos. As contas das visões estão em `lib/novo/agenda.ts`.
+ * abre na própria agenda e pode ver a agenda da clínica inteira, só para olhar (pedido do Pedro em
+ * 2026-10-09: a agenda é de cada um, mas todos veem a de todos); recepção e gestão veem todos. As contas das visões estão em `lib/novo/agenda.ts`.
  */
 import * as React from "react";
 
@@ -66,7 +66,7 @@ function gravarVisao(v: VisaoDaAgenda): void {
 export function Agenda() {
   const t = useT();
   const tag = useTagDeIdioma();
-  const { fuso, meuId, soAsMinhas, modalidades, role } = useNovo();
+  const { fuso, meuId, soAsMinhas, role } = useNovo();
   const agora = useAgora();
   const hoje = diaLocalISO(agora, fuso);
   const [dia, setDia] = React.useState(hoje);
@@ -86,11 +86,11 @@ export function Agenda() {
   const [agendar, setAgendar] = React.useState(false);
 
   const todos = grade.data?.profissionais ?? [];
-  const daMinhaArea = (p: ProfissionalDaGrade) =>
-    !modalidades || p.modalidades.some((m) => modalidades.includes(m));
+  // "Ver agenda da equipe toda": todas as colunas, a minha primeiro. Mexer na sessão de um colega
+  // segue a regra de sempre (a opção "Atendentes podem mexer na agenda dos colegas", no servidor).
   const colunas: ProfissionalDaGrade[] = soAsMinhas
     ? daEquipe
-      ? todos.filter(daMinhaArea).sort((a) => (a.user_id === meuId ? -1 : 1))
+      ? [...todos].sort((a, b) => Number(b.user_id === meuId) - Number(a.user_id === meuId))
       : todos.filter((p) => p.user_id === meuId)
     : todos;
   const ids = new Set(colunas.map((c) => c.user_id));
@@ -188,7 +188,7 @@ export function Agenda() {
               aria-pressed={daEquipe}
               onClick={() => setDaEquipe((v) => !v)}
             >
-              {daEquipe ? t("Ver só a minha") : t("Ver a equipe da minha área")}
+              {daEquipe ? t("Ver só a minha") : t("Ver agenda da equipe toda")}
             </button>
           )}
           {role !== "viewer" && (

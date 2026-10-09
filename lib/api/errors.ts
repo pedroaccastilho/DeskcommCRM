@@ -56,6 +56,10 @@ export const ApiErrorCodes = {
   agenda_disponibilidade_invalida: "agenda_disponibilidade_invalida",
   agenda_ja_cancelado: "agenda_ja_cancelado",
   agenda_listagem_sem_recorte: "agenda_listagem_sem_recorte",
+  // Módulo clínica: o PACIENTE já tem sessão viva que cruza o horário pedido, com qualquer
+  // profissional (`lib/clinica/regras-da-agenda.ts`, `pacienteLivreNaClinica`). Diferente de
+  // `agenda_horario_indisponivel`, que é a agenda de QUEM ATENDE.
+  agenda_paciente_ocupado: "agenda_paciente_ocupado",
   // Código PRÓPRIO, e não o `unprocessable_entity` genérico: quem recebe isto
   // precisa saber que o `lead_id` mandado não é um negócio do funil (é quase
   // sempre um id de CONTATO — ver #509/#540) e que a correção é trocar o

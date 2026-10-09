@@ -532,6 +532,9 @@ export const crmListAppointments: McpToolDefinition<typeof listarShape> = {
 const ENSINO_POR_CODIGO: Record<string, string> = {
   agenda_horario_indisponivel:
     "esse horário acabou de ficar indisponível. Chame `crm_find_free_slots` de novo e ofereça um dos horários que voltarem.",
+  agenda_paciente_ocupado:
+    "a pessoa já tem outro atendimento marcado nesse horário. Ofereça um horário que não cruze com " +
+    "os compromissos dela (`crm_list_appointments` mostra quais são).",
   agenda_fora_da_jornada:
     "esse horário está fora do expediente do atendente. Chame `crm_find_free_slots` e ofereça um dos que ele devolver — não insista no horário pedido.",
   agenda_tipo_desativado:
