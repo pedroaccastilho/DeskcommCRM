@@ -174,6 +174,13 @@ test.describe("Acabamento da interface nova", () => {
           await abrir(page, tela);
           const rolagem = await page.evaluate(() => document.documentElement.scrollWidth);
           expect(rolagem, `${tela} (escuro, ${onde}) passa da janela`).toBeLessThanOrEqual(largura);
+          if (tela === "/conta" && largura < 400) {
+            // No celular, Idioma e Fuso ficam um embaixo do outro: lado a lado, os dois cortavam.
+            const seletor = await page
+              .locator("#locale")
+              .evaluate((el) => el.getBoundingClientRect().width);
+            expect(seletor, "seletor de idioma com a largura do cartão").toBeGreaterThan(250);
+          }
           await page.screenshot({
             path: path.join(EVIDENCIA, `gestao-dark-${onde}${tela.replace(/\//g, "-")}.png`),
           });
