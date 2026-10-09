@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-/** Os funis moravam nos Ajustes; agora são "Leads", com porta no menu (`/funis`). */
+/** `/leads` sozinho leva à lista dos funis, que é a porta "Leads" do menu. */
 export default function Page() {
   redirect("/funis");
 }

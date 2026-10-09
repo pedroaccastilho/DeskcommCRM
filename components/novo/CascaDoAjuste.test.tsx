@@ -64,6 +64,6 @@ describe("CascaDoAjuste: a navegação da tela de lá fica na interface nova", (
       </CascaDoAjuste>,
     );
     fireEvent.click(screen.getByText("funil"));
-    expect(router.push).toHaveBeenCalledWith("/ajustes/funis/42");
+    expect(router.push).toHaveBeenCalledWith("/funis/42");
   });
 });

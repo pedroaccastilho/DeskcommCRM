@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  abasDoCelular,
   cargoDe,
   cargosParaVer,
   escreveEvolucao,
@@ -45,6 +46,7 @@ describe("cargo na interface nova", () => {
       "Agenda",
       "Pacientes",
       "WhatsApp",
+      "Leads",
     ]);
     expect(menuDoCargo("saude").map((i) => i.rotulo)).toEqual([
       "Meu dia",
@@ -64,12 +66,35 @@ describe("cargo na interface nova", () => {
       "Agenda",
       "Pacientes",
       "WhatsApp",
+      "Leads",
       "Relatórios",
     ]);
     expect(menuDoCargo("saude", true).map((i) => i.rotulo)).toEqual([
       "Meu dia",
       "Minha agenda",
       "Meus pacientes",
+      "Relatórios",
+    ]);
+  });
+});
+
+describe("os leads na interface nova", () => {
+  it("Recepção e Gestão têm a porta; quem atende não", () => {
+    for (const cargo of ["recepcao", "gestao"] as const) {
+      expect(menuDoCargo(cargo).find((i) => i.href === "/funis")?.rotulo).toBe("Leads");
+    }
+    for (const cargo of ["saude", "educador"] as const) {
+      expect(menuDoCargo(cargo, true).some((i) => i.href === "/funis")).toBe(false);
+    }
+  });
+
+  it("no celular, com seis portas, Leads sai das abas para caber", () => {
+    expect(abasDoCelular(menuDoCargo("recepcao")).map((i) => i.rotulo)).toContain("Leads");
+    expect(abasDoCelular(menuDoCargo("gestao", true)).map((i) => i.rotulo)).toEqual([
+      "Hoje",
+      "Agenda",
+      "Pacientes",
+      "WhatsApp",
       "Relatórios",
     ]);
   });

@@ -36,7 +36,7 @@ describe("os endereços da interface nova moram na raiz", () => {
     const [raiz, telas] = redirecionamentosDoNovo();
     expect(raiz).toEqual({ source: "/novo", destination: "/hoje", permanent: false });
     expect(telas!.source).toBe(
-      "/novo/:tela(agenda|pacientes|whatsapp|tarefas|relatorios|equipe|conta|ajustes)/:resto*",
+      "/novo/:tela(agenda|pacientes|whatsapp|funis|leads|tarefas|relatorios|equipe|conta|ajustes)/:resto*",
     );
     expect(telas!.destination).toBe("/:tela/:resto*");
   });
