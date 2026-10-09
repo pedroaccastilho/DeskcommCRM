@@ -35,3 +35,25 @@ describe("motivoDaIsencao", () => {
     expect(motivoDaIsencao("   ")).toBe(MOTIVO_PADRAO_DA_ISENCAO);
   });
 });
+
+describe("os corpos de isentar e de cancelar", () => {
+  it("isentar aceita motivo vazio ou ausente, e recusa motivo de 1 ou 2 letras", async () => {
+    const { isentarMultaSchema } = await import("./agenda-schemas");
+    expect(isentarMultaSchema.safeParse({}).success).toBe(true);
+    expect(isentarMultaSchema.safeParse({ motivo: "  " }).success).toBe(true);
+    expect(isentarMultaSchema.safeParse({ motivo: "ok" }).success).toBe(false);
+    expect(isentarMultaSchema.safeParse({ motivo: "atestado" }).success).toBe(true);
+  });
+
+  it("cancelar sem dizer nada sobre a multa a deixa a cobrar", async () => {
+    const { cancelarSessaoSchema } = await import("./agenda-schemas");
+    const lido = cancelarSessaoSchema.parse({ motivo: "paciente com febre" });
+    expect(lido.multa).toBe("cobrar");
+    expect(
+      cancelarSessaoSchema.parse({ motivo: "paciente com febre", multa: "isentar" }).multa,
+    ).toBe("isentar");
+    expect(
+      cancelarSessaoSchema.safeParse({ motivo: "paciente com febre", multa: "talvez" }).success,
+    ).toBe(false);
+  });
+});
