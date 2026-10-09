@@ -8,6 +8,29 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.75.0] — 2026-10-09
+
+### Adicionado
+
+- **A clínica não marca o mesmo paciente em dois lugares ao mesmo tempo** Com o módulo clínica, marcar ou remarcar uma sessão para um paciente que já tem
+  outra sessão nesse horário (com qualquer profissional) é recusado, com a frase
+  dizendo o que já está marcado, com quem e quando. Vale para a tela, para o
+  agente de IA e para o chatbot do WhatsApp, que deixa de oferecer esses horários.
+  A agenda de cada profissional continua individual: o médico pode atender outro
+  paciente no mesmo horário em que a fisioterapeuta atende. Na interface nova, a
+  folha de agendar risca o horário em que o paciente já está ocupado, e quem
+  atende ganha "Ver agenda da equipe toda" para olhar a agenda de toda a equipe.
+
+- **Toda tarefa tem um responsável, e qualquer pessoa da equipe pode passá-la adiante** Na tela de Tarefas da interface nova, cada tarefa mostra quem da equipe vai resolvê-la. A tarefa
+  nova já nasce com quem a criou, e na folha da tarefa qualquer pessoa da equipe escolhe outro
+  responsável. Cada repasse fica registrado (quem passou, de quem, para quem e quando) e aparece na
+  própria folha. A lista e o calendário ganharam o filtro "Minhas tarefas". Tarefas antigas ou
+  criadas pelo sistema aparecem como "Sem responsável" até alguém assumir.
+
+### Corrigido
+
+- **O menu e as telas da interface nova ficaram alinhados** Os rótulos de duas palavras do menu lateral ("Minha agenda", "Meus pacientes") ficam centralizados e todos os itens têm a mesma altura. As palavras deixaram de colar no texto miúdo, as horas do Meu dia não se encavalam mais, as abas do celular não se encostam, a busca do WhatsApp não corta, o botão suave aparece no tema escuro o paciente anonimizado mostra as iniciais certas e, em Minha conta no celular, Idioma e Fuso não cortam mais o texto.
+
 ## [1.74.2] — 2026-10-08
 
 ### Corrigido
@@ -9956,7 +9979,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.2...HEAD
+[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.75.0...HEAD
+[1.75.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.2...v1.75.0
 [1.74.2]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.1...v1.74.2
 [1.74.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.0...v1.74.1
 [1.74.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.73.0...v1.74.0
