@@ -22,6 +22,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { createClient } from "@/lib/supabase/server";
 import { registraAtividadeDaTarefa } from "@/lib/tarefas/atividade";
+import { podeSerResponsavel } from "@/lib/tarefas/responsavel";
 import { PRIORIDADES_DA_TAREFA, SITUACOES_DA_TAREFA, type Tarefa } from "@/lib/tarefas/tipos";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +39,9 @@ const edicaoSchema = z
     status: z.enum(SITUACOES_DA_TAREFA).optional(),
     lead_id: z.string().uuid().nullable().optional(),
     contact_id: z.string().uuid().nullable().optional(),
-    assigned_to: z.string().uuid().nullable().optional(),
+    // Sem `.nullable()`: a tarefa tem sempre alguém que vai resolvê-la. Passar para outra pessoa
+    // é trocar o responsável, nunca tirar.
+    assigned_to: z.string().uuid().optional(),
   })
   // PATCH vazio gravaria só o `updated_at` e devolveria 200: a tela diria
   // "salvo" sobre uma edição que não existiu.
@@ -71,13 +74,30 @@ export async function PATCH(req: NextRequest, ctx: Contexto): Promise<Response> 
 
   // A situação ANTES da edição decide se esta é a vez em que a tarefa fechou.
   // Sem ler antes, marcar "concluída" duas vezes emitiria duas linhas na
-  // timeline do negócio — e a segunda seria mentira.
-  const { data: antes } = await supabase
+  // timeline do negócio — e a segunda seria mentira. O responsável antes decide,
+  // do mesmo jeito, se houve repasse.
+  const { data: antesLido } = await supabase
     .from("crm_tasks")
-    .select("status")
+    .select("status, assigned_to")
     .eq("id", id)
     .eq("organization_id", authz.org.orgId)
     .maybeSingle();
+  const antes = antesLido as { status?: string; assigned_to?: string | null } | null;
+
+  // Qualquer pessoa da equipe pode passar a tarefa para outra — a cerca é só que o destino seja
+  // da equipe (a FK aceitaria alguém de outra organização).
+  const novoResponsavel = parsed.data.assigned_to;
+  const repassou =
+    novoResponsavel !== undefined && novoResponsavel !== (antes?.assigned_to ?? null);
+  if (
+    repassou &&
+    novoResponsavel !== authz.user.id &&
+    !(await podeSerResponsavel(authz.org.orgId, novoResponsavel))
+  ) {
+    return fail("validation_failed", t("O responsável escolhido não é da equipe."), 422, {
+      requestId,
+    });
+  }
 
   const { data, error } = await supabase
     .from("crm_tasks")
@@ -111,8 +131,22 @@ export async function PATCH(req: NextRequest, ctx: Contexto): Promise<Response> 
     metadata: { campos: Object.keys(parsed.data) },
   });
 
-  const fechouAgora =
-    tarefa.status === "done" && (antes as { status?: string } | null)?.status !== "done";
+  // O repasse fica registrado: quem passou, de quem, para quem e quando. A auditoria é
+  // append-only (migration 0258), e é dela que `GET /api/v1/tasks/[id]/repasses` lê o histórico
+  // que a folha da tarefa mostra.
+  if (repassou) {
+    await audit({
+      organizationId: authz.org.orgId,
+      actorUserId: authz.user.id,
+      action: "crm_task.reassigned",
+      resourceType: "crm_tasks",
+      resourceId: tarefa.id,
+      requestId,
+      metadata: { de: antes?.assigned_to ?? null, para: tarefa.assigned_to },
+    });
+  }
+
+  const fechouAgora = tarefa.status === "done" && antes?.status !== "done";
   if (fechouAgora) {
     await registraAtividadeDaTarefa(supabase, {
       organizationId: authz.org.orgId,

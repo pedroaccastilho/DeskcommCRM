@@ -33,10 +33,15 @@ import { requireRole } from "@/lib/auth/require-role";
 import { ROLE_RANK, type AuthUser, type Role } from "@/lib/auth/types";
 import { emitLeadActivity } from "@/lib/leads/activity-emitter";
 import { createClient } from "@/lib/supabase/server";
+import { podeSerResponsavel } from "@/lib/tarefas/responsavel";
 
 vi.mock("@/lib/auth/require-role", () => ({ requireRole: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
-vi.mock("@/lib/audit", () => ({ audit: vi.fn(async () => undefined) }));
+vi.mock("@/lib/audit", () => ({
+  audit: vi.fn(async () => undefined),
+  isServiceRoleConfigured: () => false,
+}));
+vi.mock("@/lib/tarefas/responsavel", () => ({ podeSerResponsavel: vi.fn(async () => true) }));
 vi.mock("@/lib/leads/activity-emitter", () => ({
   emitLeadActivity: vi.fn(async () => ({ ok: true })),
 }));
@@ -46,6 +51,7 @@ const OUTRA_ORG = "33333333-3333-4333-8333-333333333333";
 const ANA = "11111111-1111-4111-8111-111111111111";
 const LEAD = "44444444-4444-4444-8444-444444444444";
 const TAREFA = "55555555-5555-4555-8555-555555555555";
+const BRUNO = "66666666-6666-4666-8666-666666666666";
 
 function sessao(papel: Role) {
   const user: AuthUser = {
@@ -78,6 +84,8 @@ interface Resposta {
 function fazerSupabase(respostas: Resposta[]) {
   const tabelas: string[] = [];
   const filtros: Array<[string, unknown]> = [];
+  /** O que a rota mandou gravar (`insert`/`update`), na ordem. */
+  const gravados: Array<Record<string, unknown>> = [];
   let i = 0;
   const proxima = (): Resposta => respostas[Math.min(i++, respostas.length - 1)] ?? { data: null };
 
@@ -88,8 +96,14 @@ function fazerSupabase(respostas: Resposta[]) {
       const r = proxima();
       return Promise.resolve({ data: r.data ?? null, error: r.error ?? null });
     };
-    for (const metodo of ["select", "insert", "update", "delete", "order", "limit", "in", "gte", "lte"]) {
+    for (const metodo of ["select", "delete", "order", "limit", "in", "gte", "lte"]) {
       elo[metodo] = () => elo;
+    }
+    for (const metodo of ["insert", "update"]) {
+      elo[metodo] = (linha: Record<string, unknown>) => {
+        gravados.push(linha);
+        return elo;
+      };
     }
     elo.eq = (coluna: string, valor: unknown) => {
       filtros.push([coluna, valor]);
@@ -101,7 +115,7 @@ function fazerSupabase(respostas: Resposta[]) {
     return elo;
   };
   vi.mocked(createClient).mockResolvedValue({ from } as never);
-  return { tabelas, filtros };
+  return { tabelas, filtros, gravados };
 }
 
 const LINHA = {
@@ -292,6 +306,148 @@ describe("PATCH e DELETE /api/v1/tasks/[id]", () => {
     expect(res.status).toBe(404);
     expect(espiao.filtros).toContainEqual(["organization_id", ORG]);
     expect(vi.mocked(audit)).not.toHaveBeenCalled();
+  });
+});
+
+describe("o responsável da tarefa", () => {
+  const ctx = { params: Promise.resolve({ id: TAREFA }) };
+
+  function pedido(metodo: "POST" | "PATCH", corpo: Record<string, unknown>) {
+    return new NextRequest(`http://x/api/v1/tasks${metodo === "PATCH" ? `/${TAREFA}` : ""}`, {
+      method: metodo,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(corpo),
+    });
+  }
+
+  it("tarefa criada sem escolha nasce com quem criou", async () => {
+    const espiao = fazerSupabase([{ data: { ...LINHA, assigned_to: ANA } }]);
+    const { POST } = await import("@/app/api/v1/tasks/route");
+
+    const res = await POST(pedido("POST", { title: "Ligar de volta" }));
+
+    expect(res.status).toBe(201);
+    expect(espiao.gravados[0]).toMatchObject({ assigned_to: ANA, created_by: ANA });
+    // A própria pessoa não precisa da cerca: ela é da equipe por estar na sessão.
+    expect(vi.mocked(podeSerResponsavel)).not.toHaveBeenCalled();
+  });
+
+  it("criar já passando para alguém de fora da equipe é 422, e nada é gravado", async () => {
+    vi.mocked(podeSerResponsavel).mockResolvedValueOnce(false);
+    const espiao = fazerSupabase([{ data: LINHA }]);
+    const { POST } = await import("@/app/api/v1/tasks/route");
+
+    const res = await POST(pedido("POST", { title: "Ligar de volta", assigned_to: BRUNO }));
+
+    expect(res.status).toBe(422);
+    expect(vi.mocked(podeSerResponsavel)).toHaveBeenCalledWith(ORG, BRUNO);
+    expect(espiao.gravados).toHaveLength(0);
+  });
+
+  it("passar a tarefa para outra pessoa grava e registra quem passou, de quem e para quem", async () => {
+    const espiao = fazerSupabase([
+      { data: { status: "pending", assigned_to: ANA } },
+      { data: { ...LINHA, assigned_to: BRUNO } },
+    ]);
+    const { PATCH } = await import("@/app/api/v1/tasks/[id]/route");
+
+    const res = await PATCH(pedido("PATCH", { assigned_to: BRUNO }), ctx);
+
+    expect(res.status).toBe(200);
+    expect(espiao.gravados[0]).toEqual({ assigned_to: BRUNO });
+    expect(vi.mocked(audit)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "crm_task.reassigned",
+        actorUserId: ANA,
+        organizationId: ORG,
+        resourceId: TAREFA,
+        metadata: { de: ANA, para: BRUNO },
+      }),
+    );
+  });
+
+  it("salvar com o MESMO responsável não inventa repasse", async () => {
+    fazerSupabase([
+      { data: { status: "pending", assigned_to: BRUNO } },
+      { data: { ...LINHA, assigned_to: BRUNO } },
+    ]);
+    const { PATCH } = await import("@/app/api/v1/tasks/[id]/route");
+
+    await PATCH(pedido("PATCH", { assigned_to: BRUNO, title: "Ligar de volta" }), ctx);
+
+    expect(vi.mocked(audit)).not.toHaveBeenCalledWith(
+      expect.objectContaining({ action: "crm_task.reassigned" }),
+    );
+  });
+
+  it("passar para alguém de fora da equipe é 422", async () => {
+    vi.mocked(podeSerResponsavel).mockResolvedValueOnce(false);
+    const espiao = fazerSupabase([{ data: { status: "pending", assigned_to: ANA } }]);
+    const { PATCH } = await import("@/app/api/v1/tasks/[id]/route");
+
+    const res = await PATCH(pedido("PATCH", { assigned_to: BRUNO }), ctx);
+
+    expect(res.status).toBe(422);
+    expect(espiao.gravados).toHaveLength(0);
+  });
+
+  it("tirar o responsável (null) é recusado: a tarefa tem sempre alguém", async () => {
+    fazerSupabase([{ data: LINHA }]);
+    const { PATCH } = await import("@/app/api/v1/tasks/[id]/route");
+
+    const res = await PATCH(pedido("PATCH", { assigned_to: null }), ctx);
+
+    expect(res.status).toBe(422);
+  });
+
+  it('"Minhas tarefas" filtra pelo responsável, dentro da org da sessão', async () => {
+    const espiao = fazerSupabase([{ data: [LINHA] }]);
+    const { GET } = await import("@/app/api/v1/tasks/route");
+
+    await GET(new NextRequest(`http://x/api/v1/tasks?assigned_to=${ANA}`));
+
+    expect(espiao.filtros).toContainEqual(["assigned_to", ANA]);
+    expect(espiao.filtros).toContainEqual(["organization_id", ORG]);
+  });
+
+  it("o histórico de repasses lê só a auditoria desta tarefa, nesta org", async () => {
+    const espiao = fazerSupabase([
+      { data: { id: TAREFA } },
+      {
+        data: [
+          {
+            actor_user_id: ANA,
+            metadata: { de: ANA, para: BRUNO },
+            created_at: "2026-10-09T12:00:00.000Z",
+          },
+        ],
+      },
+    ]);
+    const { GET } = await import("@/app/api/v1/tasks/[id]/repasses/route");
+
+    const res = await GET(new NextRequest(`http://x/api/v1/tasks/${TAREFA}/repasses`), ctx);
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      data: { repasses: [{ por: ANA, de: ANA, para: BRUNO, em: "2026-10-09T12:00:00.000Z" }] },
+    });
+    expect(espiao.tabelas).toEqual(["crm_tasks", "api_audit_log"]);
+    expect(espiao.filtros).toContainEqual(["action", "crm_task.reassigned"]);
+    expect(espiao.filtros).toContainEqual(["resource_id", TAREFA]);
+    expect(espiao.filtros.filter(([c]) => c === "organization_id")).toEqual([
+      ["organization_id", ORG],
+      ["organization_id", ORG],
+    ]);
+  });
+
+  it("histórico de tarefa de outra organização é 404, sem ler a auditoria", async () => {
+    const espiao = fazerSupabase([{ data: null }]);
+    const { GET } = await import("@/app/api/v1/tasks/[id]/repasses/route");
+
+    const res = await GET(new NextRequest(`http://x/api/v1/tasks/${TAREFA}/repasses`), ctx);
+
+    expect(res.status).toBe(404);
+    expect(espiao.tabelas).toEqual(["crm_tasks"]);
   });
 });
 

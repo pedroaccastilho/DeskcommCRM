@@ -702,6 +702,9 @@ export const AUDIT_ACTIONS = [
   "crm_task.created",
   "crm_task.updated",
   "crm_task.deleted",
+  // Passar a tarefa para outra pessoa da equipe: `{ de, para }` no metadata. É o
+  // histórico que a folha da tarefa mostra (`GET /api/v1/tasks/[id]/repasses`).
+  "crm_task.reassigned",
 
   // A proposta comercial. Rascunho, edição, ajuste pelo assistente, envio e
   // decisão do cliente — cada um muda o que o negócio vale ou o que foi
