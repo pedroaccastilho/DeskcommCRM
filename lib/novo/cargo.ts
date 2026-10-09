@@ -97,13 +97,17 @@ export function escreveEvolucao(
 export interface ItemDoMenu {
   href: string;
   rotulo: string;
-  icone: "hoje" | "agenda" | "pacientes" | "conversas" | "relatorios";
+  icone: "hoje" | "agenda" | "pacientes" | "conversas" | "leads" | "relatorios";
 }
 
 /**
  * O menu da interface nova: o nome das portas conforme o cargo que a tela mostra, mais o que os
  * PERFIS da pessoa somam (migration 9008). Quem é Gerente ou Financeiro ganha "Relatórios" em
  * qualquer visão, inclusive a gerente que também é fisioterapeuta e está vendo o próprio dia.
+ *
+ * "Leads" são os funis de venda da versão atual (`/app/kanban`), que ficaram sem porta aqui (Pedro,
+ * 2026-10-09). Entram na visão de quem não atende (Recepção e Gestão, que inclui o Administrador);
+ * quem atende fica só com o próprio dia.
  */
 export function menuDoCargo(cargo: Cargo, veRelatorios = false): ItemDoMenu[] {
   const quemAtende = atende(cargo);
@@ -121,9 +125,20 @@ export function menuDoCargo(cargo: Cargo, veRelatorios = false): ItemDoMenu[] {
     },
     ...(quemAtende
       ? []
-      : [{ href: "/whatsapp", rotulo: "WhatsApp", icone: "conversas" as const }]),
+      : [
+          { href: "/whatsapp", rotulo: "WhatsApp", icone: "conversas" as const },
+          { href: "/funis", rotulo: "Leads", icone: "leads" as const },
+        ]),
     ...(veRelatorios
       ? [{ href: "/relatorios", rotulo: "Relatórios", icone: "relatorios" as const }]
       : []),
   ];
+}
+
+/**
+ * As abas do celular: as mesmas portas, mas no máximo cinco ao lado de "Você", senão os rótulos se
+ * encostam numa tela de 390px. Quando não cabem, "Leads" sai das abas e fica no menu de "Você".
+ */
+export function abasDoCelular(menu: readonly ItemDoMenu[]): ItemDoMenu[] {
+  return menu.length > 5 ? menu.filter((i) => i.href !== "/funis") : [...menu];
 }

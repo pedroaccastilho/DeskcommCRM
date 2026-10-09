@@ -1277,6 +1277,7 @@ jobs:
         clinica-tarefas-calendario.spec.ts
         clinica-pacientes-duplicados.spec.ts
         clinica-acabamento-visual.spec.ts
+        clinica-leads.spec.ts
 
       # ─── FORA_DO_CI — as que ficaram fora, e o motivo de cada uma ───
       #

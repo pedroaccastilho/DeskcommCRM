@@ -19,6 +19,7 @@ import { apiClient } from "@/lib/api/client";
 import type { Role } from "@/lib/auth/types";
 import {
   ROTULO_DO_CARGO,
+  abasDoCelular,
   atende,
   cargoDe,
   cargosParaVer,
@@ -35,6 +36,7 @@ import {
   CalendarBlank,
   ChartBar,
   ClipboardText,
+  Funnel,
   Gear,
   IdentificationCard,
   Moon,
@@ -131,6 +133,7 @@ const ICONE: Record<
   agenda: CalendarBlank,
   pacientes: UsersThree,
   conversas: WhatsappLogo,
+  leads: Funnel,
   relatorios: ChartBar,
   ajustes: Gear,
 };
@@ -194,6 +197,8 @@ export function Casca({
 
   const pathname = usePathname() ?? "/hoje";
   const menu = menuDoCargo(cargo, veRelatoriosDaGestao(role, eu.data?.cargos ?? []));
+  const abas = abasDoCelular(menu);
+  const leadsForaDasAbas = menu.length !== abas.length;
   // A Equipe completa (revogar, convites, horários) mora em /ajustes, mas é continuação da Equipe.
   const caminho = pathname.startsWith("/ajustes/equipe-completa") ? "/equipe" : pathname;
   const ativo = (href: string) => caminho === href || caminho.startsWith(`${href}/`);
@@ -279,7 +284,7 @@ export function Casca({
       </main>
 
       <nav className="n-abas" aria-label="Menu principal">
-        {menu.map((item) => {
+        {abas.map((item) => {
           const Icone = ICONE[item.icone];
           return (
             <Link
@@ -293,7 +298,7 @@ export function Casca({
             </Link>
           );
         })}
-        <MenuDaPessoa compacto />
+        <MenuDaPessoa compacto comLeads={leadsForaDasAbas} />
       </nav>
     </Ctx.Provider>
   );
@@ -360,7 +365,14 @@ function Monograma({ marca }: { marca: { nome: string; logoUrl: string | null } 
 }
 
 /** O avatar abre o menu da pessoa: ver como outro cargo, voltar para a versão atual, sair. */
-function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
+function MenuDaPessoa({
+  compacto = false,
+  comLeads = false,
+}: {
+  compacto?: boolean;
+  /** No celular, quando "Leads" não coube nas abas, a porta fica aqui. */
+  comLeads?: boolean;
+}) {
   const t = useT();
   const { signOut } = useAuth();
   const { meuNome, cargo, cargos, trocarCargo, role, veGestao } = useNovo();
@@ -439,6 +451,16 @@ function MenuDaPessoa({ compacto = false }: { compacto?: boolean }) {
             >
               {t("Tarefas")}
             </Link>
+            {comLeads && (
+              <Link
+                href="/funis"
+                onClick={() => setAberto(false)}
+                className="n-linha-clicavel px-2 py-2 text-sm"
+                data-testid="novo-menu-leads"
+              >
+                {t("Leads")}
+              </Link>
+            )}
             {veConfiguracoes(role) && (
               <Link href="/equipe" className="n-linha-clicavel px-2 py-2 text-sm">
                 {t("Equipe")}

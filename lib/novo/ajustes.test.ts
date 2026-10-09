@@ -43,7 +43,7 @@ describe("os ajustes do administrador na interface nova", () => {
     });
     expect(enderecoDoAjuste("/app/team")).toEqual({ href: "/equipe", naNova: true });
     expect(enderecoDoAjuste("/app/agenda")).toEqual({ href: "/agenda", naNova: true });
-    expect(enderecoDoAjuste("/app/kanban")).toEqual({ href: "/ajustes/funis", naNova: true });
+    expect(enderecoDoAjuste("/app/kanban")).toEqual({ href: "/funis", naNova: true });
     expect(enderecoDoAjuste("/app/crm")).toEqual({ href: "/app/crm", naNova: false });
   });
 
@@ -57,16 +57,14 @@ describe("os ajustes do administrador na interface nova", () => {
       const pagina = path.join(process.cwd(), "app", "(nova)", nova, "page.tsx");
       expect(existsSync(pagina), `${nova} sem ${pagina}`).toBe(true);
       const fonte = readFileSync(pagina, "utf8");
-      if (atual === "/app/leads/[id]") expect(fonte).toContain("redirect(`/ajustes/funis/");
+      if (atual === "/app/leads/[id]") expect(fonte).toContain("redirect(`/funis/");
       else expect(fonte).toContain(`from "@/app${atual}/page"`);
     }
   });
 
   it("um link de lá leva à tela daqui, com o id e a busca; o que não tem par segue para lá", () => {
     const ID = "4c97628c-6540-4f09-8c32-1bc43e99098a";
-    expect(enderecoNaInterfaceNova(`/app/pipelines/${ID}?lead=7`)).toBe(
-      `/ajustes/funis/${ID}?lead=7`,
-    );
+    expect(enderecoNaInterfaceNova(`/app/pipelines/${ID}?lead=7`)).toBe(`/funis/${ID}?lead=7`);
     expect(enderecoNaInterfaceNova("/app/campaigns/new")).toBe("/ajustes/campanhas/nova");
     expect(enderecoNaInterfaceNova(`/app/campaigns/${ID}/edit`)).toBe(
       `/ajustes/campanhas/${ID}/editar`,

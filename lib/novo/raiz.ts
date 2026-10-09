@@ -54,11 +54,20 @@ export function destinoNaInterfaceNova(caminho: string, busca = ""): string | nu
   if (ficha) return `/pacientes/${ficha[1]}`;
   if (p === "/app/inbox") {
     const id = q.get("id");
-    return id && new RegExp(`^${UUID}$`, "i").test(id)
-      ? `/whatsapp?id=${id}`
-      : "/whatsapp";
+    return id && new RegExp(`^${UUID}$`, "i").test(id) ? `/whatsapp?id=${id}` : "/whatsapp";
   }
   const conversa = p.match(new RegExp(`^/app/inbox/(${UUID})$`, "i"));
   if (conversa) return `/whatsapp?id=${conversa[1]}`;
+  // Os leads: a lista dos funis, o quadro de um funil (com o negócio aberto) e um negócio.
+  if (p === "/app/kanban") return "/funis";
+  const funil = p.match(new RegExp(`^/app/pipelines/(${UUID})$`, "i"));
+  if (funil) {
+    const lead = q.get("lead");
+    return lead && new RegExp(`^${UUID}$`, "i").test(lead)
+      ? `/funis/${funil[1]}?lead=${lead}`
+      : `/funis/${funil[1]}`;
+  }
+  const negocio = p.match(new RegExp(`^/app/leads/(${UUID})$`, "i"));
+  if (negocio) return `/leads/${negocio[1]}`;
   return null;
 }
