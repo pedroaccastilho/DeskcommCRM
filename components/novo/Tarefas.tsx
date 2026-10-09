@@ -7,6 +7,10 @@
  *
  * O que muda é a pergunta da clínica: a tarefa pode ficar presa a um paciente ("ligar para a Ana
  * sobre o exame"), e aí aparece na ficha dele também.
+ *
+ * E toda tarefa tem um RESPONSÁVEL: alguém da equipe que vai resolvê-la. Nasce com quem criou,
+ * qualquer pessoa da equipe pode passá-la para outra (`PATCH assigned_to`), e cada repasse fica
+ * registrado (`GET /api/v1/tasks/[id]/repasses`). A lista e o calendário filtram "Minhas".
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -14,6 +18,7 @@ import * as React from "react";
 import { toast } from "sonner";
 
 import { showApiError } from "@/components/feedback/ApiErrorToast";
+import { useAssignableMembers } from "@/hooks/inbox/useAssignableMembers";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { apiClient } from "@/lib/api/client";
 import { rotuloDoContato } from "@/lib/contacts/rotulo-do-contato";
@@ -30,6 +35,7 @@ import {
   type SituacaoDaTarefa,
   type Tarefa,
 } from "@/lib/tarefas/tipos";
+import type { RepasseDaTarefa } from "@/lib/tarefas/responsavel";
 
 import { useNovo } from "./Casca";
 import { useBuscaDePacientes, usePaciente } from "./dados";
@@ -37,10 +43,13 @@ import { Avatar, Folha, Vazio } from "./pecas";
 
 const CHAVE = ["crm_tasks"] as const;
 
-export function useTarefasDaClinica(filtro: { aberto?: boolean; contactId?: string } = {}) {
+export function useTarefasDaClinica(
+  filtro: { aberto?: boolean; contactId?: string; responsavel?: string } = {},
+) {
   const qs = new URLSearchParams();
   if (filtro.aberto) qs.set("aberto", "true");
   if (filtro.contactId) qs.set("contact_id", filtro.contactId);
+  if (filtro.responsavel) qs.set("assigned_to", filtro.responsavel);
   const s = qs.toString();
   return useQuery({
     queryKey: [...CHAVE, s],
@@ -50,6 +59,35 @@ export function useTarefasDaClinica(filtro: { aberto?: boolean; contactId?: stri
     staleTime: 10_000,
     retry: false,
   });
+}
+
+/**
+ * Quem pode ser responsável (membros ativos que atendem, `/api/v1/team/assignable`), e o nome de
+ * cada um para as linhas. Quem saiu da equipe some da lista; a tarefa que ficou com ele mostra
+ * "Ex-membro da equipe" até alguém passá-la adiante.
+ */
+function useEquipeDasTarefas() {
+  const membros = useAssignableMembers(true);
+  const lista = (membros.data ?? []).map((m) => ({
+    id: m.user_id,
+    nome: m.full_name?.trim() || null,
+  }));
+  const nomes = new Map(lista.map((m) => [m.id, m.nome]));
+  return { lista, nomes, carregando: membros.isLoading };
+}
+
+function useNomeDoMembro() {
+  const t = useT();
+  const { meuId } = useNovo();
+  const { nomes, carregando } = useEquipeDasTarefas();
+  return (id: string | null): string => {
+    if (!id) return t("Sem responsável");
+    const nome = nomes.get(id);
+    if (nome) return id === meuId ? `${nome} (${t("você")})` : nome;
+    if (id === meuId) return t("Você");
+    if (carregando) return "…";
+    return nomes.has(id) ? t("Membro da equipe") : t("Ex-membro da equipe");
+  };
 }
 
 function useInvalidarTarefas() {
@@ -107,6 +145,7 @@ function LinhaDaTarefa({
   const t = useT();
   const tag = useTagDeIdioma();
   const invalidar = useInvalidarTarefas();
+  const nomeDoMembro = useNomeDoMembro();
   const feita = tarefa.status === "done";
   const encerrada = estaEncerrada(tarefa);
   const atrasada = estaAtrasada(tarefa);
@@ -164,6 +203,15 @@ function LinhaDaTarefa({
           {tarefa.status === "cancelled" && (
             <span className="n-selo n-selo-neutro">{t("Cancelada")}</span>
           )}
+          <span
+            className={`inline-flex min-w-0 items-center gap-1 ${
+              tarefa.assigned_to ? "n-suave" : "font-bold text-[var(--n-alerta)]"
+            }`}
+            data-testid="novo-tarefa-responsavel"
+          >
+            {tarefa.assigned_to && <Avatar nome={nomeDoMembro(tarefa.assigned_to)} tamanho={16} />}
+            <span className="truncate">{nomeDoMembro(tarefa.assigned_to)}</span>
+          </span>
         </span>
         {tarefa.description && (
           <span className="n-suave mt-1 line-clamp-2 block text-sm">{tarefa.description}</span>
@@ -194,10 +242,14 @@ function PacienteDaTarefa({ contactId }: { contactId: string }) {
 /** A TELA de tarefas. */
 export function TelaDeTarefas() {
   const t = useT();
-  const { role } = useNovo();
+  const { role, meuId } = useNovo();
   const podeEditar = role !== "viewer";
   const [filtro, setFiltro] = React.useState<"aberto" | "todas">("aberto");
-  const tarefas = useTarefasDaClinica(filtro === "aberto" ? { aberto: true } : {});
+  const [quem, setQuem] = React.useState<"minhas" | "equipe">("equipe");
+  const tarefas = useTarefasDaClinica({
+    aberto: filtro === "aberto",
+    responsavel: quem === "minhas" ? meuId : undefined,
+  });
   const [aberta, setAberta] = React.useState<Tarefa | "nova" | null>(null);
   const [novaNoDia, setNovaNoDia] = React.useState<string | null>(null);
   const [modo, setModo] = React.useState<"lista" | "calendario">("lista");
@@ -246,6 +298,27 @@ export function TelaDeTarefas() {
           </button>
         </div>
         <span className="w-px self-stretch bg-[var(--n-linha)]" aria-hidden />
+        <div className="flex gap-2" role="group" aria-label={t("De quem")}>
+          <button
+            type="button"
+            className="n-chip"
+            aria-pressed={quem === "minhas"}
+            onClick={() => setQuem("minhas")}
+            data-testid="novo-tarefas-minhas"
+          >
+            {t("Minhas tarefas")}
+          </button>
+          <button
+            type="button"
+            className="n-chip"
+            aria-pressed={quem === "equipe"}
+            onClick={() => setQuem("equipe")}
+            data-testid="novo-tarefas-da-equipe"
+          >
+            {t("Da equipe")}
+          </button>
+        </div>
+        <span className="w-px self-stretch bg-[var(--n-linha)]" aria-hidden />
         <div className="flex gap-2" role="group" aria-label={t("Quais tarefas")}>
           <button
             type="button"
@@ -280,8 +353,12 @@ export function TelaDeTarefas() {
           />
         ) : grupos.length === 0 ? (
           <Vazio
-            titulo={t("Nada pendente")}
-            texto={t("Quando algo ficar combinado (ligar de volta, pedir um exame), anote aqui.")}
+            titulo={quem === "minhas" ? t("Nada com você") : t("Nada pendente")}
+            texto={
+              quem === "minhas"
+                ? t("As tarefas que passarem para você aparecem aqui.")
+                : t("Quando algo ficar combinado (ligar de volta, pedir um exame), anote aqui.")
+            }
           />
         ) : (
           grupos.map((g) => (
@@ -534,6 +611,48 @@ function separaPrazo(iso: string | null | undefined): { dia: string; hora: strin
   };
 }
 
+/** O registro da tarefa: quem criou, e cada vez que ela passou de uma pessoa para outra. */
+function RepassesDaTarefa({ tarefa }: { tarefa: Tarefa }) {
+  const t = useT();
+  const tag = useTagDeIdioma();
+  const nomeDoMembro = useNomeDoMembro();
+  const repasses = useQuery({
+    queryKey: [...CHAVE, "repasses", tarefa.id, tarefa.updated_at],
+    queryFn: async () =>
+      (
+        await apiClient.get<{ data: { repasses: RepasseDaTarefa[] } }>(
+          `/api/v1/tasks/${encodeURIComponent(tarefa.id)}/repasses`,
+        )
+      ).data.repasses,
+    staleTime: 10_000,
+    retry: false,
+  });
+  const quando = (iso: string) =>
+    new Intl.DateTimeFormat(tag, {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(iso));
+  const lista = repasses.data ?? [];
+  return (
+    <div className="grid gap-1 text-xs" data-testid="novo-tarefa-repasses">
+      {lista.map((r) => (
+        <p key={`${r.em}-${r.para}`} className="n-suave">
+          {quando(r.em)} · {nomeDoMembro(r.por)} {t("passou de")} {nomeDoMembro(r.de)} {t("para")}{" "}
+          <strong>{nomeDoMembro(r.para)}</strong>
+        </p>
+      ))}
+      <p className="n-fraco">
+        {quando(tarefa.created_at)} ·{" "}
+        {tarefa.created_by
+          ? `${t("Criada por")} ${nomeDoMembro(tarefa.created_by)}`
+          : t("Criada pelo sistema")}
+      </p>
+    </div>
+  );
+}
+
 /** Montada a cada abertura: o estado nasce da tarefa (ou em branco). */
 export function FolhaDaTarefa({
   tarefa,
@@ -558,6 +677,22 @@ export function FolhaDaTarefa({
     tarefa?.priority ?? "medium",
   );
   const [situacao, setSituacao] = React.useState<SituacaoDaTarefa>(tarefa?.status ?? "pending");
+  const { meuId } = useNovo();
+  const equipe = useEquipeDasTarefas();
+  const nomeDoMembro = useNomeDoMembro();
+  // Tarefa nova nasce com quem cria; a antiga sem responsável (criada antes, ou pelo sistema)
+  // pede uma escolha antes de salvar.
+  const [responsavel, setResponsavel] = React.useState<string>(
+    tarefa ? (tarefa.assigned_to ?? "") : meuId,
+  );
+  const opcoesDeResponsavel = [
+    ...equipe.lista,
+    // Quem já tem a tarefa continua na lista mesmo que tenha saído da equipe: senão a escolha
+    // gravada some da tela.
+    ...(tarefa?.assigned_to && !equipe.nomes.has(tarefa.assigned_to)
+      ? [{ id: tarefa.assigned_to, nome: null }]
+      : []),
+  ].sort((a, b) => (a.id === meuId ? -1 : b.id === meuId ? 1 : 0));
   const [paciente, setPaciente] = React.useState<{ id: string; nome: string } | null>(
     pacienteFixo ?? null,
   );
@@ -581,6 +716,7 @@ export function FolhaDaTarefa({
         priority: prioridade,
         status: situacao,
         contact_id: paciente?.id ?? null,
+        assigned_to: responsavel,
       };
       if (tarefa) await apiClient.patch(`/api/v1/tasks/${encodeURIComponent(tarefa.id)}`, corpo);
       else await apiClient.post("/api/v1/tasks", { ...corpo, lead_id: null });
@@ -669,6 +805,33 @@ export function FolhaDaTarefa({
             ))}
           </div>
         </div>
+        <div className="grid gap-1.5" role="group" aria-label={t("Responsável")}>
+          <span className="n-rotulo !mb-0">{t("Responsável")}</span>
+          <span className="n-suave -mt-1 text-xs">
+            {t("Quem da equipe vai resolver. Qualquer pessoa pode passar a tarefa para outra.")}
+          </span>
+          <div className="flex flex-wrap gap-2" data-testid="novo-tarefa-responsaveis">
+            {opcoesDeResponsavel.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                className="n-chip gap-1.5"
+                aria-pressed={responsavel === m.id}
+                onClick={() => setResponsavel(m.id)}
+                data-testid="novo-tarefa-responsavel-opcao"
+              >
+                <Avatar nome={nomeDoMembro(m.id)} tamanho={18} />
+                {nomeDoMembro(m.id)}
+              </button>
+            ))}
+          </div>
+          {!responsavel && (
+            <span className="text-xs font-bold text-[var(--n-alerta)]">
+              {t("Escolha quem vai resolver esta tarefa.")}
+            </span>
+          )}
+        </div>
+        {tarefa && <RepassesDaTarefa tarefa={tarefa} />}
         {tarefa && (
           <div className="grid gap-1.5">
             <span className="n-rotulo !mb-0">{t("Situação")}</span>
@@ -738,7 +901,7 @@ export function FolhaDaTarefa({
         <button
           type="button"
           className="n-botao n-botao-principal w-full"
-          disabled={titulo.trim() === "" || salvar.isPending}
+          disabled={titulo.trim() === "" || !responsavel || salvar.isPending}
           onClick={() => salvar.mutate()}
           data-testid="novo-salvar-tarefa"
         >

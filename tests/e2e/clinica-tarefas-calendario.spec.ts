@@ -106,6 +106,23 @@ test.describe("Calendário de tarefas na interface nova", () => {
       expect(largura).toBeLessThanOrEqual(390);
       await animacoesTerminadas(page);
       await page.screenshot({ path: path.join(EVIDENCIA, "4-celular.png") });
+
+      // O responsável: a tarefa criada sem escolha está com quem criou, e "Minhas tarefas" a mostra.
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.getByTestId("novo-tarefas-lista").click();
+      await page.getByTestId("novo-tarefas-minhas").click();
+      const linha = page.getByTestId("novo-tarefa").filter({ hasText: primeira });
+      await expect(linha).toHaveCount(1, { timeout: ESPERA });
+      await expect(linha.getByTestId("novo-tarefa-responsavel")).not.toHaveText(/Sem responsável/);
+      await linha.getByText(primeira).click();
+      await expect(folha.getByTestId("novo-tarefa-responsaveis")).toBeVisible({ timeout: ESPERA });
+      await expect(
+        folha
+          .getByTestId("novo-tarefa-responsavel-opcao")
+          .and(page.locator('[aria-pressed="true"]')),
+      ).toHaveCount(1);
+      await animacoesTerminadas(page);
+      await page.screenshot({ path: path.join(EVIDENCIA, "5-responsavel.png") });
     } finally {
       await admin.from("crm_tasks").delete().in("title", [primeira, segunda]);
     }

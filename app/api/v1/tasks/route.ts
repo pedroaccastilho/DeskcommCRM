@@ -33,6 +33,7 @@ import { requireRole } from "@/lib/auth/require-role";
 import { traduzir } from "@/lib/i18n/dicionario";
 import { createClient } from "@/lib/supabase/server";
 import { registraAtividadeDaTarefa } from "@/lib/tarefas/atividade";
+import { podeSerResponsavel } from "@/lib/tarefas/responsavel";
 import { PRIORIDADES_DA_TAREFA, SITUACOES_DA_TAREFA, type Tarefa } from "@/lib/tarefas/tipos";
 
 export const dynamic = "force-dynamic";
@@ -57,6 +58,8 @@ const listaSchema = z.object({
   priority: z.enum(PRIORIDADES_DA_TAREFA).optional(),
   lead_id: z.string().uuid().optional(),
   contact_id: z.string().uuid().optional(),
+  /** "Minhas tarefas": as que estão com esta pessoa. */
+  assigned_to: z.string().uuid().optional(),
   due_from: z.string().datetime({ offset: true }).optional(),
   due_to: z.string().datetime({ offset: true }).optional(),
   /** "abertas" = o que ainda pede ação. É o default da tela. */
@@ -95,6 +98,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   if (filtros.priority) query = query.eq("priority", filtros.priority);
   if (filtros.lead_id) query = query.eq("lead_id", filtros.lead_id);
   if (filtros.contact_id) query = query.eq("contact_id", filtros.contact_id);
+  if (filtros.assigned_to) query = query.eq("assigned_to", filtros.assigned_to);
   if (filtros.due_from) query = query.gte("due_date", filtros.due_from);
   if (filtros.due_to) query = query.lte("due_date", filtros.due_to);
   if (filtros.aberto === "true") query = query.in("status", ["pending", "in_progress"]);
@@ -126,11 +130,22 @@ export async function POST(req: NextRequest): Promise<Response> {
     });
   }
 
+  // Toda tarefa criada pela tela tem um responsável: alguém da clínica que vai resolvê-la. Sem
+  // escolha, é quem criou. Escolher outra pessoa passa pela cerca de `podeSerResponsavel` — a FK
+  // de `assigned_to` aceitaria o id de alguém de outra organização.
+  const responsavel = parsed.data.assigned_to ?? authz.user.id;
+  if (responsavel !== authz.user.id && !(await podeSerResponsavel(authz.org.orgId, responsavel))) {
+    return fail("validation_failed", t("O responsável escolhido não é da equipe."), 422, {
+      requestId,
+    });
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("crm_tasks")
     .insert({
       ...parsed.data,
+      assigned_to: responsavel,
       organization_id: authz.org.orgId,
       created_by: authz.user.id,
     })
@@ -157,7 +172,11 @@ export async function POST(req: NextRequest): Promise<Response> {
     resourceType: "crm_tasks",
     resourceId: tarefa.id,
     requestId,
-    metadata: { due_date: tarefa.due_date, priority: tarefa.priority },
+    metadata: {
+      due_date: tarefa.due_date,
+      priority: tarefa.priority,
+      assigned_to: tarefa.assigned_to,
+    },
   });
 
   // O laço de retorno: tarefa presa a um negócio aparece na linha do tempo dele.

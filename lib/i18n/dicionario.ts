@@ -12389,6 +12389,26 @@ export const DICIONARIO: Traducoes = {
   "Erro ao salvar a tarefa.": { es: "Error al guardar la tarea." },
   "Erro ao listar as tarefas.": { es: "Error al listar las tareas." },
   "Erro ao apagar a tarefa.": { es: "Error al eliminar la tarea." },
+  "O responsável escolhido não é da equipe.": {
+    es: "La persona responsable elegida no es del equipo.",
+  },
+  // ─── components/novo/Tarefas.tsx — o responsável da tarefa ───
+  "Membro da equipe": { es: "Miembro del equipo" },
+  "Ex-membro da equipe": { es: "Ex miembro del equipo" },
+  "De quem": { es: "De quién" },
+  "Minhas tarefas": { es: "Mis tareas" },
+  "Da equipe": { es: "Del equipo" },
+  "Nada com você": { es: "Nada contigo" },
+  "As tarefas que passarem para você aparecem aqui.": {
+    es: "Las tareas que te pasen aparecen aquí.",
+  },
+  "Quem da equipe vai resolver. Qualquer pessoa pode passar a tarefa para outra.": {
+    es: "Quién del equipo la va a resolver. Cualquier persona puede pasar la tarea a otra.",
+  },
+  "Escolha quem vai resolver esta tarefa.": { es: "Elige quién va a resolver esta tarea." },
+  "passou de": { es: "pasó de" },
+  "Criada por": { es: "Creada por" },
+  "Criada pelo sistema": { es: "Creada por el sistema" },
 
   Baixa: { es: "Baja" },
   Média: { es: "Media" },
