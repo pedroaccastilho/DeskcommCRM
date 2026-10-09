@@ -16,6 +16,8 @@ export const TELAS_DA_INTERFACE_NOVA = [
   "agenda",
   "pacientes",
   "whatsapp",
+  "funis",
+  "leads",
   "tarefas",
   "relatorios",
   "equipe",

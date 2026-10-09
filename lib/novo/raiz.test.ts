@@ -43,6 +43,16 @@ describe("a tela equivalente", () => {
     expect(destinoNaInterfaceNova("/app/settings/notifications")).toBe("/conta/avisos");
   });
 
+  it("os leads (funis, quadro de um funil e um negócio) também têm tela na nova", () => {
+    expect(destinoNaInterfaceNova("/app/kanban")).toBe("/funis");
+    expect(destinoNaInterfaceNova(`/app/pipelines/${ID}`)).toBe(`/funis/${ID}`);
+    expect(destinoNaInterfaceNova(`/app/pipelines/${ID}`, `lead=${ID}`)).toBe(
+      `/funis/${ID}?lead=${ID}`,
+    );
+    expect(destinoNaInterfaceNova(`/app/pipelines/${ID}`, "lead=//evil")).toBe(`/funis/${ID}`);
+    expect(destinoNaInterfaceNova(`/app/leads/${ID}`)).toBe(`/leads/${ID}`);
+  });
+
   it("tela sem equivalente continua na atual, e lixo na URL não vira destino", () => {
     expect(destinoNaInterfaceNova("/app/settings/billing")).toBeNull();
     expect(destinoNaInterfaceNova("/app/notifications")).toBeNull();

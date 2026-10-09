@@ -30,8 +30,11 @@ export function CascaDoAjuste({
   voltar,
 }: {
   children: React.ReactNode;
-  /** Para onde o "‹" leva, quando a tela não sai dos Ajustes (a Equipe completa volta à Equipe). */
-  voltar?: { href: Route; rotulo: string };
+  /**
+   * Para onde o "‹" leva, quando a tela não sai dos Ajustes (a Equipe completa volta à Equipe);
+   * `null` para uma tela que tem porta própria no menu (Leads) e não volta para lugar nenhum.
+   */
+  voltar?: { href: Route; rotulo: string } | null;
 }) {
   const router = useRouter();
   // Quem não administra chega aqui pela Gestão (`telasDaGestao`), que é a mesma lista.
@@ -62,10 +65,16 @@ export function CascaDoAjuste({
 
   return (
     <div className="n-conteudo max-w-6xl" data-testid="novo-ajuste">
-      <Link href={voltar?.href ?? "/ajustes"} className="n-suave text-sm font-semibold">
-        ‹ {voltar ? t(voltar.rotulo) : !role || veConfiguracoes(role) ? t("Ajustes") : t("Gestão")}
-      </Link>
-      <div className="n-vestida n-ajuste mt-3" onClickCapture={aoClicar}>
+      {voltar !== null && (
+        <Link href={voltar?.href ?? "/ajustes"} className="n-suave text-sm font-semibold">
+          ‹{" "}
+          {voltar ? t(voltar.rotulo) : !role || veConfiguracoes(role) ? t("Ajustes") : t("Gestão")}
+        </Link>
+      )}
+      <div
+        className={`n-vestida n-ajuste ${voltar === null ? "" : "mt-3"}`}
+        onClickCapture={aoClicar}
+      >
         <AppRouterContext.Provider value={roteador}>{children}</AppRouterContext.Provider>
       </div>
     </div>

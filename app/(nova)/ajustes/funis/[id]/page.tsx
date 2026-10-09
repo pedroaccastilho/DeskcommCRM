@@ -1,18 +1,22 @@
-import type { Metadata } from "next";
-
-import PaginaDaVersaoAtual from "@/app/app/pipelines/[id]/page";
-import { CascaDoAjuste } from "@/components/novo/CascaDoAjuste";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Funil" };
 
-/**
- * `/app/pipelines/[id]` dentro da interface nova (`lib/novo/ajustes.ts`).
- */
-export default function Page(props: Parameters<typeof PaginaDaVersaoAtual>[0]) {
-  return (
-    <CascaDoAjuste>
-      <PaginaDaVersaoAtual {...props} />
-    </CascaDoAjuste>
-  );
+/** O quadro de um funil morava nos Ajustes; o endereço antigo leva ao novo, com a mesma busca. */
+export default async function Page({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const { id } = await params;
+  const busca = new URLSearchParams();
+  for (const [chave, valor] of Object.entries(await searchParams)) {
+    for (const v of Array.isArray(valor) ? valor : valor === undefined ? [] : [valor]) {
+      busca.append(chave, v);
+    }
+  }
+  const resto = busca.toString();
+  redirect(`/funis/${encodeURIComponent(id)}${resto ? `?${resto}` : ""}`);
 }
