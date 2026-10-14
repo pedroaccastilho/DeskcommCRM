@@ -375,6 +375,27 @@ export function useSessoesDoPaciente(contactId: string) {
   });
 }
 
+/**
+ * O nome de cada profissional de saúde pelo `user_id`, inclusive de quem já saiu da equipe, para
+ * dizer com quem foi cada sessão no histórico do paciente. Qualquer membro lê (não é dado clínico).
+ */
+export function useNomesDosProfissionais() {
+  return useQuery({
+    queryKey: ["clinica", "profissionais", "nomes"],
+    queryFn: async () => {
+      const linhas =
+        (
+          await apiClient.get<{ data: Array<{ user_id: string; nome_profissional: string }> }>(
+            "/api/v1/clinica/profissionais",
+          )
+        ).data ?? [];
+      return new Map(linhas.map((p) => [p.user_id, p.nome_profissional]));
+    },
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+}
+
 export interface SessaoDoPacienteNoDia {
   id: string;
   iniciaEm: string;
