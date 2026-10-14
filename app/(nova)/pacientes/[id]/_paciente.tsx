@@ -31,6 +31,7 @@ import {
   usePaciente,
   useOrigemDoPaciente,
   usePacotesDoPaciente,
+  useNomesDosProfissionais,
   useProntuario,
   useSessoesDoPaciente,
   type OrigemDoPacienteNaFicha,
@@ -63,6 +64,9 @@ export function Paciente({ contactId }: { contactId: string }) {
   const { fuso, role, cargo, veProntuario, eu, podeIrParaAAtual } = useNovo();
   const paciente = usePaciente(contactId);
   const sessoes = useSessoesDoPaciente(contactId);
+  const nomesDosProfissionais = useNomesDosProfissionais();
+  const comQuem = (donoId: string | null) =>
+    (donoId && nomesDosProfissionais.data?.get(donoId)) || null;
   const pacotes = usePacotesDoPaciente(contactId);
   const ehProfissional = veProntuario;
   const prontuario = useProntuario(contactId, ehProfissional);
@@ -280,8 +284,18 @@ export function Paciente({ contactId }: { contactId: string }) {
                     <span className="n-numero n-inicial w-28 text-sm font-semibold">
                       {dataCurta(s.iniciaEm, fuso, tag)}
                     </span>
-                    <span className="n-suave flex-1 truncate text-sm">
-                      {s.tipo?.nome ?? s.titulo}
+                    <span className="min-w-0 flex-1">
+                      <span className="n-suave block truncate text-sm">
+                        {s.tipo?.nome ?? s.titulo}
+                      </span>
+                      {comQuem(s.donoId) && (
+                        <span
+                          className="n-fraco block truncate text-xs"
+                          data-testid="novo-historico-profissional"
+                        >
+                          {t("com")} {comQuem(s.donoId)}
+                        </span>
+                      )}
                     </span>
                     <span className={`n-selo ${SITUACAO[s.situacao]?.classe ?? "n-selo-neutro"}`}>
                       {SITUACAO[s.situacao]?.rotulo ?? s.situacao}
@@ -340,12 +354,13 @@ export function Paciente({ contactId }: { contactId: string }) {
                       <span className="block truncate text-sm font-bold">
                         {s.tipo?.nome ?? s.titulo}
                       </span>
-                      <span className="n-suave n-inicial text-xs">
+                      <span className="n-suave n-inicial block truncate text-xs">
                         {new Intl.DateTimeFormat(tag, {
                           weekday: "long",
                           timeZone: fuso,
                         }).format(new Date(s.iniciaEm))}{" "}
                         {t("às")} {hora(s.iniciaEm, fuso)}
+                        {comQuem(s.donoId) ? ` · ${t("com")} ${comQuem(s.donoId)}` : ""}
                       </span>
                     </span>
                     <span className={`n-selo ${SITUACAO[s.situacao]?.classe ?? "n-selo-neutro"}`}>
