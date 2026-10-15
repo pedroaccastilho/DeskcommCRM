@@ -114,10 +114,6 @@
   background: var(--n-trilho-fundo);
   color: var(--n-trilho-tinta);
   z-index: 30;
-  /* Gestão com Leads, Relatórios e Financeiro passa da altura de um notebook baixo: o trilho
-     rola por dentro em vez de cortar o avatar. */
-  overflow-y: auto;
-  scrollbar-width: none;
 }
 
 @media (min-width: 900px) {
@@ -154,6 +150,22 @@
 .novo .n-trilho > .n-porta {
   /* Os destinos do menu têm todos a mesma altura, com uma palavra ou duas, ativos ou não. */
   height: 68px;
+}
+
+/* Na tela baixa de notebook, a Gestão (com Leads, Relatórios e Financeiro, mais Equipe, Ajustes e
+   o avatar embaixo) passa da altura da janela e o avatar some. O trilho aperta os itens em vez de
+   rolar: rolar cortaria o menu da pessoa, que abre para fora dele. */
+@media (min-width: 900px) and (max-height: 900px) {
+  .novo .n-trilho {
+    gap: 2px;
+    padding: 12px 0;
+  }
+  .novo .n-trilho .n-porta {
+    padding: 6px 4px;
+  }
+  .novo .n-trilho > .n-porta {
+    height: 52px;
+  }
 }
 
 .novo .n-trilho .n-porta:hover {

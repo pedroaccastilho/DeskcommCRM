@@ -215,14 +215,15 @@ function Total({
         : tom === "ok"
           ? "text-[var(--n-ok)]"
           : "";
+  // Um bloco só: o botão clicável é flex, e o rótulo, o valor e o detalhe vão um embaixo do outro.
   const corpo = (
-    <>
+    <div className="w-full">
       <p className="n-suave text-[13px] font-semibold">{rotulo}</p>
       <p className={`n-titulo n-numero mt-1 text-[24px] leading-none sm:text-[30px] ${cor}`}>
         {valor}
       </p>
       {detalhe && <p className="n-fraco mt-1.5 text-[13px]">{detalhe}</p>}
-    </>
+    </div>
   );
   return aoClicar ? (
     <button

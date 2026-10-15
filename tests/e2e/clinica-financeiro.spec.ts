@@ -264,13 +264,22 @@ test.describe("Painel financeiro na interface nova", () => {
       await expect(page.getByText("Saída apagada.")).toBeVisible({ timeout: ESPERA });
       await expect(saida).toHaveCount(0, { timeout: ESPERA });
 
-      // ── 6. Celular: sem rolagem lateral; Financeiro no menu de "Você" ─────────
+      // ── 6. Notebook de tela baixa: o avatar (menu da pessoa) continua dentro da janela ──
+      await page.setViewportSize({ width: 1280, height: 720 });
+      const fimDoTrilho = await page
+        .locator("nav.n-trilho > div > *")
+        .last()
+        .evaluate((el) => el.getBoundingClientRect().bottom);
+      expect(fimDoTrilho, "o avatar do trilho cabe numa janela de 720 px").toBeLessThanOrEqual(720);
+      await page.screenshot({ path: path.join(EVIDENCIA, "5-notebook-720.png") });
+
+      // ── 7. Celular: sem rolagem lateral; Financeiro no menu de "Você" ─────────
       await page.setViewportSize({ width: 390, height: 844 });
       await page.getByTestId("novo-financeiro-aba-a_receber").click();
       await expect(aCobrar).toHaveCount(2, { timeout: ESPERA });
       const largura = await page.evaluate(() => document.documentElement.scrollWidth);
       expect(largura).toBeLessThanOrEqual(390);
-      await page.screenshot({ path: path.join(EVIDENCIA, "5-celular.png"), fullPage: true });
+      await page.screenshot({ path: path.join(EVIDENCIA, "6-celular.png"), fullPage: true });
       await page.locator(".n-abas").getByRole("button").last().click();
       await expect(page.getByTestId("novo-menu-financeiro")).toBeVisible({ timeout: ESPERA });
     } finally {
