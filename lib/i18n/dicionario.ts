@@ -17308,6 +17308,8 @@ export const DICIONARIO: Traducoes = {
   "Cartão de crédito": { es: "Tarjeta de crédito" },
   "Cartão de débito": { es: "Tarjeta de débito" },
   "Pago com {forma}": { es: "Pagado con {forma}" },
+  "Sem multa": { es: "Sin multa" },
+  "Multa a cobrar": { es: "Multa por cobrar" },
   Desfazer: { es: "Deshacer" },
   Multa: { es: "Multa" },
   "A pagar": { es: "Por pagar" },
