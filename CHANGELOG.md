@@ -8,6 +8,15 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.75.4] — 2026-10-15
+
+### Corrigido
+
+- **No painel Financeiro, "Este mês" vai até o último dia do mês** Com o módulo clínica, o período "Este mês" do painel Financeiro ia do dia 1 até hoje, e a previsão
+  "Vai entrar" (as sessões marcadas de agora até o fim do período) ficava quase sempre vazia. Agora
+  "Este mês" vai do dia 1 ao último dia do mês, e a previsão mostra o resto do mês sem escolher datas.
+  O que já passou não muda, e o relatório da gestão continua com "Este mês" até hoje.
+
 ## [1.75.3] — 2026-10-15
 
 ### Adicionado
@@ -10038,7 +10047,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.75.3...HEAD
+[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.75.4...HEAD
+[1.75.4]: https://github.com/melgarafael/DeskcommCRM/compare/v1.75.3...v1.75.4
 [1.75.3]: https://github.com/melgarafael/DeskcommCRM/compare/v1.75.2...v1.75.3
 [1.75.2]: https://github.com/melgarafael/DeskcommCRM/compare/v1.75.1...v1.75.2
 [1.75.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.75.0...v1.75.1
