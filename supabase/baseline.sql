@@ -47016,7 +47016,7 @@ $do$;
 
 -- ---- clínica: o painel financeiro e as despesas (migration 9012, fork TOQ) ----
 -- Espelho de supabase/migrations/20261015170000_9012_clinica_financeiro.sql. Recria
--- fn_clinica_provisionar_pagamentos() (9011, acima) com a chamada da provisionadora das despesas;
+-- fn_clinica_provisionar_interface() (9011, acima) com a chamada da provisionadora das despesas;
 -- vale esta definição, a última do arquivo.
 -- ---- a provisionadora das despesas ----
 create or replace function public.fn_clinica_provisionar_despesas()
@@ -47066,79 +47066,31 @@ $f$;
 revoke execute on function public.fn_clinica_provisionar_despesas() from public, anon, authenticated;
 grant execute on function public.fn_clinica_provisionar_despesas() to service_role;
 
--- ---- a provisionadora dos pagamentos passa a chamar a das despesas (9012) ----
--- O corpo é o da 9011, sem mudança, mais a última linha. Idempotente como antes.
-create or replace function public.fn_clinica_provisionar_pagamentos()
+-- ---- a provisionadora da interface passa a chamar também a das despesas (9012) ----
+-- O corpo é o da 9011, sem mudança, mais a última linha. Idempotente como antes. (A dos
+-- pagamentos não é recriada: o corpo dela reconstrói uma constraint, e uma constraint só pode
+-- ser reconstruída em um bloco do baseline.)
+create or replace function public.fn_clinica_provisionar_interface()
 returns void
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $f$
 begin
-  -- ── de onde veio a multa ──────────────────────────────────────────────────
-  alter table public.clinica_multas
-    add column if not exists origem text not null default 'cancelamento';
-  alter table public.clinica_multas
-    drop constraint if exists clinica_multas_origem_valida;
-  alter table public.clinica_multas
-    add constraint clinica_multas_origem_valida check (origem in ('cancelamento', 'falta'));
-  comment on column public.clinica_multas.origem is
-    'cancelamento = cancelou em cima da hora (automática); falta = a recepção decidiu cobrar ao registrar a falta (9011).';
+  alter table public.clinica_politicas
+    add column if not exists interface_nova_principal boolean not null default false;
+  comment on column public.clinica_politicas.interface_nova_principal is
+    'Ligada, quem não é Administrador trabalha só na interface nova: as telas da atual que têm equivalente levam para ela. Só o Administrador muda (rota /api/v1/clinica/interface).';
 
-  -- ── o pagamento registrado ────────────────────────────────────────────────
-  create table if not exists public.clinica_pagamentos (
-    id uuid primary key default gen_random_uuid(),
-    organization_id uuid not null references public.organizations(id) on delete cascade,
-    -- `restrict`: pagamento é registro financeiro do paciente; a LGPD anonimiza, não apaga.
-    contact_id uuid not null references public.contacts(id) on delete restrict,
-    -- O que foi pago: exatamente um dos três.
-    pacote_id uuid references public.clinica_pacotes(id) on delete cascade,
-    appointment_id uuid references public.calendar_appointments(id) on delete cascade,
-    multa_id uuid references public.clinica_multas(id) on delete cascade,
-    forma text not null
-      check (forma in ('pix', 'cartao_credito', 'cartao_debito', 'dinheiro')),
-    -- NULL quando a coisa paga não tem valor cadastrado (pacote ou tipo sem preço).
-    valor_cents bigint check (valor_cents is null or valor_cents >= 0),
-    currency text not null default 'BRL' check (currency ~ '^[A-Z]{3}$'),
-    pago_em timestamptz not null default now(),
-    registrado_por_user_id uuid references auth.users(id) on delete set null,
-    created_at timestamptz not null default now(),
-    constraint clinica_pagamentos_paga_uma_coisa check (
-      num_nonnulls(pacote_id, appointment_id, multa_id) = 1
-    )
-  );
-
-  create unique index if not exists clinica_pagamentos_um_por_pacote
-    on public.clinica_pagamentos (pacote_id) where pacote_id is not null;
-  create unique index if not exists clinica_pagamentos_um_por_sessao
-    on public.clinica_pagamentos (appointment_id) where appointment_id is not null;
-  create unique index if not exists clinica_pagamentos_um_por_multa
-    on public.clinica_pagamentos (multa_id) where multa_id is not null;
-  create index if not exists clinica_pagamentos_paciente_idx
-    on public.clinica_pagamentos (organization_id, contact_id, pago_em desc);
-
-  -- ── RLS ───────────────────────────────────────────────────────────────────
-  -- Valor é financeiro: `agent`+ lê (como multa e pacote); "Somente leitura" não. Sem policy de
-  -- escrita: só o servidor, depois de conferir o perfil (`lib/clinica/pagamentos.ts`).
-  alter table public.clinica_pagamentos enable row level security;
-  drop policy if exists clinica_pagamentos_select on public.clinica_pagamentos;
-  create policy clinica_pagamentos_select
-    on public.clinica_pagamentos
-    for select using (organization_id in (select public.fn_user_org_ids())
-                      and public.fn_role_at_least(organization_id, 'agent'));
-  revoke all on public.clinica_pagamentos from anon;
-
-  comment on table public.clinica_pagamentos is
-    'Pagamento registrado à mão pela recepção: de um pacote, de uma sessão avulsa ou de uma multa (exatamente um), com a forma (Pix, crédito, débito, dinheiro). Um por coisa paga. Só o servidor escreve, pela rota /api/v1/clinica/pagamentos.';
-
+  -- O pagamento registrado e a multa por falta (migration 9011).
+  perform public.fn_clinica_provisionar_pagamentos();
   -- As saídas do caixa da clínica (migration 9012).
   perform public.fn_clinica_provisionar_despesas();
 end;
 $f$;
 
-
-revoke execute on function public.fn_clinica_provisionar_pagamentos() from public, anon, authenticated;
-grant execute on function public.fn_clinica_provisionar_pagamentos() to service_role;
+revoke execute on function public.fn_clinica_provisionar_interface() from public, anon, authenticated;
+grant execute on function public.fn_clinica_provisionar_interface() to service_role;
 
 -- ---- o resumo do painel financeiro ----
 create or replace function public.fn_clinica_financeiro_resumo(

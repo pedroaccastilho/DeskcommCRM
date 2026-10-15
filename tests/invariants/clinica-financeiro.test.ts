@@ -151,12 +151,12 @@ describe("financeiro: a provisionadora", () => {
     expect(tableExists("clinica_despesas")).toBe(true);
   });
 
-  it("a provisionadora dos pagamentos chama a das despesas, e provisionar de novo não apaga nada", () => {
+  it("a provisionadora da interface chama a das despesas, e provisionar de novo não apaga nada", () => {
     expect(
       sql(
         `select position('fn_clinica_provisionar_despesas' in p.prosrc) > 0
            from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-          where n.nspname = 'public' and p.proname = 'fn_clinica_provisionar_pagamentos';`,
+          where n.nspname = 'public' and p.proname = 'fn_clinica_provisionar_interface';`,
       ),
     ).toBe("t");
     sql(`select public.fn_clinica_provisionar();`);
