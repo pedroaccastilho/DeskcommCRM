@@ -306,12 +306,15 @@ test.describe("Pagamento e multa por falta na interface nova", () => {
             starts_at: ontem.toISOString(),
             ends_at: new Date(ontem.getTime() + 50 * 60_000).toISOString(),
             status: "no_show",
+            cancelled_at: null,
           },
           {
             ...sessaoBase,
             starts_at: tresDias.toISOString(),
             ends_at: new Date(tresDias.getTime() + 50 * 60_000).toISOString(),
             status: "cancelled",
+            // Cancelou duas horas antes: em cima da hora (`calendar_appointments_cancelamento_coerente`).
+            cancelled_at: new Date(tresDias.getTime() - 2 * 3_600_000).toISOString(),
           },
         ] as never)
         .select("id, status");
