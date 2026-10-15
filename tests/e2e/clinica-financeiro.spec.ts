@@ -21,6 +21,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { expect, test } from "./helpers/test";
 
+import { fimDoMes } from "../../lib/clinica/financeiro";
 import { carregarEnvLocal, destinoEhLocal } from "../../scripts/lib/env-de-teste";
 import { lerCreds, loginComoAdmin, loginComoDono } from "./helpers/login-admin";
 import { fusoDaOrganizacaoLongeDaVirada } from "./helpers/virada-do-dia";
@@ -219,8 +220,14 @@ test.describe("Painel financeiro na interface nova", () => {
 
       // ── 1. A porta no menu e a lista do que falta cobrar ──────────────────────
       await page.goto("/hoje");
+      // "Este mês", o padrão, pede o mês inteiro: o que vem depois de hoje é a previsão.
+      const pedidoDoPainel = page.waitForRequest((r) =>
+        r.url().includes("/api/v1/clinica/financeiro?"),
+      );
       await page.locator(".n-trilho").getByRole("link", { name: "Financeiro" }).click();
       await expect(page).toHaveURL(/\/financeiro$/, { timeout: ESPERA });
+      const ate = new URL((await pedidoDoPainel).url()).searchParams.get("ate")!;
+      expect(ate, 'o "Este mês" vai até o último dia do mês').toBe(fimDoMes(ate));
       const tela = page.getByTestId("novo-financeiro");
       await expect(tela.getByRole("heading", { name: "Financeiro" })).toBeVisible({
         timeout: ESPERA,

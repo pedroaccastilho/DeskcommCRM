@@ -27,6 +27,7 @@ import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 import { apiClient } from "@/lib/api/client";
 import {
   CATEGORIAS_DE_DESPESA,
+  fimDoMes,
   FORMAS_DE_SAIDA,
   ROTULO_DA_CATEGORIA,
   ROTULO_DA_FORMA_DE_SAIDA,
@@ -87,6 +88,16 @@ function diaCurto(iso: string, fuso: string, tag: string): string {
 
 const dinheiro = (centavos: number, moeda = "BRL") => formatCents(centavos, moeda);
 
+/**
+ * Os atalhos do relatório, com uma diferença: aqui "Este mês" vai até o último dia do mês, não
+ * até hoje. O que passou é igual; o que vem é a previsão "Vai entrar", que com o mês cortado em
+ * hoje só aparecia escolhendo as datas à mão (decisão do Pedro, 2026-10-15).
+ */
+function periodoDoFinanceiro(atalho: Exclude<Atalho, "livre">, hoje: string): Periodo {
+  const p = periodoDoAtalho(atalho, hoje);
+  return atalho === "mes" ? { ...p, ate: fimDoMes(hoje) } : p;
+}
+
 export function TelaDoFinanceiro() {
   const t = useT();
   const { role, eu, fuso } = useNovo();
@@ -94,8 +105,8 @@ export function TelaDoFinanceiro() {
   const hoje = hojeNoFuso(fuso);
 
   const [atalho, setAtalho] = React.useState<Atalho>("mes");
-  const [livre, setLivre] = React.useState<Periodo>(() => periodoDoAtalho("mes", hoje));
-  const periodo = atalho === "livre" ? livre : periodoDoAtalho(atalho, hoje);
+  const [livre, setLivre] = React.useState<Periodo>(() => periodoDoFinanceiro("mes", hoje));
+  const periodo = atalho === "livre" ? livre : periodoDoFinanceiro(atalho, hoje);
   const valido = periodo.de <= periodo.ate;
   const [aba, setAba] = React.useState<Aba>("a_receber");
 

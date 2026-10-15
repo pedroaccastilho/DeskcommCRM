@@ -202,6 +202,13 @@ export function diaParaInstante(diaCivil: string): string {
   return new Date(`${diaCivil}T12:00:00-03:00`).toISOString();
 }
 
+/** O último dia do mês de `dia` (`AAAA-MM-DD`): o fim do "Este mês" do painel. */
+export function fimDoMes(dia: string): string {
+  const d = new Date(`${dia.slice(0, 8)}01T12:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() + 1, 0);
+  return d.toISOString().slice(0, 10);
+}
+
 export const TIPOS_DE_EXPORTACAO_FINANCEIRA = [
   "entradas",
   "saidas",
