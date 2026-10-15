@@ -2,7 +2,8 @@
  * As travas por PERFIL no servidor, além do degrau que a rota já exige:
  *  - o relatório da gestão: Administrador, Gerente ou Financeiro;
  *  - LGPD e a trilha de quem abriu o prontuário: Administrador ou Jurídico;
- *  - isentar ou voltar a cobrar multa: Administrador, Gerente ou Recepção.
+ *  - isentar ou voltar a cobrar multa: Administrador, Gerente ou Recepção;
+ *  - registrar ou desfazer pagamento: Administrador, Gerente, Recepção ou Financeiro.
  */
 import { fail } from "@/lib/api/wrappers";
 import { cargosDoUsuario } from "@/lib/clinica/cargos";
@@ -12,6 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import { moduloClinicaNaoInstalado } from "./api";
 import { veLgpdEAcessos, veRelatoriosDaGestao } from "./gestao";
 import { RECUSA_DA_MULTA, decideMulta } from "./multas";
+import { RECUSA_DO_PAGAMENTO, registraPagamento } from "./pagamentos";
 
 /** Os perfis de quem chama (os gravados ou, sem nenhum, os calculados), ou a resposta de erro. */
 async function cargosDoChamador(
@@ -78,6 +80,20 @@ export async function recusaDaMulta(
   if ("erro" in lidos) return lidos.erro;
   if (decideMulta(role, lidos.cargos)) return null;
   return fail("forbidden", RECUSA_DA_MULTA, 403, { requestId });
+}
+
+/** Registrar ou desfazer pagamento (`lib/clinica/pagamentos.ts`). */
+export async function recusaDoPagamento(
+  orgId: string,
+  userId: string,
+  role: Role,
+  requestId: string,
+): Promise<Response | null> {
+  if (role === "admin") return null;
+  const lidos = await cargosDoChamador(orgId, userId, role, requestId);
+  if ("erro" in lidos) return lidos.erro;
+  if (registraPagamento(role, lidos.cargos)) return null;
+  return fail("forbidden", RECUSA_DO_PAGAMENTO, 403, { requestId });
 }
 
 /**

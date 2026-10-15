@@ -33,7 +33,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   let consulta = supabase
     .from("clinica_multas")
     .select(
-      "id, appointment_id, contact_id, percentual, antecedencia_horas, valor_cents, currency, status, isencao_motivo, isenta_por_user_id, isenta_em, created_at, calendar_appointments(title, starts_at, owner_user_id), contacts(name, display_name, phone_number)",
+      "id, appointment_id, contact_id, percentual, antecedencia_horas, valor_cents, currency, status, origem, isencao_motivo, isenta_por_user_id, isenta_em, created_at, calendar_appointments(title, starts_at, owner_user_id), contacts(name, display_name, phone_number)",
     )
     .eq("organization_id", authz.org.orgId)
     .order("created_at", { ascending: false })

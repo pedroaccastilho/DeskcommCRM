@@ -114,6 +114,28 @@ export function multaDoCancelamento(args: {
   };
 }
 
+/**
+ * A multa da FALTA, quando a recepção decide cobrar ao registrar "Faltou" (migration 9011). Usa o
+ * mesmo percentual da multa de cancelamento; sem multa quando a política está com 0%. A
+ * antecedência fica negativa: a falta é registrada depois do início.
+ */
+export function multaDaFalta(args: {
+  inicio: Date;
+  registradaEm: Date;
+  politica: PoliticaDaAgenda;
+  valorDaSessaoCents: number | null;
+}): MultaCalculada | null {
+  const pct = args.politica.multa_cancelamento_pct;
+  if (pct <= 0) return null;
+  const antecedenciaMs = args.inicio.getTime() - args.registradaEm.getTime();
+  return {
+    percentual: pct,
+    antecedencia_horas: Math.round((antecedenciaMs / HORA_MS) * 100) / 100,
+    valor_cents:
+      args.valorDaSessaoCents === null ? null : Math.round((args.valorDaSessaoCents * pct) / 100),
+  };
+}
+
 /** A partir de quando a recepção pode registrar "não compareceu". */
 export function faltaLiberadaEm(inicio: Date, politica: PoliticaDaAgenda): Date {
   return new Date(inicio.getTime() + politica.tolerancia_atraso_minutos * 60_000);
