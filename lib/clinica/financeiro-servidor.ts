@@ -8,7 +8,7 @@
  */
 import type { createAdminClient } from "@/lib/supabase/admin";
 
-import type { Despesa, EntradaFinanceira, ItemAReceber } from "./financeiro";
+import type { Despesa, EntradaFinanceira, ItemAReceber, ItemPrevisto } from "./financeiro";
 
 type Admin = ReturnType<typeof createAdminClient>;
 type Erro = { code?: string; message: string };
@@ -51,6 +51,13 @@ export function lerEntradas(admin: Admin, args: Periodo, teto: number) {
 export function lerAReceber(admin: Admin, args: Periodo, teto: number) {
   return paginar<ItemAReceber>(
     (desde, ate) => admin.rpc("fn_clinica_financeiro_a_receber", args).range(desde, ate),
+    teto,
+  );
+}
+
+export function lerPrevisao(admin: Admin, args: Periodo, teto: number) {
+  return paginar<ItemPrevisto>(
+    (desde, ate) => admin.rpc("fn_clinica_financeiro_previsao", args).range(desde, ate),
     teto,
   );
 }

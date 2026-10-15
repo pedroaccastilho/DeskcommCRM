@@ -1,9 +1,9 @@
 /**
  * O PAINEL FINANCEIRO (módulo clínica, migration 9012).
  *
- * GET ?de=AAAA-MM-DD&ate=AAAA-MM-DD → `{ periodo, resumo, entradas, a_receber, saidas, cortado }`:
- * o que entrou (pagamentos registrados), o que saiu (despesas) e o que ainda falta cobrar no
- * período. Sem datas, o mês corrente. Administrador, Gerente e Financeiro (`recusaDoRelatorio`).
+ * GET ?de=AAAA-MM-DD&ate=AAAA-MM-DD → `{ periodo, resumo, entradas, a_receber, previsao, saidas,
+ * cortado }`: o que entrou (pagamentos registrados), o que saiu (despesas), o que ainda falta
+ * cobrar no período e o que a agenda diz que vai entrar (sessões marcadas daqui até o fim dele). Sem datas, o mês corrente. Administrador, Gerente e Financeiro (`recusaDoRelatorio`).
  *
  * As somas são do banco (`fn_clinica_financeiro_resumo`), nunca das listas: as listas param no
  * teto da tela e a soma não pode parar junto. Quem precisa de tudo baixa a planilha
@@ -17,7 +17,12 @@ import { fail, ok } from "@/lib/api/wrappers";
 import { requireRole } from "@/lib/auth/require-role";
 import { MODULO_CLINICA_NAO_INSTALADO, moduloClinicaNaoInstalado } from "@/lib/clinica/api";
 import type { PainelFinanceiro, ResumoFinanceiro } from "@/lib/clinica/financeiro";
-import { lerAReceber, lerEntradas, lerSaidas } from "@/lib/clinica/financeiro-servidor";
+import {
+  lerAReceber,
+  lerEntradas,
+  lerPrevisao,
+  lerSaidas,
+} from "@/lib/clinica/financeiro-servidor";
 import { recusaDoRelatorio } from "@/lib/clinica/gestao-servidor";
 import { periodoDoRelatorio } from "@/lib/clinica/origens";
 import { relatorioDeOrigensSchema } from "@/lib/clinica/origens-schemas";
@@ -56,10 +61,11 @@ export async function GET(req: NextRequest): Promise<Response> {
     p_de: periodo.inicio.toISOString(),
     p_ate: periodo.fim.toISOString(),
   };
-  const [resumo, entradas, aReceber, saidas] = await Promise.all([
+  const [resumo, entradas, aReceber, previsao, saidas] = await Promise.all([
     admin.rpc("fn_clinica_financeiro_resumo", args),
     lerEntradas(admin, args, TETO_DA_TELA),
     lerAReceber(admin, args, TETO_DA_TELA),
+    lerPrevisao(admin, args, TETO_DA_TELA),
     lerSaidas(admin, args, TETO_DA_TELA),
   ]);
 
@@ -67,6 +73,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     resumo.error ??
     ("erro" in entradas ? entradas.erro : null) ??
     ("erro" in aReceber ? aReceber.erro : null) ??
+    ("erro" in previsao ? previsao.erro : null) ??
     ("erro" in saidas ? saidas.erro : null);
   if (erro) {
     if (moduloClinicaNaoInstalado(erro)) {
@@ -74,7 +81,7 @@ export async function GET(req: NextRequest): Promise<Response> {
     }
     return fail("internal_error", erro.message, 500, { requestId });
   }
-  if ("erro" in entradas || "erro" in aReceber || "erro" in saidas) {
+  if ("erro" in entradas || "erro" in aReceber || "erro" in previsao || "erro" in saidas) {
     return fail("internal_error", "leitura incompleta", 500, { requestId });
   }
 
@@ -83,10 +90,12 @@ export async function GET(req: NextRequest): Promise<Response> {
     resumo: resumo.data as ResumoFinanceiro,
     entradas: entradas.linhas,
     a_receber: aReceber.linhas,
+    previsao: previsao.linhas,
     saidas: saidas.linhas,
     cortado: {
       entradas: entradas.cortado,
       a_receber: aReceber.cortado,
+      previsao: previsao.cortado,
       saidas: saidas.cortado,
     },
   };

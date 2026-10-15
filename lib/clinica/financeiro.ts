@@ -93,6 +93,13 @@ export interface ResumoFinanceiro {
     sem_valor: number;
     por_tipo: { tipo: TipoDoItem; qtd: number; valor_cents: number }[];
   };
+  /** Sessões marcadas de agora até o fim do período que um pacote não vai cobrir. */
+  previsao: {
+    qtd: number;
+    total_cents: number;
+    sem_valor: number;
+    cobertas_por_pacote: number;
+  };
 }
 
 interface Contato {
@@ -122,6 +129,16 @@ export interface ItemAReceber extends Contato {
   currency: string;
 }
 
+/** Um compromisso marcado: entra pelo preço de tabela, ou não entra se um pacote o cobre. */
+export interface ItemPrevisto extends Contato {
+  id: string;
+  starts_at: string;
+  descricao: string | null;
+  coberta_por_pacote: boolean;
+  valor_cents: number | null;
+  currency: string;
+}
+
 export interface Despesa {
   id: string;
   descricao: string;
@@ -138,9 +155,10 @@ export interface PainelFinanceiro {
   resumo: ResumoFinanceiro;
   entradas: EntradaFinanceira[];
   a_receber: ItemAReceber[];
+  previsao: ItemPrevisto[];
   saidas: Despesa[];
   /** A lista passou do teto da tela; a planilha traz tudo. */
-  cortado: { entradas: boolean; a_receber: boolean; saidas: boolean };
+  cortado: { entradas: boolean; a_receber: boolean; previsao: boolean; saidas: boolean };
 }
 
 /** Quanto sobrou: entradas menos saídas. */
@@ -184,7 +202,12 @@ export function diaParaInstante(diaCivil: string): string {
   return new Date(`${diaCivil}T12:00:00-03:00`).toISOString();
 }
 
-export const TIPOS_DE_EXPORTACAO_FINANCEIRA = ["entradas", "saidas", "a_receber"] as const;
+export const TIPOS_DE_EXPORTACAO_FINANCEIRA = [
+  "entradas",
+  "saidas",
+  "a_receber",
+  "previsao",
+] as const;
 export type TipoDeExportacaoFinanceira = (typeof TIPOS_DE_EXPORTACAO_FINANCEIRA)[number];
 
 /** O nome do arquivo: `clinica-financeiro-entradas-2026-10-01-a-2026-10-31.csv`. */

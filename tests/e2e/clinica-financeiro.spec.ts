@@ -104,6 +104,28 @@ test.describe("Painel financeiro na interface nova", () => {
       event_type_id: tipoId,
       modalidade: "fisioterapia",
     } as never);
+    // Um segundo tipo, de outra modalidade: a sessão marcada dele não é coberta pelo pacote de fisio.
+    const { data: tipoPilates, error: erroPilates } = await admin
+      .from("calendar_event_types")
+      .insert({
+        organization_id: orgId,
+        name: `Pilates caixa ${sufixo}`,
+        slug: `pilates-caixa-${sufixo}`,
+        default_price_cents: 9000,
+        duration_minutes: 50,
+        minimum_notice_minutes: 0,
+        booking_window_days: 60,
+        is_active: true,
+      } as never)
+      .select("id")
+      .single();
+    if (erroPilates || !tipoPilates) throw new Error(`pilates insert: ${erroPilates?.message}`);
+    const tipoPilatesId = (tipoPilates as { id: string }).id;
+    await admin.from("clinica_tipos_atendimento").insert({
+      organization_id: orgId,
+      event_type_id: tipoPilatesId,
+      modalidade: "pilates",
+    } as never);
 
     const nome = `Vera Caixa ${sufixo}`;
     const { data: contato, error: erroContato } = await admin
@@ -116,7 +138,7 @@ test.describe("Painel financeiro na interface nova", () => {
     const descricaoDaSaida = `Aluguel da sala ${sufixo}`;
 
     // O fuso da organização longe da virada do dia: "Este mês" contém o que semeamos agora.
-    const desfazerFuso = await fusoDaOrganizacaoLongeDaVirada(admin, orgId, 60, 120);
+    const desfazerFuso = await fusoDaOrganizacaoLongeDaVirada(admin, orgId, 60, 180);
     try {
       const agora = Date.now();
       const sessaoBase = {
@@ -142,6 +164,21 @@ test.describe("Painel financeiro na interface nova", () => {
             starts_at: new Date(agora - 5 * 3_600_000).toISOString(),
             ends_at: new Date(agora - 5 * 3_600_000 + 50 * 60_000).toISOString(),
             status: "no_show",
+          },
+          // A agenda: uma fisio marcada (o pacote cobre) e um pilates marcado (vai entrar R$ 90).
+          {
+            ...sessaoBase,
+            starts_at: new Date(agora + 60 * 60_000).toISOString(),
+            ends_at: new Date(agora + 110 * 60_000).toISOString(),
+            status: "pending",
+          },
+          {
+            ...sessaoBase,
+            title: `Pilates caixa ${sufixo}`,
+            event_type_id: tipoPilatesId,
+            starts_at: new Date(agora + 120 * 60_000).toISOString(),
+            ends_at: new Date(agora + 170 * 60_000).toISOString(),
+            status: "confirmed",
           },
         ] as never)
         .select("id, status");
@@ -207,6 +244,17 @@ test.describe("Painel financeiro na interface nova", () => {
       await folhaPagamento.getByTestId("novo-confirmar-pagamento").click();
       await expect(page.getByText("Pagamento registrado.")).toBeVisible({ timeout: ESPERA });
       await expect(aCobrar).toHaveCount(2, { timeout: ESPERA });
+
+      // ── 2b. O que a agenda diz que vai entrar ─────────────────────────────────
+      await page.getByTestId("novo-financeiro-previsao").click();
+      const previsto = page.getByTestId("novo-financeiro-item-previsto").filter({ hasText: nome });
+      await expect(previsto).toHaveCount(2, { timeout: ESPERA });
+      await expect(previsto.filter({ hasText: "Pilates" })).toContainText("90,00");
+      await expect(previsto.filter({ hasText: "Fisioterapia" })).toContainText("Pacote");
+      await expect(page.getByTestId("novo-financeiro-lista-previsao")).toContainText(
+        "1 sessão coberta por pacote fica fora da soma.",
+      );
+      await page.screenshot({ path: path.join(EVIDENCIA, "2-vai-entrar.png"), fullPage: true });
 
       await page.getByTestId("novo-financeiro-aba-entradas").click();
       const entrada = page.getByTestId("novo-financeiro-entrada").filter({ hasText: nome });
@@ -290,7 +338,8 @@ test.describe("Painel financeiro na interface nova", () => {
       await admin.from("clinica_pacotes").delete().eq("contact_id", contactId);
       await admin.from("calendar_appointments").delete().eq("contact_id", contactId);
       await admin.from("clinica_tipos_atendimento").delete().eq("event_type_id", tipoId);
-      await admin.from("calendar_event_types").delete().eq("id", tipoId);
+      await admin.from("clinica_tipos_atendimento").delete().eq("event_type_id", tipoPilatesId);
+      await admin.from("calendar_event_types").delete().in("id", [tipoId, tipoPilatesId]);
     }
   });
 });

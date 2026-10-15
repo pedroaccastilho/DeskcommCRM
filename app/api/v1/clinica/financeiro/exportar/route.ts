@@ -1,7 +1,7 @@
 /**
  * A PLANILHA DO PAINEL FINANCEIRO (módulo clínica, migration 9012).
  *
- * GET ?tipo=entradas|saidas|a_receber&de=AAAA-MM-DD&ate=AAAA-MM-DD → um CSV no padrão brasileiro
+ * GET ?tipo=entradas|saidas|a_receber|previsao&de=AAAA-MM-DD&ate=AAAA-MM-DD → um CSV no padrão brasileiro
  * (`;`, vírgula decimal, BOM, data dd/mm/aaaa em Brasília), igual às planilhas do relatório da
  * gestão. Administrador, Gerente e Financeiro (`recusaDoRelatorio`).
  *
@@ -25,7 +25,12 @@ import {
   TIPOS_DE_EXPORTACAO_FINANCEIRA,
   nomeDoArquivoFinanceiro,
 } from "@/lib/clinica/financeiro";
-import { lerAReceber, lerEntradas, lerSaidas } from "@/lib/clinica/financeiro-servidor";
+import {
+  lerAReceber,
+  lerEntradas,
+  lerPrevisao,
+  lerSaidas,
+} from "@/lib/clinica/financeiro-servidor";
 import { csvBr, dataBr, dinheiroBr, type CelulaCsv } from "@/lib/clinica/gestao";
 import { recusaDoRelatorio } from "@/lib/clinica/gestao-servidor";
 import { periodoDoRelatorio } from "@/lib/clinica/origens";
@@ -134,6 +139,31 @@ export async function GET(req: NextRequest): Promise<Response> {
         ROTULO_DO_TIPO[l.tipo] ?? l.tipo,
         l.descricao ?? "",
         dinheiroBr(l.valor_cents),
+        l.currency,
+      ]);
+      break;
+    }
+    case "previsao": {
+      const r = await lerPrevisao(admin, args, TETO);
+      if ("erro" in r) {
+        erro = r.erro;
+        break;
+      }
+      cortado = r.cortado;
+      cabecalho = [
+        "Marcado para",
+        "Paciente",
+        "Atendimento",
+        "Pago por",
+        "Valor previsto (R$)",
+        "Moeda",
+      ];
+      linhas = r.linhas.map((l) => [
+        dataBr(l.starts_at),
+        paciente(l),
+        l.descricao ?? "",
+        l.coberta_por_pacote ? "Pacote" : "Avulsa",
+        l.coberta_por_pacote ? "" : dinheiroBr(l.valor_cents),
         l.currency,
       ]);
       break;

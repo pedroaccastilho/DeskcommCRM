@@ -47,6 +47,7 @@ describe("as contas do painel", () => {
       entradas: { qtd: 2, total_cents: 168000, sem_valor: 0, por_forma: [], por_tipo: [] },
       saidas: { qtd: 1, total_cents: 300000, por_categoria: [] },
       a_receber: { qtd: 0, total_cents: 0, sem_valor: 0, por_tipo: [] },
+      previsao: { qtd: 0, total_cents: 0, sem_valor: 0, cobertas_por_pacote: 0 },
     } satisfies ResumoFinanceiro;
     expect(saldoDo(r)).toBe(-132000);
   });

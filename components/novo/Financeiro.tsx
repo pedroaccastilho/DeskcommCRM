@@ -13,6 +13,9 @@
  *    registrar o pagamento ali mesmo (a mesma folha da ficha do paciente).
  *  - "Entradas": os pagamentos registrados no período.
  *  - "Saídas": as despesas lançadas à mão (aluguel, salário…), com "Registrar saída".
+ *  - "Vai entrar": a previsão pela agenda ("E previsão doq vai entrar baseado nas agendas"), as
+ *    sessões marcadas de hoje até o fim do período pelo preço de tabela; as que um pacote cobre
+ *    aparecem marcadas e ficam fora da soma.
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -34,6 +37,7 @@ import {
   type EntradaFinanceira,
   type FormaDeSaida,
   type ItemAReceber,
+  type ItemPrevisto,
   type PainelFinanceiro,
   type TipoDeExportacaoFinanceira,
   type TipoDoItem,
@@ -56,7 +60,7 @@ import {
   type Periodo,
 } from "./Relatorios";
 
-type Aba = "a_receber" | "entradas" | "saidas";
+type Aba = "a_receber" | "previsao" | "entradas" | "saidas";
 
 const CHAVE = ["clinica", "financeiro"] as const;
 
@@ -113,7 +117,9 @@ export function TelaDoFinanceiro() {
     <div className="n-conteudo max-w-5xl" data-testid="novo-financeiro">
       <div className="n-entra">
         <h1 className="n-titulo text-[44px] leading-tight sm:text-[52px]">{t("Financeiro")}</h1>
-        <p className="n-suave mt-1">{t("O que entrou, o que saiu e o que falta cobrar.")}</p>
+        <p className="n-suave mt-1">
+          {t("O que entrou, o que saiu, o que falta cobrar e o que a agenda diz que vai entrar.")}
+        </p>
       </div>
 
       <SeletorDePeriodo
@@ -145,6 +151,9 @@ export function TelaDoFinanceiro() {
               <BotaoDaAba aba="a_receber" atual={aba} aoEscolher={setAba}>
                 {t("A cobrar")} <span className="n-numero">{p.resumo.a_receber.qtd}</span>
               </BotaoDaAba>
+              <BotaoDaAba aba="previsao" atual={aba} aoEscolher={setAba}>
+                {t("Vai entrar")} <span className="n-numero">{p.resumo.previsao.qtd}</span>
+              </BotaoDaAba>
               <BotaoDaAba aba="entradas" atual={aba} aoEscolher={setAba}>
                 {t("Entradas")} <span className="n-numero">{p.resumo.entradas.qtd}</span>
               </BotaoDaAba>
@@ -153,6 +162,7 @@ export function TelaDoFinanceiro() {
               </BotaoDaAba>
             </div>
             {aba === "a_receber" && <ACobrar p={p} />}
+            {aba === "previsao" && <Previsao p={p} />}
             {aba === "entradas" && <Entradas p={p} />}
             {aba === "saidas" && <Saidas p={p} />}
           </div>
@@ -199,6 +209,7 @@ function Total({
   tom,
   testid,
   aoClicar,
+  largo,
 }: {
   rotulo: string;
   valor: string;
@@ -206,6 +217,8 @@ function Total({
   tom?: "alerta" | "aviso" | "ok";
   testid: string;
   aoClicar?: () => void;
+  /** No celular ocupa a linha toda (o quinto cartão não fica sozinho pela metade). */
+  largo?: boolean;
 }) {
   const cor =
     tom === "alerta"
@@ -219,7 +232,9 @@ function Total({
   const corpo = (
     <div className="w-full">
       <p className="n-suave text-[13px] font-semibold">{rotulo}</p>
-      <p className={`n-titulo n-numero mt-1 text-[24px] leading-none sm:text-[30px] ${cor}`}>
+      <p
+        className={`n-titulo n-numero mt-1 text-[24px] leading-none sm:text-[28px] lg:text-[26px] ${cor}`}
+      >
         {valor}
       </p>
       {detalhe && <p className="n-fraco mt-1.5 text-[13px]">{detalhe}</p>}
@@ -235,7 +250,10 @@ function Total({
       {corpo}
     </button>
   ) : (
-    <div className="n-cartao n-entra px-5 py-4" data-testid={testid}>
+    <div
+      className={`n-cartao n-entra px-5 py-4 ${largo ? "col-span-2 sm:col-span-1" : ""}`}
+      data-testid={testid}
+    >
       {corpo}
     </div>
   );
@@ -250,7 +268,7 @@ function Totais({ p, aoAbrir }: { p: PainelFinanceiro; aoAbrir: (a: Aba) => void
   const r = p.resumo;
   const saldo = saldoDo(r);
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
       <Total
         rotulo={t("A receber")}
         valor={dinheiro(r.a_receber.total_cents)}
@@ -258,6 +276,13 @@ function Totais({ p, aoAbrir }: { p: PainelFinanceiro; aoAbrir: (a: Aba) => void
         tom={r.a_receber.qtd > 0 ? "aviso" : undefined}
         testid="novo-financeiro-a-receber"
         aoClicar={() => aoAbrir("a_receber")}
+      />
+      <Total
+        rotulo={t("Vai entrar")}
+        valor={dinheiro(r.previsao.total_cents)}
+        detalhe={quantos(r.previsao.qtd, t("sessão marcada"), t("sessões marcadas"))}
+        testid="novo-financeiro-previsao"
+        aoClicar={() => aoAbrir("previsao")}
       />
       <Total
         rotulo={t("Entrou")}
@@ -280,6 +305,7 @@ function Totais({ p, aoAbrir }: { p: PainelFinanceiro; aoAbrir: (a: Aba) => void
         detalhe={t("Entrou menos saiu")}
         tom={saldo < 0 ? "alerta" : undefined}
         testid="novo-financeiro-saldo"
+        largo
       />
     </div>
   );
@@ -309,7 +335,7 @@ function Cortado({ mostrar }: { mostrar: boolean }) {
   );
 }
 
-function NomeDoPaciente({ l }: { l: EntradaFinanceira | ItemAReceber }) {
+function NomeDoPaciente({ l }: { l: EntradaFinanceira | ItemAReceber | ItemPrevisto }) {
   const t = useT();
   const nome = rotuloDoContato(
     { name: l.contato_name, display_name: l.contato_display_name, phone_number: l.contato_phone },
@@ -418,6 +444,65 @@ function ACobrar({ p }: { p: PainelFinanceiro }) {
           aoFechar={() => setCobrando(null)}
         />
       )}
+    </div>
+  );
+}
+
+function Previsao({ p }: { p: PainelFinanceiro }) {
+  const t = useT();
+  const tag = useTagDeIdioma();
+  const { fuso } = useNovo();
+  const r = p.resumo.previsao;
+  if (p.previsao.length === 0) {
+    return (
+      <Vazio
+        titulo={t("Nenhuma sessão marcada daqui até o fim do período.")}
+        texto={t("A previsão soma as sessões da agenda que ainda vão acontecer.")}
+      />
+    );
+  }
+  return (
+    <div data-testid="novo-financeiro-lista-previsao">
+      <p className="n-suave mb-3 text-sm">
+        {t("Sessões marcadas de hoje até o fim do período, pelo preço de tabela.")}{" "}
+        {r.cobertas_por_pacote > 0 &&
+          quantos(
+            r.cobertas_por_pacote,
+            t("sessão coberta por pacote fica fora da soma."),
+            t("sessões cobertas por pacote ficam fora da soma."),
+          )}
+      </p>
+      <ul className="n-cartao divide-y divide-[var(--n-linha)] px-5">
+        {p.previsao.map((item) => (
+          <li
+            key={item.id}
+            className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3.5"
+            data-testid="novo-financeiro-item-previsto"
+          >
+            <div className="min-w-0">
+              <NomeDoPaciente l={item} />
+              <p className="n-fraco text-[13px]">
+                {item.descricao ?? t("Sessão")} · {diaCurto(item.starts_at, fuso, tag)}
+              </p>
+            </div>
+            {item.coberta_por_pacote ? (
+              <span className="n-selo n-selo-neutro">{t("Pacote")}</span>
+            ) : (
+              <span className="n-numero font-semibold">
+                {item.valor_cents === null
+                  ? t("Sem preço")
+                  : dinheiro(item.valor_cents, item.currency)}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      {r.sem_valor > 0 && (
+        <p className="n-fraco mt-2 text-[13px]">
+          {r.sem_valor} {t("item(ns) sem preço cadastrado não entram na soma.")}
+        </p>
+      )}
+      <Cortado mostrar={p.cortado.previsao} />
     </div>
   );
 }
@@ -705,6 +790,15 @@ function Exportar({ de, ate }: { de: string; ate: string }) {
         >
           <DownloadSimple size={18} />
           {t("A cobrar")}
+        </a>
+        <a
+          className="n-botao n-botao-suave"
+          href={href("previsao")}
+          download
+          data-testid="novo-financeiro-exportar-previsao"
+        >
+          <DownloadSimple size={18} />
+          {t("Vai entrar")}
         </a>
         <a
           className="n-botao n-botao-suave"

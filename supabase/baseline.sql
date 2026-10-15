@@ -47108,6 +47108,7 @@ declare
   v_entradas jsonb;
   v_saidas jsonb;
   v_receber jsonb;
+  v_previsao jsonb;
 begin
   with e as (
     select pg.forma,
@@ -47173,7 +47174,19 @@ begin
     ), '[]'::jsonb)
   ) into v_receber;
 
-  return jsonb_build_object('entradas', v_entradas, 'saidas', v_saidas, 'a_receber', v_receber);
+  with f as (
+    select f.coberta_por_pacote, f.valor_cents
+      from public.fn_clinica_financeiro_previsao(p_org, p_de, p_ate) f
+  )
+  select jsonb_build_object(
+    'qtd', (select count(*) from f where not f.coberta_por_pacote),
+    'total_cents', (select coalesce(sum(f.valor_cents), 0) from f where not f.coberta_por_pacote),
+    'sem_valor', (select count(*) from f where not f.coberta_por_pacote and f.valor_cents is null),
+    'cobertas_por_pacote', (select count(*) from f where f.coberta_por_pacote)
+  ) into v_previsao;
+
+  return jsonb_build_object('entradas', v_entradas, 'saidas', v_saidas, 'a_receber', v_receber,
+                            'previsao', v_previsao);
 end;
 $f$;
 
@@ -47326,6 +47339,87 @@ $f$;
 revoke execute on function public.fn_clinica_financeiro_a_receber(uuid, timestamptz, timestamptz)
   from public, anon, authenticated;
 grant execute on function public.fn_clinica_financeiro_a_receber(uuid, timestamptz, timestamptz)
+  to service_role;
+
+-- ---- a previsão: o que a agenda diz que vai entrar ----
+-- Compromisso FUTURO (de agora até o fim do período), ainda marcado (`pending`/`confirmed`),
+-- de um tipo de atendimento da clínica e sem pagamento adiantado, vale o preço de tabela do tipo.
+-- Fica de fora o que um pacote vai cobrir: por paciente e modalidade, os próximos N compromissos,
+-- sendo N o saldo dos pacotes ativos daquela modalidade (sessões não usadas), e só até a validade
+-- do pacote que vence por último. É a mesma regra do consumo (9004): pacote ativo, da modalidade,
+-- ainda válido. O pacote ainda não pago já está em "a receber"; contar a sessão de novo dobraria.
+create or replace function public.fn_clinica_financeiro_previsao(
+  p_org uuid,
+  p_de timestamptz,
+  p_ate timestamptz
+)
+returns table (
+  id uuid,
+  starts_at timestamptz,
+  descricao text,
+  coberta_por_pacote boolean,
+  valor_cents bigint,
+  currency text,
+  contact_id uuid,
+  contato_name text,
+  contato_display_name text,
+  contato_phone text
+)
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $f$
+#variable_conflict use_column
+begin
+  return query
+  with futuros as (
+    select a.id, a.starts_at, a.contact_id, t.modalidade,
+           coalesce(et.name, a.title) as descricao,
+           et.default_price_cents::bigint as preco,
+           row_number() over (partition by a.contact_id, t.modalidade
+                              order by a.starts_at, a.id) as ordem
+      from public.calendar_appointments a
+      join public.clinica_tipos_atendimento t
+        on t.organization_id = p_org and t.event_type_id = a.event_type_id
+      left join public.calendar_event_types et on et.id = a.event_type_id
+     where a.organization_id = p_org
+       and a.status in ('pending', 'confirmed')
+       and a.contact_id is not null
+       and a.starts_at >= now()
+       and a.starts_at < p_ate
+       and not exists (select 1 from public.clinica_pagamentos pg
+                        where pg.organization_id = p_org and pg.appointment_id = a.id)
+  ),
+  restantes as (
+    select p.contact_id, p.modalidade,
+           sum(greatest(p.sessoes_total - (select count(*) from public.clinica_pacote_consumos k
+                                            where k.organization_id = p_org
+                                              and k.pacote_id = p.id), 0)) as sessoes,
+           max(p.valido_ate) as ate
+      from public.clinica_pacotes p
+     where p.organization_id = p_org
+       and p.status = 'ativo'
+       and p.valido_ate >= now()
+     group by p.contact_id, p.modalidade
+  )
+  select f.id, f.starts_at, f.descricao,
+         coalesce(f.ordem <= s.sessoes and f.starts_at <= s.ate, false),
+         case when coalesce(f.ordem <= s.sessoes and f.starts_at <= s.ate, false)
+              then 0::bigint else f.preco end,
+         'BRL'::text, f.contact_id,
+         c.name, c.display_name, c.phone_number
+    from futuros f
+    left join restantes s on s.contact_id = f.contact_id and s.modalidade = f.modalidade
+    left join public.contacts c on c.id = f.contact_id and c.organization_id = p_org
+   where f.starts_at >= p_de
+   order by f.starts_at, f.id;
+end;
+$f$;
+
+revoke execute on function public.fn_clinica_financeiro_previsao(uuid, timestamptz, timestamptz)
+  from public, anon, authenticated;
+grant execute on function public.fn_clinica_financeiro_previsao(uuid, timestamptz, timestamptz)
   to service_role;
 
 -- ---- onde o módulo já está instalado ----
