@@ -106,8 +106,14 @@ describe("os leads na interface nova", () => {
       "Leads",
       "Financeiro",
     ]);
-    // A gerente que atende: cinco portas, cabem todas.
-    expect(abasDoCelular(menuDoCargo("saude", true)).map((i) => i.rotulo)).toContain("Financeiro");
+    // A gerente que atende: cinco portas; "Financeiro", o rótulo mais largo, vai para "Você".
+    expect(abasDoCelular(menuDoCargo("saude", true)).map((i) => i.rotulo)).toEqual([
+      "Meu dia",
+      "Minha agenda",
+      "Meus pacientes",
+      "Relatórios",
+    ]);
+    expect(foraDasAbas(menuDoCargo("saude", true)).map((i) => i.rotulo)).toEqual(["Financeiro"]);
   });
 });
 

@@ -139,9 +139,15 @@ export function menuDoCargo(cargo: Cargo, veRelatorios = false): ItemDoMenu[] {
   ];
 }
 
-/** No celular, quem sai das abas primeiro quando elas não cabem (vai para o menu de "Você"). */
-const SAEM_DAS_ABAS = ["/funis", "/financeiro"] as const;
-const MAXIMO_DE_ABAS = 5;
+/**
+ * No celular, quem sai das abas quando elas não cabem (vai para o menu de "Você"), e com quantas
+ * portas ainda fica. "Financeiro" é o rótulo mais largo: com ele, cinco portas e "Você" encostam
+ * os rótulos numa tela de 390px (medido no CI: 1,8px entre "Financeiro" e "Você").
+ */
+const SAEM_DAS_ABAS = [
+  { href: "/funis", cabeAte: 5 },
+  { href: "/financeiro", cabeAte: 4 },
+] as const;
 
 /**
  * As abas do celular: as mesmas portas, mas no máximo cinco ao lado de "Você", senão os rótulos se
@@ -150,9 +156,8 @@ const MAXIMO_DE_ABAS = 5;
  */
 export function abasDoCelular(menu: readonly ItemDoMenu[]): ItemDoMenu[] {
   let abas = [...menu];
-  for (const href of SAEM_DAS_ABAS) {
-    if (abas.length <= MAXIMO_DE_ABAS) break;
-    abas = abas.filter((i) => i.href !== href);
+  for (const { href, cabeAte } of SAEM_DAS_ABAS) {
+    if (abas.length > cabeAte) abas = abas.filter((i) => i.href !== href);
   }
   return abas;
 }
