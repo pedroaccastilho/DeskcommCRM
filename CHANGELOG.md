@@ -8,6 +8,26 @@ Se você roda o DeskcommCRM numa VPS, **leia a seção da versão para a qual es
 
 ## [Não lançado]
 
+## [1.75.2] — 2026-10-15
+
+### Adicionado
+
+- **Na clínica, a recepção registra o pagamento e decide a multa pela falta** Com o módulo clínica, a interface nova registra se o paciente já pagou e como (Pix, cartão de
+  crédito, cartão de débito ou dinheiro): o pacote (no cartão do pacote e já na venda), a sessão
+  avulsa (na folha da sessão e no histórico da ficha) e a multa, que passa a "Paga". O registro pode
+  ser desfeito. Registram pagamento Administrador, Gerente, Recepção e Financeiro. Ao tocar "Faltou",
+  Administrador, Gerente e Recepção escolhem "Sim, cobrar" ou "Não cobrar"; quando quem marcou a falta
+  foi o profissional, a folha da sessão oferece "Cobrar multa pela falta" depois. A multa pela falta
+  usa o mesmo percentual da multa de cancelamento. É só registro à mão: não fala com maquininha nem
+  banco. A atualização cria a tabela `clinica_pagamentos` e a coluna `clinica_multas.origem`
+  (migration 9011), só onde o módulo clínica está instalado.
+
+### Alterado
+
+- **A ficha do paciente mostra com qual profissional foi cada sessão** Na ficha do paciente da interface nova, o "Histórico recente" e as "Próximas sessões" dizem também
+  com quem foi ou será cada sessão (por exemplo, "terça às 14:00 · com Ana Souza"). Todos os cargos
+  veem o nome, porque ele não é dado clínico; o prontuário continua só para a saúde.
+
 ## [1.75.1] — 2026-10-09
 
 ### Adicionado
@@ -10000,7 +10020,8 @@ Primeira versão marcada do DeskcommCRM. O projeto vinha sendo desenvolvido publ
 
 - **Node 22 é obrigatório para desenvolvimento.** A suíte de invariantes instancia o cliente do Supabase, que exige o `WebSocket` global — nativo apenas a partir do Node 22. Isso não afeta quem apenas hospeda: a VPS roda a imagem pronta.
 
-[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.75.1...HEAD
+[Não lançado]: https://github.com/melgarafael/DeskcommCRM/compare/v1.75.2...HEAD
+[1.75.2]: https://github.com/melgarafael/DeskcommCRM/compare/v1.75.1...v1.75.2
 [1.75.1]: https://github.com/melgarafael/DeskcommCRM/compare/v1.75.0...v1.75.1
 [1.75.0]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.2...v1.75.0
 [1.74.2]: https://github.com/melgarafael/DeskcommCRM/compare/v1.74.1...v1.74.2
