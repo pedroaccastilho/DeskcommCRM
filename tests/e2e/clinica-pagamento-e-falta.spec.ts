@@ -344,7 +344,8 @@ test.describe("Pagamento e multa por falta na interface nova", () => {
         timeout: ESPERA,
       });
       await expect(linhaDaFaltaDeOntem).toContainText("Multa a cobrar", { timeout: ESPERA });
-      await expect(linhaDaFaltaDeOntem).toContainText("45,00");
+      // O pacote vendido no passo 4 vale para ontem: 30% de R$ 120 (R$ 1.200 em 10 sessões).
+      await expect(linhaDaFaltaDeOntem).toContainText("36,00");
 
       // Isentar pelo histórico, e voltar a cobrar.
       await linhaDaFaltaDeOntem.getByTestId("novo-historico-isentar").click();
@@ -383,7 +384,7 @@ test.describe("Pagamento e multa por falta na interface nova", () => {
       expect(doHistorico.find((m) => m.appointment_id === faltaSemMultaId)).toMatchObject({
         origem: "falta",
         status: "pendente",
-        valor_cents: 4500,
+        valor_cents: 3600,
       });
       expect(doHistorico.find((m) => m.appointment_id === canceladaId)).toMatchObject({
         status: "paga",
