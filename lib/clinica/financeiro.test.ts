@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   diaParaInstante,
+  fimDoMes,
   nomeDoArquivoFinanceiro,
   registrarDespesaSchema,
   saldoDo,
@@ -50,6 +51,14 @@ describe("as contas do painel", () => {
       previsao: { qtd: 0, total_cents: 0, sem_valor: 0, cobertas_por_pacote: 0 },
     } satisfies ResumoFinanceiro;
     expect(saldoDo(r)).toBe(-132000);
+  });
+
+  it('"Este mês" vai até o último dia do mês, com fevereiro e ano bissexto', () => {
+    expect(fimDoMes("2026-10-15")).toBe("2026-10-31");
+    expect(fimDoMes("2026-11-30")).toBe("2026-11-30");
+    expect(fimDoMes("2026-02-01")).toBe("2026-02-28");
+    expect(fimDoMes("2028-02-10")).toBe("2028-02-29");
+    expect(fimDoMes("2026-12-31")).toBe("2026-12-31");
   });
 
   it("o nome da planilha diz o tipo e o período", () => {
