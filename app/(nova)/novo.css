@@ -114,6 +114,10 @@
   background: var(--n-trilho-fundo);
   color: var(--n-trilho-tinta);
   z-index: 30;
+  /* Gestão com Leads, Relatórios e Financeiro passa da altura de um notebook baixo: o trilho
+     rola por dentro em vez de cortar o avatar. */
+  overflow-y: auto;
+  scrollbar-width: none;
 }
 
 @media (min-width: 900px) {

@@ -20,6 +20,7 @@ export const TELAS_DA_INTERFACE_NOVA = [
   "leads",
   "tarefas",
   "relatorios",
+  "financeiro",
   "equipe",
   "conta",
   "ajustes",

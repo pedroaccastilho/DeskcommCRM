@@ -23,6 +23,7 @@ import {
   atende,
   cargoDe,
   cargosParaVer,
+  foraDasAbas,
   menuDoCargo,
   modalidadesDaVisao,
   veConfiguracoes,
@@ -35,6 +36,7 @@ import { telasDaGestao, veRelatoriosDaGestao } from "@/lib/clinica/gestao";
 import {
   CalendarBlank,
   ChartBar,
+  Wallet,
   ClipboardText,
   Funnel,
   Gear,
@@ -135,6 +137,7 @@ const ICONE: Record<
   conversas: WhatsappLogo,
   leads: Funnel,
   relatorios: ChartBar,
+  financeiro: Wallet,
   ajustes: Gear,
 };
 
@@ -198,7 +201,7 @@ export function Casca({
   const pathname = usePathname() ?? "/hoje";
   const menu = menuDoCargo(cargo, veRelatoriosDaGestao(role, eu.data?.cargos ?? []));
   const abas = abasDoCelular(menu);
-  const leadsForaDasAbas = menu.length !== abas.length;
+  const noMenuDaPessoa = foraDasAbas(menu);
   // A Equipe completa (revogar, convites, horários) mora em /ajustes, mas é continuação da Equipe.
   const caminho = pathname.startsWith("/ajustes/equipe-completa") ? "/equipe" : pathname;
   const ativo = (href: string) => caminho === href || caminho.startsWith(`${href}/`);
@@ -298,7 +301,7 @@ export function Casca({
             </Link>
           );
         })}
-        <MenuDaPessoa compacto comLeads={leadsForaDasAbas} />
+        <MenuDaPessoa compacto extras={noMenuDaPessoa} />
       </nav>
     </Ctx.Provider>
   );
@@ -367,11 +370,11 @@ function Monograma({ marca }: { marca: { nome: string; logoUrl: string | null } 
 /** O avatar abre o menu da pessoa: ver como outro cargo, voltar para a versão atual, sair. */
 function MenuDaPessoa({
   compacto = false,
-  comLeads = false,
+  extras = [],
 }: {
   compacto?: boolean;
-  /** No celular, quando "Leads" não coube nas abas, a porta fica aqui. */
-  comLeads?: boolean;
+  /** No celular, as portas que não couberam nas abas ("Leads", "Financeiro") ficam aqui. */
+  extras?: readonly ItemDoMenu[];
 }) {
   const t = useT();
   const { signOut } = useAuth();
@@ -451,16 +454,17 @@ function MenuDaPessoa({
             >
               {t("Tarefas")}
             </Link>
-            {comLeads && (
+            {extras.map((item) => (
               <Link
-                href="/funis"
+                key={item.href}
+                href={item.href}
                 onClick={() => setAberto(false)}
                 className="n-linha-clicavel px-2 py-2 text-sm"
-                data-testid="novo-menu-leads"
+                data-testid={item.href === "/funis" ? "novo-menu-leads" : `novo-menu-${item.icone}`}
               >
-                {t("Leads")}
+                {t(item.rotulo)}
               </Link>
-            )}
+            ))}
             {veConfiguracoes(role) && (
               <Link href="/equipe" className="n-linha-clicavel px-2 py-2 text-sm">
                 {t("Equipe")}

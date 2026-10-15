@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   abasDoCelular,
+  foraDasAbas,
   cargoDe,
   cargosParaVer,
   escreveEvolucao,
@@ -60,7 +61,7 @@ describe("cargo na interface nova", () => {
     ]);
   });
 
-  it("os perfis somam: Gerente ou Financeiro ganha Relatórios em qualquer visão", () => {
+  it("os perfis somam: Gerente ou Financeiro ganha Relatórios e Financeiro em qualquer visão", () => {
     expect(menuDoCargo("gestao", true).map((i) => i.rotulo)).toEqual([
       "Hoje",
       "Agenda",
@@ -68,13 +69,16 @@ describe("cargo na interface nova", () => {
       "WhatsApp",
       "Leads",
       "Relatórios",
+      "Financeiro",
     ]);
     expect(menuDoCargo("saude", true).map((i) => i.rotulo)).toEqual([
       "Meu dia",
       "Minha agenda",
       "Meus pacientes",
       "Relatórios",
+      "Financeiro",
     ]);
+    expect(menuDoCargo("recepcao").some((i) => i.href === "/financeiro")).toBe(false);
   });
 });
 
@@ -88,8 +92,9 @@ describe("os leads na interface nova", () => {
     }
   });
 
-  it("no celular, com seis portas, Leads sai das abas para caber", () => {
+  it("no celular, com mais de cinco portas, Leads e depois Financeiro saem das abas", () => {
     expect(abasDoCelular(menuDoCargo("recepcao")).map((i) => i.rotulo)).toContain("Leads");
+    expect(foraDasAbas(menuDoCargo("recepcao"))).toEqual([]);
     expect(abasDoCelular(menuDoCargo("gestao", true)).map((i) => i.rotulo)).toEqual([
       "Hoje",
       "Agenda",
@@ -97,6 +102,12 @@ describe("os leads na interface nova", () => {
       "WhatsApp",
       "Relatórios",
     ]);
+    expect(foraDasAbas(menuDoCargo("gestao", true)).map((i) => i.rotulo)).toEqual([
+      "Leads",
+      "Financeiro",
+    ]);
+    // A gerente que atende: cinco portas, cabem todas.
+    expect(abasDoCelular(menuDoCargo("saude", true)).map((i) => i.rotulo)).toContain("Financeiro");
   });
 });
 
