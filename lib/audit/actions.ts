@@ -1023,6 +1023,10 @@ export const AUDIT_ACTIONS = [
   "clinica.multa_registrada",
   "clinica.multa_isenta",
   "clinica.multa_cobrada",
+  // Pagamento registrado à mão (fork TOQ, migration 9011): de pacote, sessão avulsa ou multa.
+  // Quem registrou, com que forma, e quem desfez ficam na trilha.
+  "clinica.pagamento_registrado",
+  "clinica.pagamento_desfeito",
   // Pacotes de sessões (fork TOQ, migration 9004). Saldo de pacote é dinheiro pago adiantado:
   // venda, sessão gasta ou devolvida, congelamento, prorrogação e cancelamento ficam registrados.
   "clinica.produto_cadastrado",

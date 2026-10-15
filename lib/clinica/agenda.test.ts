@@ -178,6 +178,13 @@ describe("validação das rotas", () => {
       gradeQuerySchema.safeParse({ de: "2026-10-01T00:00:00Z", ate: "2026-11-15T00:00:00Z" })
         .success,
     ).toBe(false);
+    // Outubro em Lisboa: 31 dias e 1 hora, por causa da volta do horário de verão.
+    expect(
+      gradeQuerySchema.safeParse({
+        de: "2026-10-01T00:00:00+01:00",
+        ate: "2026-11-01T00:00:00+00:00",
+      }).success,
+    ).toBe(true);
     expect(
       gradeQuerySchema.safeParse({
         de: "2026-10-01T00:00:00Z",

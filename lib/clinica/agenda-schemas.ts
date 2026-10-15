@@ -6,6 +6,11 @@ import { MODALIDADES } from "@/lib/clinica/vocabulario";
 const DIA_MS = 24 * 60 * 60 * 1000;
 /** A grade cobre no máximo um mês por pedido. */
 export const JANELA_MAXIMA_DA_GRADE_DIAS = 31;
+/**
+ * Folga para o horário de verão: num fuso que volta o relógio no mês (Lisboa em outubro), o mês
+ * de 31 dias tem 31 dias e 1 hora, e a visão Mês da agenda vinha vazia.
+ */
+const FOLGA_DO_HORARIO_DE_VERAO_MS = 2 * 60 * 60 * 1000;
 
 /** "a,b,c" → ["a","b","c"]; ausente → []. */
 const separadaPorVirgula = z
@@ -36,7 +41,8 @@ export const gradeQuerySchema = z
   })
   .refine(
     (q) =>
-      new Date(q.ate).getTime() - new Date(q.de).getTime() <= JANELA_MAXIMA_DA_GRADE_DIAS * DIA_MS,
+      new Date(q.ate).getTime() - new Date(q.de).getTime() <=
+      JANELA_MAXIMA_DA_GRADE_DIAS * DIA_MS + FOLGA_DO_HORARIO_DE_VERAO_MS,
     { message: `A grade cobre no máximo ${JANELA_MAXIMA_DA_GRADE_DIAS} dias por pedido.` },
   );
 

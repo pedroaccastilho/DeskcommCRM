@@ -23,8 +23,11 @@ import { useT } from "@/lib/i18n/IdiomaProvider";
 import { decideMulta } from "@/lib/clinica/multas";
 import { formatCents } from "@/lib/money";
 
+import { pagamentoDe } from "@/lib/clinica/pagamentos";
+
 import { useNovo } from "./Casca";
-import { useRecarregar } from "./dados";
+import { usePagamentosDoPaciente, useRecarregar } from "./dados";
+import { SituacaoDoPagamento } from "./Pagamentos";
 import { Folha, dataCurta, hora } from "./pecas";
 
 export interface MultaDaClinica {
@@ -35,6 +38,8 @@ export interface MultaDaClinica {
   valor_cents: number | null;
   currency: string;
   status: "pendente" | "isenta" | "paga";
+  /** De onde veio (9011): cancelamento em cima da hora ou falta. Ausente em módulo antigo. */
+  origem?: "cancelamento" | "falta";
   isencao_motivo: string | null;
   created_at: string;
   calendar_appointments: { title: string | null; starts_at: string } | null;
@@ -57,6 +62,7 @@ export function CartaoDeMultas({ contactId, fuso }: { contactId: string; fuso: s
   const { role, eu, soOlhar } = useNovo();
   const decide = !soOlhar && decideMulta(role, eu?.cargos ?? []);
   const [isentar, setIsentar] = React.useState<MultaDaClinica | null>(null);
+  const pagamentos = usePagamentosDoPaciente(contactId, role !== "viewer");
   const cobrar = useMutation({
     mutationFn: async (m: MultaDaClinica) =>
       apiClient.post(`/api/v1/clinica/multas/${encodeURIComponent(m.id)}/cobrar`, {}),
@@ -120,9 +126,20 @@ export function CartaoDeMultas({ contactId, fuso }: { contactId: string; fuso: s
                 </span>
               </div>
               <p className="n-suave text-xs">
+                {m.origem === "falta" ? `${t("Falta")} · ` : ""}
                 {s?.title ? `${s.title} · ` : ""}
                 {valorDaMulta(m, t)}
               </p>
+              {pagamentos.data && m.status !== "isenta" && (
+                <SituacaoDoPagamento
+                  alvo={{ multa_id: m.id }}
+                  pagamento={pagamentoDe(pagamentos.data, { multa_id: m.id })}
+                  valorCents={m.valor_cents}
+                  moeda={m.currency}
+                  descricao={`${t("Multa")} · ${valorDaMulta(m, t)}`}
+                  seloAPagar={false}
+                />
+              )}
               {m.status === "isenta" && m.isencao_motivo && (
                 <p className="n-fraco mt-0.5 text-xs">
                   {t("Motivo")}: {m.isencao_motivo}

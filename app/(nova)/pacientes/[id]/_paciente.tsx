@@ -31,6 +31,7 @@ import {
   usePaciente,
   useOrigemDoPaciente,
   usePacotesDoPaciente,
+  usePagamentosDoPaciente,
   useNomesDosProfissionais,
   useProntuario,
   useSessoesDoPaciente,
@@ -42,6 +43,10 @@ import { FolhaDeEvolucao } from "@/components/novo/FolhaDeEvolucao";
 import { FolhaDoPaciente } from "@/components/novo/FolhaDoPaciente";
 import { CartaoDeMultas } from "@/components/novo/Multas";
 import { CartaoDePacotes } from "@/components/novo/PacotesNaFicha";
+import { SituacaoDoPagamento } from "@/components/novo/Pagamentos";
+import { useActiveOrg } from "@/hooks/auth/AuthProvider";
+import { pagamentoDe, sessaoAvulsa } from "@/lib/clinica/pagamentos";
+import { moedaServidaOu } from "@/lib/money";
 import { CartaoDeTarefas } from "@/components/novo/Tarefas";
 import { CartaoDeAcessos, CartaoDoPlano } from "@/components/novo/PlanoEAcessos";
 import { Avatar, Carregando, Secao, Vazio, dataCurta, hora } from "@/components/novo/pecas";
@@ -68,6 +73,8 @@ export function Paciente({ contactId }: { contactId: string }) {
   const comQuem = (donoId: string | null) =>
     (donoId && nomesDosProfissionais.data?.get(donoId)) || null;
   const pacotes = usePacotesDoPaciente(contactId);
+  const pagamentos = usePagamentosDoPaciente(contactId, role !== "viewer");
+  const moeda = moedaServidaOu(useActiveOrg()?.currency);
   const ehProfissional = veProntuario;
   const prontuario = useProntuario(contactId, ehProfissional);
   // A grade de hoje só serve para saber quem são os profissionais na hora de agendar.
@@ -297,8 +304,28 @@ export function Paciente({ contactId }: { contactId: string }) {
                         </span>
                       )}
                     </span>
-                    <span className={`n-selo ${SITUACAO[s.situacao]?.classe ?? "n-selo-neutro"}`}>
-                      {SITUACAO[s.situacao]?.rotulo ?? s.situacao}
+                    <span className="flex flex-col items-end gap-1">
+                      <span className={`n-selo ${SITUACAO[s.situacao]?.classe ?? "n-selo-neutro"}`}>
+                        {SITUACAO[s.situacao]?.rotulo ?? s.situacao}
+                      </span>
+                      {/* Sessão realizada fora de pacote: pagou ou não, e como (9011). */}
+                      {s.situacao === "completed" &&
+                        pagamentos.data &&
+                        sessaoAvulsa({
+                          appointmentId: s.id,
+                          status: s.situacao,
+                          temPacoteValendo: false,
+                          dados: pagamentos.data,
+                        }) && (
+                          <SituacaoDoPagamento
+                            alvo={{ appointment_id: s.id }}
+                            pagamento={pagamentoDe(pagamentos.data, { appointment_id: s.id })}
+                            valorCents={null}
+                            moeda={moeda}
+                            descricao={`${s.tipo?.nome ?? s.titulo} · ${dataCurta(s.iniciaEm, fuso, tag)}`}
+                            compacta
+                          />
+                        )}
                     </span>
                   </li>
                 ))}

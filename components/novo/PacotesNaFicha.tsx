@@ -32,8 +32,11 @@ import { useT } from "@/lib/i18n/IdiomaProvider";
 import { formatCents, parseReaisToCents } from "@/lib/money";
 import { randomId } from "@/lib/random-id";
 
+import { pagamentoDe, type FormaDePagamento } from "@/lib/clinica/pagamentos";
+
 import { useNovo } from "./Casca";
-import { usePacotesDoPaciente, useRecarregar } from "./dados";
+import { usePacotesDoPaciente, usePagamentosDoPaciente, useRecarregar } from "./dados";
+import { EscolhaDaForma, SituacaoDoPagamento, useRegistraPagamento } from "./Pagamentos";
 import { Folha, PontoDaModalidade } from "./pecas";
 
 interface Politica {
@@ -77,6 +80,7 @@ export function CartaoDePacotes({ contactId }: { contactId: string }) {
   const dia = useDia();
   const { role } = useNovo();
   const pacotes = usePacotesDoPaciente(contactId);
+  const pagamentos = usePagamentosDoPaciente(contactId, role !== "viewer");
   const [vendendo, setVendendo] = React.useState(false);
   const [ajuste, setAjuste] = React.useState<{
     tipo: AjusteDoPacote;
@@ -92,6 +96,17 @@ export function CartaoDePacotes({ contactId }: { contactId: string }) {
     prorrogar: t("Prorrogar"),
     cancelar: t("Cancelar pacote"),
   };
+  // Sem o módulo atualizado (409) ou sem acesso, a linha do pagamento some.
+  const pagamento = (p: PacoteDaFicha) =>
+    pagamentos.data ? (
+      <SituacaoDoPagamento
+        alvo={{ pacote_id: p.id }}
+        pagamento={pagamentoDe(pagamentos.data, { pacote_id: p.id })}
+        valorCents={p.valor_cents}
+        moeda={p.currency}
+        descricao={p.nome}
+      />
+    ) : null;
   const botoes = (p: PacoteDaFicha) =>
     (podeMudar ? ajustesPermitidos(p, gerencia) : []).map((tipo) => (
       <button
@@ -174,8 +189,9 @@ export function CartaoDePacotes({ contactId }: { contactId: string }) {
                       : t("Ficou congelado até {data}.")
                     ).replace("{data}", dia(congelado.toISOString()))}`}
                   {p.valor_cents !== null &&
-                    ` ${t("Pago {valor}.").replace("{valor}", formatCents(p.valor_cents, p.currency))}`}
+                    ` ${t("Valor {valor}.").replace("{valor}", formatCents(p.valor_cents, p.currency))}`}
                 </p>
+                {pagamento(p)}
                 {p.precisa_renovar && (
                   <p className="mt-1 text-xs font-bold text-[var(--n-aviso)]">
                     {t("Hora de oferecer a renovação")}
@@ -212,6 +228,7 @@ export function CartaoDePacotes({ contactId }: { contactId: string }) {
                           .replace("{n}", String(p.sessoes_usadas))
                           .replace("{total}", String(p.sessoes_total))}
                 </span>
+                {pagamento(p)}
                 <div className="mt-1 flex flex-wrap gap-1.5">{botoes(p)}</div>
               </li>
             ))}
@@ -294,6 +311,9 @@ export function FolhaVenderPacote({
   const [escolhaFeita, setEscolha] = React.useState<string | null>(null);
   const [valor, setValor] = React.useState("");
   const [aceite, setAceite] = React.useState(false);
+  // Pagou na hora? `null` = ainda não (fica "a pagar" no cartão do pacote).
+  const registra = useRegistraPagamento();
+  const [formaPaga, setFormaPaga] = React.useState<FormaDePagamento | null>(null);
 
   // Quem atende vê primeiro as opções da própria área; a recepção e a gerência veem todas.
   const todas = catalogo.data ? opcoesDeVenda(catalogo.data) : null;
@@ -315,13 +335,29 @@ export function FolhaVenderPacote({
   const pronto = opcao !== null && aceite && politica.data !== undefined && !valorInvalido;
 
   const vender = useMutation({
-    mutationFn: async () =>
-      apiClient.post("/api/v1/clinica/pacotes", corpoDaVenda(contactId, opcao!, valorCents), {
-        idempotencyKey: chave,
-      }),
-    onSuccess: () => {
+    mutationFn: async () => {
+      const vendido = await apiClient.post<{ data: { id: string } }>(
+        "/api/v1/clinica/pacotes",
+        corpoDaVenda(contactId, opcao!, valorCents),
+        { idempotencyKey: chave },
+      );
+      if (!registra || formaPaga === null) return { pago: false };
+      // O pacote já está vendido: se o pagamento falhar, a venda fica, e a recepção registra
+      // pelo cartão do pacote.
+      try {
+        await apiClient.post("/api/v1/clinica/pagamentos", {
+          pacote_id: vendido.data.id,
+          forma: formaPaga,
+        });
+        return { pago: true };
+      } catch (e) {
+        showApiError(e);
+        return { pago: false };
+      }
+    },
+    onSuccess: (r) => {
       atualizar();
-      toast.success(t("Pacote vendido."));
+      toast.success(r.pago ? t("Pacote vendido e pagamento registrado.") : t("Pacote vendido."));
       aoFechar();
     },
     onError: (e) => showApiError(e),
@@ -427,6 +463,22 @@ export function FolhaVenderPacote({
             {t("O paciente leu e aceitou a política de cancelamento.")}
           </label>
         </div>
+
+        {registra && (
+          <div data-testid="novo-pagamento-na-venda">
+            <p className="n-rotulo">{t("O paciente já pagou?")}</p>
+            <EscolhaDaForma forma={formaPaga} aoEscolher={setFormaPaga} />
+            <button
+              type="button"
+              aria-pressed={formaPaga === null}
+              onClick={() => setFormaPaga(null)}
+              className={`n-botao mt-2 w-full ${formaPaga === null ? "n-botao-escuro" : "n-botao-suave"}`}
+              data-testid="novo-forma-ainda-nao"
+            >
+              {t("Ainda não pagou")}
+            </button>
+          </div>
+        )}
 
         <button
           type="button"

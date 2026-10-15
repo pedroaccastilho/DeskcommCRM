@@ -11,7 +11,7 @@
  * de abrir outra janela por cima. As regras (multa, tolerância) são as mesmas da interface atual
  * (`lib/clinica/balcao.ts`); quem decide de verdade continua sendo o servidor.
  */
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
@@ -20,11 +20,13 @@ import { showApiError } from "@/components/feedback/ApiErrorToast";
 import { useActiveOrg } from "@/hooks/auth/AuthProvider";
 import { instanteDe, partesNoFuso } from "@/lib/agenda/fuso";
 import { apiClient } from "@/lib/api/client";
-import type { PoliticaDaAgenda, SessaoDaGrade } from "@/lib/clinica/agenda";
+import { multaDaFalta, type PoliticaDaAgenda, type SessaoDaGrade } from "@/lib/clinica/agenda";
 import { faltaLiberada, previaDaMulta } from "@/lib/clinica/balcao";
 import { decideMulta } from "@/lib/clinica/multas";
 import { DIAS_ATE_A_PROXIMA_SUGERIDA, proximaJaMarcada } from "@/lib/clinica/meu-dia";
 import { pacoteDaSessao } from "@/lib/clinica/pacotes-na-ficha";
+import { valorDaSessaoNoPacote } from "@/lib/clinica/pacotes";
+import { pagamentoDe, sessaoAvulsa } from "@/lib/clinica/pagamentos";
 import { ROTULO_DA_MODALIDADE } from "@/lib/clinica/vocabulario";
 import { formatCents, moedaServidaOu } from "@/lib/money";
 import { randomId } from "@/lib/random-id";
@@ -37,15 +39,18 @@ import {
   useHorariosLivresDaFolha,
   useMultasPendentes,
   usePacotesDoPaciente,
+  usePagamentosDoPaciente,
   useRecarregar,
   useSessoesDoPaciente,
 } from "./dados";
 import { FolhaDeEvolucao } from "./FolhaDeEvolucao";
+import type { MultaDaClinica } from "./Multas";
+import { SituacaoDoPagamento } from "./Pagamentos";
 import { Avatar, Folha, PontoDaModalidade, dataLonga, hora, primeiroNome } from "./pecas";
 import { useT } from "@/lib/i18n/IdiomaProvider";
 import { useTagDeIdioma } from "@/hooks/i18n/useLocaleDeData";
 
-type Passo = "inicio" | "remarcar" | "cancelar" | "whatsapp" | "assinada" | "proxima";
+type Passo = "inicio" | "remarcar" | "cancelar" | "faltou" | "whatsapp" | "assinada" | "proxima";
 
 export const SELO_DO_MOMENTO = {
   em_atendimento: { rotulo: "Em atendimento", classe: "n-selo-ok" },
@@ -122,6 +127,23 @@ export function FolhaDaSessao({
     Boolean(sessao?.paciente && sessao.modalidade),
   );
   const multas = useMultasPendentes(role !== "viewer" && !soAsMinhas);
+  const pagamentos = usePagamentosDoPaciente(
+    sessao?.paciente?.id ?? "",
+    role !== "viewer" && Boolean(sessao?.paciente && sessao.modalidade),
+  );
+  // Administrador, Gerente e Recepção decidem a multa (inclusive a da falta).
+  const decideAMulta = !soOlhar && decideMulta(role, eu?.cargos ?? []);
+  const multasDaSessao = useQuery({
+    queryKey: ["clinica", "multas", "paciente", sessao?.paciente?.id ?? ""],
+    enabled: decideAMulta && sessao?.status === "no_show" && Boolean(sessao?.paciente),
+    retry: false,
+    queryFn: async () =>
+      (
+        await apiClient.get<{ data: MultaDaClinica[] }>(
+          `/api/v1/clinica/multas?contact_id=${encodeURIComponent(sessao!.paciente!.id)}`,
+        )
+      ).data,
+  });
   const moedaDaMulta = moedaServidaOu(useActiveOrg()?.currency);
 
   const desfecho = useMutation({
@@ -159,11 +181,9 @@ export function FolhaDaSessao({
   const temEtapa = Boolean(sessao.modalidade);
   const dentro = naClinica(momento);
   const podeChegar = balcao && aberta && temEtapa && !sessao.chegou_em && momento !== "para_fechar";
-  const podeIniciar =
-    marca && soAsMinhas && aberta && temEtapa && !sessao.atendimento_iniciado_em;
+  const podeIniciar = marca && soAsMinhas && aberta && temEtapa && !sessao.atendimento_iniciado_em;
   const podeFechar =
-    marca &&
-    (dentro || momento === "agora" || momento === "atrasado" || momento === "para_fechar");
+    marca && (dentro || momento === "agora" || momento === "atrasado" || momento === "para_fechar");
   const principal: "iniciar" | "confirmar" | "chegou" | "realizado" | null =
     !aberta || !marca
       ? null
@@ -180,19 +200,38 @@ export function FolhaDaSessao({
   const multasDoPaciente = (multas.data ?? []).filter(
     (m) => sessao.paciente && m.contact_id === sessao.paciente.id,
   );
+  // O pagamento da sessão avulsa (a do pacote é paga pelo pacote, e a cancelada, pela multa).
+  const avulsa =
+    Boolean(sessao.paciente && sessao.modalidade && pagamentos.data) &&
+    sessaoAvulsa({
+      appointmentId: sessao.id,
+      status: sessao.status,
+      temPacoteValendo: pacote !== null,
+      dados: pagamentos.data,
+    });
+  // Falta já registrada, sem multa: quem decide ainda pode cobrar (o profissional que marcou a
+  // falta não decide, e a recepção cobra depois por aqui).
+  const podeCobrarAFalta =
+    decideAMulta &&
+    sessao.status === "no_show" &&
+    Boolean(sessao.modalidade) &&
+    multasDaSessao.data !== undefined &&
+    !multasDaSessao.data.some((m) => m.appointment_id === sessao.id);
 
   const titulo =
     passo === "remarcar"
       ? `Remarcar ${primeiroNome(nome)}`
       : passo === "cancelar"
         ? `Cancelar a sessão`
-        : passo === "whatsapp"
-          ? `Mensagem para ${primeiroNome(nome)}`
-          : passo === "assinada"
-            ? t("Evolução assinada")
-            : passo === "proxima"
-              ? `${t("Próxima sessão de")} ${primeiroNome(nome)}`
-              : nome;
+        : passo === "faltou"
+          ? t("Registrar a falta")
+          : passo === "whatsapp"
+            ? `Mensagem para ${primeiroNome(nome)}`
+            : passo === "assinada"
+              ? t("Evolução assinada")
+              : passo === "proxima"
+                ? `${t("Próxima sessão de")} ${primeiroNome(nome)}`
+                : nome;
 
   return (
     <>
@@ -290,6 +329,20 @@ export function FolhaDaSessao({
                   )}
                 </p>
               )}
+              {avulsa && sessao.paciente && (
+                <div data-testid="novo-pagamento-da-sessao">
+                  <p className="n-fraco text-xs font-bold">{t("Pagamento da sessão avulsa")}</p>
+                  <SituacaoDoPagamento
+                    alvo={{ appointment_id: sessao.id }}
+                    pagamento={pagamentoDe(pagamentos.data, { appointment_id: sessao.id })}
+                    valorCents={precoCents}
+                    moeda={moedaDaMulta}
+                    descricao={`${sessao.tipo?.nome ?? sessao.titulo} · ${dataLonga(sessao.inicio, fuso, tag)}`}
+                    compacta
+                  />
+                </div>
+              )}
+              {podeCobrarAFalta && <CobrarAFalta sessaoId={sessao.id} />}
             </div>
 
             {aberta && recepcao && (
@@ -352,7 +405,12 @@ export function FolhaDaSessao({
                       type="button"
                       className="n-botao n-botao-perigo"
                       disabled={desfecho.isPending || !podeFaltar}
-                      onClick={() => desfecho.mutate("no_show")}
+                      onClick={() =>
+                        decideAMulta && sessao.modalidade && sessao.paciente
+                          ? setPasso("faltou")
+                          : desfecho.mutate("no_show")
+                      }
+                      data-testid="novo-faltou"
                       title={
                         podeFaltar
                           ? undefined
@@ -470,6 +528,18 @@ export function FolhaDaSessao({
             proxima
             aoVoltar={() => setPasso("assinada")}
             aoConcluir={() => setPasso("assinada")}
+          />
+        )}
+        {passo === "faltou" && (
+          <PassoFaltou
+            sessao={sessao}
+            politica={politica}
+            precoCents={precoCents}
+            valorNoPacoteCents={
+              pacote ? valorDaSessaoNoPacote(pacote.valor_cents, pacote.sessoes_total) : null
+            }
+            aoVoltar={() => setPasso("inicio")}
+            aoConcluir={aoFechar}
           />
         )}
         {passo === "cancelar" && (
@@ -941,6 +1011,145 @@ function PassoCancelar({
           onClick={() => cancelar.mutate()}
         >
           {t("Cancelar a sessão")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** "Cobrar multa pela falta" numa falta já registrada sem multa. */
+function CobrarAFalta({ sessaoId }: { sessaoId: string }) {
+  const t = useT();
+  const recarregar = useRecarregar();
+  const cobrar = useMutation({
+    mutationFn: async () =>
+      apiClient.post(`/api/v1/clinica/agenda/${encodeURIComponent(sessaoId)}/multa-da-falta`, {}),
+    onSuccess: () => {
+      toast.success(t("Multa da falta lançada, a cobrar."));
+      recarregar();
+    },
+    onError: (e) => showApiError(e),
+  });
+  return (
+    <div className="flex flex-wrap items-center gap-2" data-testid="novo-falta-sem-multa">
+      <span className="n-suave text-sm">{t("Falta sem multa.")}</span>
+      <button
+        type="button"
+        className="n-botao n-botao-suave n-botao-pequeno"
+        disabled={cobrar.isPending}
+        onClick={() => cobrar.mutate()}
+        data-testid="novo-cobrar-multa-da-falta"
+      >
+        {t("Cobrar multa pela falta")}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * REGISTRAR A FALTA perguntando se a clínica cobra a multa (pedido do Pedro, 2026-10-15). Só
+ * para quem decide a multa; para os outros, "Faltou" registra direto, sem multa, e a recepção
+ * pode cobrar depois pela folha da sessão. O valor é o da multa de cancelamento (mesmo
+ * percentual sobre o valor da sessão).
+ */
+function PassoFaltou({
+  sessao,
+  politica,
+  precoCents,
+  valorNoPacoteCents,
+  aoVoltar,
+  aoConcluir,
+}: {
+  sessao: SessaoDaGrade;
+  politica: PoliticaDaAgenda;
+  precoCents: number | null;
+  valorNoPacoteCents: number | null;
+  aoVoltar: () => void;
+  aoConcluir: () => void;
+}) {
+  const t = useT();
+  const moeda = moedaServidaOu(useActiveOrg()?.currency);
+  const recarregar = useRecarregar();
+  const [cobrar, setCobrar] = React.useState<boolean | null>(null);
+  const previa = multaDaFalta({
+    inicio: new Date(sessao.inicio),
+    registradaEm: new Date(),
+    politica,
+    valorDaSessaoCents: valorNoPacoteCents ?? precoCents,
+  });
+  const valor = previa
+    ? previa.valor_cents != null
+      ? formatCents(previa.valor_cents, moeda)
+      : `${previa.percentual}%`
+    : "";
+
+  const registrar = useMutation({
+    mutationFn: async () => {
+      await apiClient.patch("/api/v1/agenda/agendamentos", { id: sessao.id, status: "no_show" });
+      if (!cobrar || !previa) return { multa: false };
+      // A falta já está registrada: se a multa falhar, a falta fica, e a folha da sessão oferece
+      // "Cobrar multa pela falta" de novo.
+      try {
+        await apiClient.post(
+          `/api/v1/clinica/agenda/${encodeURIComponent(sessao.id)}/multa-da-falta`,
+          {},
+        );
+        return { multa: true };
+      } catch (e) {
+        showApiError(e);
+        return { multa: false };
+      }
+    },
+    onSuccess: (r) => {
+      toast.success(
+        r.multa
+          ? t("Falta registrada. Multa de {valor} lançada, a cobrar.").replace("{valor}", valor)
+          : t("Falta registrada sem multa. O horário ficou livre."),
+      );
+      recarregar();
+      aoConcluir();
+    },
+    onError: (err) => showApiError(err),
+  });
+
+  return (
+    <div className="grid gap-5" data-testid="novo-passo-faltou">
+      <p className="n-suave text-sm">
+        {t("Falta sem aviso conta como sessão usada, quando há pacote.")}
+      </p>
+      {previa ? (
+        <div data-testid="novo-decidir-multa-da-falta">
+          <p className="n-rotulo">{t("Vamos cobrar multa pela falta?")}</p>
+          <div className="grid grid-cols-2 gap-2">
+            {[true, false].map((sim) => (
+              <button
+                key={String(sim)}
+                type="button"
+                aria-pressed={cobrar === sim}
+                onClick={() => setCobrar(sim)}
+                className={`n-botao ${cobrar === sim ? "n-botao-escuro" : "n-botao-suave"}`}
+                data-testid={sim ? "novo-falta-cobrar" : "novo-falta-nao-cobrar"}
+              >
+                {sim ? t("Sim, cobrar {valor}").replace("{valor}", valor) : t("Não cobrar")}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className="n-suave text-sm">
+          {t("A multa está em 0% nas Regras da clínica: a falta sai sem multa.")}
+        </p>
+      )}
+      <div className="grid grid-cols-[auto_1fr] gap-2">
+        <Voltar aoVoltar={aoVoltar} />
+        <button
+          type="button"
+          className="n-botao n-botao-perigo"
+          disabled={(previa !== null && cobrar === null) || registrar.isPending}
+          onClick={() => registrar.mutate()}
+          data-testid="novo-confirmar-falta"
+        >
+          {t("Registrar a falta")}
         </button>
       </div>
     </div>

@@ -13,6 +13,7 @@ import { apiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/types";
 import type { PoliticaDaAgenda, SessaoDaGrade } from "@/lib/clinica/agenda";
 import type { PacoteDaFicha } from "@/lib/clinica/pacotes-na-ficha";
+import type { PagamentosDoPaciente } from "@/lib/clinica/pagamentos";
 import type { Modalidade, TipoDeRegistro } from "@/lib/clinica/vocabulario";
 import type { CadastroDeProfissional } from "@/lib/novo/cargo";
 import type { Role } from "@/lib/auth/types";
@@ -226,6 +227,21 @@ export function useMultasPendentes(habilitado: boolean) {
     queryFn: async () =>
       (await apiClient.get<{ data: MultaPendente[] }>("/api/v1/clinica/multas?status=pendente"))
         .data,
+    retry: false,
+  });
+}
+
+/** Os pagamentos registrados do paciente e as sessões dele que gastaram pacote (migration 9011). */
+export function usePagamentosDoPaciente(contactId: string, habilitado = true) {
+  return useQuery({
+    queryKey: ["clinica", "pagamentos", contactId],
+    enabled: habilitado && contactId !== "",
+    queryFn: async () =>
+      (
+        await apiClient.get<{ data: PagamentosDoPaciente }>(
+          `/api/v1/clinica/pagamentos?contact_id=${encodeURIComponent(contactId)}`,
+        )
+      ).data,
     retry: false,
   });
 }
