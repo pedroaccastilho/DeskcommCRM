@@ -17287,7 +17287,7 @@ export const DICIONARIO: Traducoes = {
   Pix: { es: "Pix" },
   "Cartão de crédito": { es: "Tarjeta de crédito" },
   "Cartão de débito": { es: "Tarjeta de débito" },
-  Pago: { es: "Pagado" },
+  "Pago com {forma}": { es: "Pagado con {forma}" },
   Desfazer: { es: "Deshacer" },
   Multa: { es: "Multa" },
   "A pagar": { es: "Por pagar" },

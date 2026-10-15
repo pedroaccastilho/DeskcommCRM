@@ -62,8 +62,8 @@ export function rotuloDoPagamento(
     .format(new Date(p.pago_em))
     .replace(".", "");
   return [
-    t("Pago"),
-    t(ROTULO_DA_FORMA[p.forma]),
+    // "Pago" sozinho não vira chave: é também o nome da etapa semeada no funil (dado, não tela).
+    t("Pago com {forma}").replace("{forma}", t(ROTULO_DA_FORMA[p.forma])),
     p.valor_cents !== null ? formatCents(p.valor_cents, p.currency) : null,
     dia,
   ]
