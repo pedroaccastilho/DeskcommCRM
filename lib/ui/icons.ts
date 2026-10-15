@@ -81,6 +81,8 @@ export {
   EyeSlash,
   ChartBar,
   ClockCountdown,
+  // painel financeiro da clínica (interface nova)
+  Wallet,
   // painéis de evolução / aprendizado
   ChartLineUp,
   Lightbulb,

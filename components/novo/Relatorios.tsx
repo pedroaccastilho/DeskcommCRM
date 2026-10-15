@@ -26,10 +26,14 @@ import { DownloadSimple } from "@/lib/ui/icons";
 import { useNovo } from "./Casca";
 import { Carregando, PontoDaModalidade, Secao, Vazio } from "./pecas";
 
-type Atalho = "mes" | "mes_passado" | "90dias" | "livre";
+export type Atalho = "mes" | "mes_passado" | "90dias" | "livre";
+export interface Periodo {
+  de: string;
+  ate: string;
+}
 
 /** `AAAA-MM-DD` de hoje no fuso da clínica. */
-function hojeNoFuso(fuso: string): string {
+export function hojeNoFuso(fuso: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: fuso }).format(new Date());
 }
 
@@ -39,7 +43,7 @@ function somarDiasCivis(dia: string, n: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function periodoDoAtalho(atalho: Exclude<Atalho, "livre">, hoje: string) {
+export function periodoDoAtalho(atalho: Exclude<Atalho, "livre">, hoje: string): Periodo {
   if (atalho === "mes") return { de: `${hoje.slice(0, 8)}01`, ate: hoje };
   if (atalho === "90dias") return { de: somarDiasCivis(hoje, -89), ate: hoje };
   const fimDoPassado = somarDiasCivis(`${hoje.slice(0, 8)}01`, -1);
@@ -113,74 +117,13 @@ export function TelaDeRelatorios() {
         <p className="n-suave mt-1">{t("Como a clínica está andando no período.")}</p>
       </div>
 
-      <div
-        className="mt-6 flex flex-wrap items-center gap-2"
-        role="group"
-        aria-label={t("Período")}
-      >
-        <button
-          type="button"
-          className="n-chip"
-          aria-pressed={atalho === "mes"}
-          onClick={() => setAtalho("mes")}
-        >
-          {t("Este mês")}
-        </button>
-        <button
-          type="button"
-          className="n-chip"
-          aria-pressed={atalho === "mes_passado"}
-          onClick={() => setAtalho("mes_passado")}
-        >
-          {t("Mês passado")}
-        </button>
-        <button
-          type="button"
-          className="n-chip"
-          aria-pressed={atalho === "90dias"}
-          onClick={() => setAtalho("90dias")}
-        >
-          {t("Últimos 90 dias")}
-        </button>
-        <button
-          type="button"
-          className="n-chip"
-          aria-pressed={atalho === "livre"}
-          onClick={() => {
-            setLivre(periodo);
-            setAtalho("livre");
-          }}
-          data-testid="novo-periodo-livre"
-        >
-          {t("Escolher datas")}
-        </button>
-        {atalho === "livre" && (
-          <span className="flex flex-wrap items-center gap-2">
-            <label className="n-suave flex items-center gap-1.5 text-sm">
-              {t("De")}
-              <input
-                type="date"
-                className="n-campo !w-auto"
-                value={livre.de}
-                max={livre.ate}
-                onChange={(e) => e.target.value && setLivre((p) => ({ ...p, de: e.target.value }))}
-                data-testid="novo-periodo-de"
-              />
-            </label>
-            <label className="n-suave flex items-center gap-1.5 text-sm">
-              {t("até")}
-              <input
-                type="date"
-                className="n-campo !w-auto"
-                value={livre.ate}
-                min={livre.de}
-                onChange={(e) => e.target.value && setLivre((p) => ({ ...p, ate: e.target.value }))}
-                data-testid="novo-periodo-ate"
-              />
-            </label>
-          </span>
-        )}
-      </div>
+      <SeletorDePeriodo
+        atalho={atalho}
+        aoMudarAtalho={setAtalho}
+        livre={livre}
+        aoMudarLivre={setLivre}
+        periodo={periodo}
+      />
 
       {!valido ? (
         <div className="mt-6">
@@ -220,6 +163,93 @@ export function TelaDeRelatorios() {
             <Exportar de={periodo.de} ate={periodo.ate} />
           </Secao>
         </div>
+      )}
+    </div>
+  );
+}
+
+/** Os atalhos do período e as datas livres, iguais no Relatórios e no Financeiro. */
+export function SeletorDePeriodo({
+  atalho,
+  aoMudarAtalho,
+  livre,
+  aoMudarLivre,
+  periodo,
+}: {
+  atalho: Atalho;
+  aoMudarAtalho: (a: Atalho) => void;
+  livre: Periodo;
+  aoMudarLivre: React.Dispatch<React.SetStateAction<Periodo>>;
+  periodo: Periodo;
+}) {
+  const t = useT();
+  return (
+    <div className="mt-6 flex flex-wrap items-center gap-2" role="group" aria-label={t("Período")}>
+      <button
+        type="button"
+        className="n-chip"
+        aria-pressed={atalho === "mes"}
+        onClick={() => aoMudarAtalho("mes")}
+      >
+        {t("Este mês")}
+      </button>
+      <button
+        type="button"
+        className="n-chip"
+        aria-pressed={atalho === "mes_passado"}
+        onClick={() => aoMudarAtalho("mes_passado")}
+      >
+        {t("Mês passado")}
+      </button>
+      <button
+        type="button"
+        className="n-chip"
+        aria-pressed={atalho === "90dias"}
+        onClick={() => aoMudarAtalho("90dias")}
+      >
+        {t("Últimos 90 dias")}
+      </button>
+      <button
+        type="button"
+        className="n-chip"
+        aria-pressed={atalho === "livre"}
+        onClick={() => {
+          aoMudarLivre(periodo);
+          aoMudarAtalho("livre");
+        }}
+        data-testid="novo-periodo-livre"
+      >
+        {t("Escolher datas")}
+      </button>
+      {atalho === "livre" && (
+        <span className="flex flex-wrap items-center gap-2">
+          <label className="n-suave flex items-center gap-1.5 text-sm">
+            {t("De")}
+            <input
+              type="date"
+              className="n-campo !w-auto"
+              value={livre.de}
+              max={livre.ate}
+              onChange={(e) =>
+                e.target.value && aoMudarLivre((p) => ({ ...p, de: e.target.value }))
+              }
+              data-testid="novo-periodo-de"
+            />
+          </label>
+          <label className="n-suave flex items-center gap-1.5 text-sm">
+            {t("até")}
+            <input
+              type="date"
+              className="n-campo !w-auto"
+              value={livre.ate}
+              min={livre.de}
+              onChange={(e) =>
+                e.target.value && aoMudarLivre((p) => ({ ...p, ate: e.target.value }))
+              }
+              data-testid="novo-periodo-ate"
+            />
+          </label>
+        </span>
       )}
     </div>
   );

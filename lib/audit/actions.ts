@@ -1027,6 +1027,9 @@ export const AUDIT_ACTIONS = [
   // Quem registrou, com que forma, e quem desfez ficam na trilha.
   "clinica.pagamento_registrado",
   "clinica.pagamento_desfeito",
+  // Saída do caixa registrada à mão (fork TOQ, migration 9012): quem lançou e quem apagou.
+  "clinica.despesa_registrada",
+  "clinica.despesa_apagada",
   // Pacotes de sessões (fork TOQ, migration 9004). Saldo de pacote é dinheiro pago adiantado:
   // venda, sessão gasta ou devolvida, congelamento, prorrogação e cancelamento ficam registrados.
   "clinica.produto_cadastrado",

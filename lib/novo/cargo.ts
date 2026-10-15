@@ -97,12 +97,13 @@ export function escreveEvolucao(
 export interface ItemDoMenu {
   href: string;
   rotulo: string;
-  icone: "hoje" | "agenda" | "pacientes" | "conversas" | "leads" | "relatorios";
+  icone: "hoje" | "agenda" | "pacientes" | "conversas" | "leads" | "relatorios" | "financeiro";
 }
 
 /**
  * O menu da interface nova: o nome das portas conforme o cargo que a tela mostra, mais o que os
- * PERFIS da pessoa somam (migration 9008). Quem é Gerente ou Financeiro ganha "Relatórios" em
+ * PERFIS da pessoa somam (migration 9008). Quem é Gerente ou Financeiro ganha "Relatórios" e
+ * "Financeiro" (o painel de entradas, saídas e o que falta cobrar, Pedro em 2026-10-15) em
  * qualquer visão, inclusive a gerente que também é fisioterapeuta e está vendo o próprio dia.
  *
  * "Leads" são os funis de venda da versão atual (`/app/kanban`), que ficaram sem porta aqui (Pedro,
@@ -130,15 +131,39 @@ export function menuDoCargo(cargo: Cargo, veRelatorios = false): ItemDoMenu[] {
           { href: "/funis", rotulo: "Leads", icone: "leads" as const },
         ]),
     ...(veRelatorios
-      ? [{ href: "/relatorios", rotulo: "Relatórios", icone: "relatorios" as const }]
+      ? [
+          { href: "/relatorios", rotulo: "Relatórios", icone: "relatorios" as const },
+          { href: "/financeiro", rotulo: "Financeiro", icone: "financeiro" as const },
+        ]
       : []),
   ];
 }
 
 /**
+ * No celular, quem sai das abas quando elas não cabem (vai para o menu de "Você"), e com quantas
+ * portas ainda fica. "Financeiro" é o rótulo mais largo: com ele, cinco portas e "Você" encostam
+ * os rótulos numa tela de 390px (medido no CI: 1,8px entre "Financeiro" e "Você").
+ */
+const SAEM_DAS_ABAS = [
+  { href: "/funis", cabeAte: 5 },
+  { href: "/financeiro", cabeAte: 4 },
+] as const;
+
+/**
  * As abas do celular: as mesmas portas, mas no máximo cinco ao lado de "Você", senão os rótulos se
- * encostam numa tela de 390px. Quando não cabem, "Leads" sai das abas e fica no menu de "Você".
+ * encostam numa tela de 390px. Quando não cabem, "Leads" sai das abas e, se ainda não couber,
+ * "Financeiro"; as duas ficam no menu de "Você" (`foraDasAbas`).
  */
 export function abasDoCelular(menu: readonly ItemDoMenu[]): ItemDoMenu[] {
-  return menu.length > 5 ? menu.filter((i) => i.href !== "/funis") : [...menu];
+  let abas = [...menu];
+  for (const { href, cabeAte } of SAEM_DAS_ABAS) {
+    if (abas.length > cabeAte) abas = abas.filter((i) => i.href !== href);
+  }
+  return abas;
+}
+
+/** As portas que não couberam nas abas do celular, na ordem do menu. */
+export function foraDasAbas(menu: readonly ItemDoMenu[]): ItemDoMenu[] {
+  const abas = new Set(abasDoCelular(menu).map((i) => i.href));
+  return menu.filter((i) => !abas.has(i.href));
 }

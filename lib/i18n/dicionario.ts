@@ -16057,7 +16057,7 @@ export const DICIONARIO: Traducoes = {
   "Chegada desfeita.": { es: "Llegada deshecha." },
   "Na clínica": { es: "En la clínica" },
   "Na recepção": { es: "En recepción" },
-  "Chegou": { es: "Llegó" },
+  Chegou: { es: "Llegó" },
   "Desfazer chegada": { es: "Deshacer llegada" },
   "Chegou às {chegada}. Em atendimento desde as {inicio}.": {
     es: "Llegó a las {chegada}. En atención desde las {inicio}.",
@@ -17113,23 +17113,35 @@ export const DICIONARIO: Traducoes = {
   "{n} faltas": { es: "{n} ausencias" },
   // clínica: a origem do paciente (cadastro, ficha e relatório)
   "Origem dos pacientes": { es: "Origen de los pacientes" },
-  "De onde vieram os pacientes novos do período e quantos deles compraram pacote.": { es: "De dónde vinieron los pacientes nuevos del período y cuántos compraron paquete." },
-  "De onde vieram os pacientes novos e quantos compraram pacote.": { es: "De dónde vinieron los pacientes nuevos y cuántos compraron paquete." },
+  "De onde vieram os pacientes novos do período e quantos deles compraram pacote.": {
+    es: "De dónde vinieron los pacientes nuevos del período y cuántos compraron paquete.",
+  },
+  "De onde vieram os pacientes novos e quantos compraram pacote.": {
+    es: "De dónde vinieron los pacientes nuevos y cuántos compraron paquete.",
+  },
   "Pacientes novos": { es: "Pacientes nuevos" },
   "Compraram pacote": { es: "Compraron paquete" },
   "Vendido em pacotes": { es: "Vendido en paquetes" },
-  "Vendido": { es: "Vendido" },
-  "Novos": { es: "Nuevos" },
+  Vendido: { es: "Vendido" },
+  Novos: { es: "Nuevos" },
   "Este mês": { es: "Este mes" },
   "Mês passado": { es: "Mes pasado" },
   "Nenhum paciente novo neste período.": { es: "Ningún paciente nuevo en este período." },
-  "Registre a origem na ficha de cada paciente para ele entrar na conta certa.": { es: "Registre el origen en la ficha de cada paciente para que entre en la cuenta correcta." },
-  "{n} chegou sozinho pelo WhatsApp, sem a recepção registrar.": { es: "{n} llegó solo por WhatsApp, sin registro de la recepción." },
-  "{n} chegaram sozinhos pelo WhatsApp, sem a recepção registrar.": { es: "{n} llegaron solos por WhatsApp, sin registro de la recepción." },
+  "Registre a origem na ficha de cada paciente para ele entrar na conta certa.": {
+    es: "Registre el origen en la ficha de cada paciente para que entre en la cuenta correcta.",
+  },
+  "{n} chegou sozinho pelo WhatsApp, sem a recepção registrar.": {
+    es: "{n} llegó solo por WhatsApp, sin registro de la recepción.",
+  },
+  "{n} chegaram sozinhos pelo WhatsApp, sem a recepção registrar.": {
+    es: "{n} llegaron solos por WhatsApp, sin registro de la recepción.",
+  },
   "Sem origem registrada": { es: "Sin origen registrado" },
   "Sem origem registrada.": { es: "Sin origen registrado." },
   "Quem indicou": { es: "Quién lo recomendó" },
-  "Busque pelo nome ou telefone do paciente": { es: "Busque por el nombre o teléfono del paciente" },
+  "Busque pelo nome ou telefone do paciente": {
+    es: "Busque por el nombre o teléfono del paciente",
+  },
   "Nenhum paciente encontrado.": { es: "Ningún paciente encontrado." },
   "Como chegou à clínica (opcional)": { es: "Cómo llegó a la clínica (opcional)" },
   "Como chegou à clínica": { es: "Cómo llegó a la clínica" },
@@ -17143,19 +17155,27 @@ export const DICIONARIO: Traducoes = {
   "Origem registrada.": { es: "Origen registrado." },
   "Não foi possível registrar a origem.": { es: "No fue posible registrar el origen." },
   "Origem do paciente": { es: "Origen del paciente" },
-  "Por onde o paciente chegou à clínica. Entra no relatório de origens.": { es: "Por dónde llegó el paciente a la clínica. Entra en el informe de orígenes." },
+  "Por onde o paciente chegou à clínica. Entra no relatório de origens.": {
+    es: "Por dónde llegó el paciente a la clínica. Entra en el informe de orígenes.",
+  },
   "Salvar origem": { es: "Guardar origen" },
   "Canal do cadastro": { es: "Canal del registro" },
-  "O contato foi criado, mas a origem não foi registrada: {motivo}": { es: "El contacto fue creado, pero el origen no fue registrado: {motivo}" },
+  "O contato foi criado, mas a origem não foi registrada: {motivo}": {
+    es: "El contacto fue creado, pero el origen no fue registrado: {motivo}",
+  },
   "tente de novo na ficha do paciente.": { es: "intente de nuevo en la ficha del paciente." },
   "Instagram: influenciador": { es: "Instagram: influencer" },
   "Instagram: anúncio pago": { es: "Instagram: anuncio pagado" },
   "Qual influenciador ou anúncio?": { es: "¿Qué influencer o anuncio?" },
   "Qual médico encaminhou?": { es: "¿Qué médico lo derivó?" },
   "Informe qual médico encaminhou o paciente.": { es: "Informe qué médico derivó al paciente." },
-  "Informe qual influenciador ou anúncio trouxe o paciente.": { es: "Informe qué influencer o anuncio trajo al paciente." },
+  "Informe qual influenciador ou anúncio trouxe o paciente.": {
+    es: "Informe qué influencer o anuncio trajo al paciente.",
+  },
   "Informe qual paciente fez a indicação.": { es: "Informe qué paciente hizo la recomendación." },
-  "O paciente não pode indicar a si mesmo.": { es: "El paciente no puede recomendarse a sí mismo." },
+  "O paciente não pode indicar a si mesmo.": {
+    es: "El paciente no puede recomendarse a sí mismo.",
+  },
   // clínica: a lista de renovação dos pacotes, para a recepção
   "Oferecer renovação": { es: "Ofrecer renovación" },
   "{n} paciente está perto do fim do pacote.": {
@@ -17628,12 +17648,15 @@ export const DICIONARIO: Traducoes = {
   "Sem preço": { es: "Sin precio" },
   "À venda": { es: "A la venta" },
   // ─── INTERFACE NOVA DA CLÍNICA (/novo) ───
-  "Aparência": { es: "Apariencia" },
+  Aparência: { es: "Apariencia" },
   Claro: { es: "Claro" },
   Escuro: { es: "Oscuro" },
   "Usar o tema claro": { es: "Usar el tema claro" },
   "Usar o tema escuro": { es: "Usar el tema oscuro" },
-  "A interface nova mostra a agenda, os pacientes e o prontuário da clínica. Peça ao administrador para instalar o módulo em Configurações da instalação › Módulos.": { es: "La interfaz nueva muestra la agenda, los pacientes y la historia clínica. Pide al administrador que instale el módulo en Configuración de la instalación › Módulos." },
+  "A interface nova mostra a agenda, os pacientes e o prontuário da clínica. Peça ao administrador para instalar o módulo em Configurações da instalação › Módulos.":
+    {
+      es: "La interfaz nueva muestra la agenda, los pacientes y la historia clínica. Pide al administrador que instale el módulo en Configuración de la instalación › Módulos.",
+    },
   "Abrir a ficha completa na versão atual": { es: "Abrir la ficha completa en la versión actual" },
   "Confirmar ou lembrar": { es: "Confirmar o recordar" },
   "Dentro do prazo: sem multa.": { es: "Dentro del plazo: sin multa." },
@@ -17779,7 +17802,9 @@ export const DICIONARIO: Traducoes = {
   isenta: { es: "exenta" },
   "comprou pacote": { es: "compró paquete" },
   "A data inicial vem antes da final.": { es: "La fecha inicial va antes de la final." },
-  "Avulsa a preço de tabela é estimativa: o recebido fica na comanda.": { es: "La sesión suelta a precio de lista es una estimación: lo cobrado queda en la comanda." },
+  "Avulsa a preço de tabela é estimativa: o recebido fica na comanda.": {
+    es: "La sesión suelta a precio de lista es una estimación: lo cobrado queda en la comanda.",
+  },
   "Como a clínica está andando no período.": { es: "Cómo va la clínica en el período." },
   "De onde vieram os pacientes novos": { es: "De dónde vinieron los pacientes nuevos" },
   "Dinheiro do período": { es: "Dinero del período" },
@@ -17797,8 +17822,13 @@ export const DICIONARIO: Traducoes = {
   "Pacientes atendidos": { es: "Pacientes atendidos" },
   "Pacotes cancelados": { es: "Paquetes cancelados" },
   "Pacotes vendidos": { es: "Paquetes vendidos" },
-  "Peça ao administrador o perfil de Gerente ou Financeiro.": { es: "Pide al administrador el perfil de Gerente o Finanzas." },
-  "Planilhas do período escolhido, no padrão brasileiro (ponto e vírgula, vírgula nos centavos). Abrem direto no Excel.": { es: "Planillas del período elegido, en el formato brasileño (punto y coma, coma en los centavos). Se abren directo en Excel." },
+  "Peça ao administrador o perfil de Gerente ou Financeiro.": {
+    es: "Pide al administrador el perfil de Gerente o Finanzas.",
+  },
+  "Planilhas do período escolhido, no padrão brasileiro (ponto e vírgula, vírgula nos centavos). Abrem direto no Excel.":
+    {
+      es: "Planillas del período elegido, en el formato brasileño (punto y coma, coma en los centavos). Se abren directo en Excel.",
+    },
   "Por modalidade": { es: "Por modalidad" },
   "Por profissional": { es: "Por profesional" },
   "Reembolso sugerido": { es: "Reembolso sugerido" },
@@ -17814,7 +17844,9 @@ export const DICIONARIO: Traducoes = {
   isentas: { es: "exentas" },
   marcadas: { es: "agendadas" },
   pacientes: { es: "pacientes" },
-  "pacote(s) vendido(s) sem preço cadastrado não entram na soma.": { es: "paquete(s) vendido(s) sin precio registrado no entran en la suma." },
+  "pacote(s) vendido(s) sem preço cadastrado não entram na soma.": {
+    es: "paquete(s) vendido(s) sin precio registrado no entran en la suma.",
+  },
   pacotes: { es: "paquetes" },
   // Tarefas na interface nova (/novo)
   "Apagar esta tarefa?": { es: "¿Borrar esta tarea?" },
@@ -17829,18 +17861,22 @@ export const DICIONARIO: Traducoes = {
   "Nenhuma tarefa em aberto.": { es: "Ninguna tarea abierta." },
   "Nome ou telefone do paciente": { es: "Nombre o teléfono del paciente" },
   "Nos próximos 7 dias": { es: "En los próximos 7 días" },
-  "O que ficou combinado, com prazo. Presa a um paciente, aparece na ficha dele.": { es: "Lo acordado, con plazo. Si está ligada a un paciente, aparece en su ficha." },
+  "O que ficou combinado, com prazo. Presa a um paciente, aparece na ficha dele.": {
+    es: "Lo acordado, con plazo. Si está ligada a un paciente, aparece en su ficha.",
+  },
   "Paciente (opcional)": { es: "Paciente (opcional)" },
   "Quais tarefas": { es: "Qué tareas" },
-  "Quando algo ficar combinado (ligar de volta, pedir um exame), anote aqui.": { es: "Cuando algo quede acordado (devolver una llamada, pedir un examen), anótalo aquí." },
+  "Quando algo ficar combinado (ligar de volta, pedir um exame), anote aqui.": {
+    es: "Cuando algo quede acordado (devolver una llamada, pedir un examen), anótalo aquí.",
+  },
   "Reabrir tarefa": { es: "Reabrir tarea" },
-  "Tarefa": { es: "Tarea" },
+  Tarefa: { es: "Tarea" },
   "Tarefa apagada.": { es: "Tarea borrada." },
   "Tarefa atualizada.": { es: "Tarea actualizada." },
   "Tarefa concluída.": { es: "Tarea completada." },
   "Tarefa criada.": { es: "Tarea creada." },
   "Tarefas de hoje": { es: "Tareas de hoy" },
-  "Tirar": { es: "Quitar" },
+  Tirar: { es: "Quitar" },
   "Ver todas as tarefas": { es: "Ver todas las tareas" },
   // Minha conta na interface nova (/conta)
   Avisos: { es: "Avisos" },
@@ -17889,6 +17925,85 @@ export const DICIONARIO: Traducoes = {
   "Como ver as tarefas": { es: "Cómo ver las tareas" },
   "tarefa sem prazo fica só na lista.": { es: "tarea sin plazo queda solo en la lista." },
   "tarefas sem prazo ficam só na lista.": { es: "tareas sin plazo quedan solo en la lista." },
+  // Painel financeiro da interface nova (/financeiro, migration 9012)
+  "A lista mostra os primeiros 500. A planilha traz todos.": {
+    es: "La lista muestra los primeros 500. La planilla trae todos.",
+  },
+  "A receber": { es: "Por cobrar" },
+  Aluguel: { es: "Alquiler" },
+  "Apagar esta saída?": { es: "¿Eliminar este egreso?" },
+  Boleto: { es: "Boleto" },
+  "Como foi pago?": { es: "¿Cómo se pagó?" },
+  Entradas: { es: "Ingresos" },
+  "Entrou menos saiu": { es: "Lo que entró menos lo que salió" },
+  "Ex.: aluguel de outubro": { es: "Ej.: alquiler de octubre" },
+  "Impostos e taxas": { es: "Impuestos y tasas" },
+  "Lance aqui o aluguel, os salários, os materiais e as outras contas pagas.": {
+    es: "Registra aquí el alquiler, los sueldos, los materiales y las otras cuentas pagadas.",
+  },
+  Manutenção: { es: "Mantenimiento" },
+  Marketing: { es: "Marketing" },
+  "Materiais e equipamentos": { es: "Materiales y equipos" },
+  "Multa de cancelamento": { es: "Multa por cancelación" },
+  "Multa por falta": { es: "Multa por ausencia" },
+  "Nada a cobrar no período.": { es: "Nada por cobrar en el período." },
+  "Nenhum pagamento no período.": { es: "Ningún pago en el período." },
+  "Nenhuma saída no período.": { es: "Ningún egreso en el período." },
+  "Não foi possível carregar o financeiro.": { es: "No fue posible cargar las finanzas." },
+  "O financeiro é da gestão": { es: "Las finanzas son de la gestión" },
+  "O que foi pago": { es: "Qué se pagó" },
+  "O que ver": { es: "Qué ver" },
+  "Os pagamentos registrados na ficha e na sessão aparecem aqui.": {
+    es: "Los pagos registrados en la ficha y en la sesión aparecen aquí.",
+  },
+  "Pacotes, sessões avulsas e multas do período já estão pagos.": {
+    es: "Paquetes, sesiones sueltas y multas del período ya están pagados.",
+  },
+  "Pago em": { es: "Pagado el" },
+  "Planilhas do financeiro": { es: "Planillas de finanzas" },
+  "Registrar saída": { es: "Registrar egreso" },
+  "Saldo do período": { es: "Saldo del período" },
+  "Salários e pessoal": { es: "Sueldos y personal" },
+  "Saída apagada.": { es: "Egreso eliminado." },
+  "Saída registrada.": { es: "Egreso registrado." },
+  Saídas: { es: "Egresos" },
+  "Serviços contratados": { es: "Servicios contratados" },
+  "Sessão avulsa": { es: "Sesión suelta" },
+  "Sessões avulsas": { es: "Sesiones sueltas" },
+  Transferência: { es: "Transferencia" },
+  "Uma conta que a clínica já pagou.": { es: "Una cuenta que la clínica ya pagó." },
+  desde: { es: "desde" },
+  despesa: { es: "gasto" },
+  despesas: { es: "gastos" },
+  "item em aberto": { es: "ítem pendiente" },
+  "item(ns) sem preço cadastrado não entram na soma.": {
+    es: "ítem(s) sin precio registrado no entran en la suma.",
+  },
+  "itens em aberto": { es: "ítems pendientes" },
+  pagamento: { es: "pago" },
+  pagamentos: { es: "pagos" },
+  "Água, luz e internet": { es: "Agua, luz e internet" },
+  "sessão coberta por pacote fica fora da soma.": {
+    es: "sesión cubierta por paquete queda fuera de la suma.",
+  },
+  "sessões cobertas por pacote ficam fora da soma.": {
+    es: "sesiones cubiertas por paquete quedan fuera de la suma.",
+  },
+  "O que entrou, o que saiu, o que falta cobrar e o que a agenda diz que vai entrar.": {
+    es: "Lo que entró, lo que salió, lo que falta cobrar y lo que la agenda dice que va a entrar.",
+  },
+  "Vai entrar": { es: "Va a entrar" },
+  "sessão marcada": { es: "sesión agendada" },
+  "sessões marcadas": { es: "sesiones agendadas" },
+  "Nenhuma sessão marcada daqui até o fim do período.": {
+    es: "Ninguna sesión agendada de aquí al final del período.",
+  },
+  "A previsão soma as sessões da agenda que ainda vão acontecer.": {
+    es: "La previsión suma las sesiones de la agenda que aún van a ocurrir.",
+  },
+  "Sessões marcadas de hoje até o fim do período, pelo preço de tabela.": {
+    es: "Sesiones agendadas de hoy al final del período, al precio de lista.",
+  },
 };
 
 /**

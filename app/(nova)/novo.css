@@ -152,6 +152,22 @@
   height: 68px;
 }
 
+/* Na tela baixa de notebook, a Gestão (com Leads, Relatórios e Financeiro, mais Equipe, Ajustes e
+   o avatar embaixo) passa da altura da janela e o avatar some. O trilho aperta os itens em vez de
+   rolar: rolar cortaria o menu da pessoa, que abre para fora dele. */
+@media (min-width: 900px) and (max-height: 900px) {
+  .novo .n-trilho {
+    gap: 2px;
+    padding: 12px 0;
+  }
+  .novo .n-trilho .n-porta {
+    padding: 6px 4px;
+  }
+  .novo .n-trilho > .n-porta {
+    height: 52px;
+  }
+}
+
 .novo .n-trilho .n-porta:hover {
   color: var(--n-trilho-tinta);
   background: color-mix(in oklab, var(--n-trilho-tinta) 9%, transparent);
