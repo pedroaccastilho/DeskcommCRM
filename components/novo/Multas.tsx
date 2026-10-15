@@ -54,6 +54,146 @@ export function valorDaMulta(m: MultaDaClinica, t: (s: string) => string): strin
         .replace("{pct}", String(m.percentual));
 }
 
+/** As multas do paciente. A mesma chave serve o cartão e o histórico da ficha. */
+export function useMultasDoPaciente(contactId: string, habilitado: boolean) {
+  return useQuery({
+    queryKey: ["clinica", "multas", "paciente", contactId],
+    enabled: habilitado,
+    retry: false,
+    queryFn: async () =>
+      (
+        await apiClient.get<{ data: MultaDaClinica[] }>(
+          `/api/v1/clinica/multas?contact_id=${encodeURIComponent(contactId)}`,
+        )
+      ).data,
+  });
+}
+
+/**
+ * A MULTA NA LINHA DO HISTÓRICO da ficha (pedido do Pedro, 2026-10-15: "só aparece se ele faltou,
+ * mas não tem opção [...] pra marcar se vai cobrar ou não"). Em cada falta e cancelamento com multa:
+ * a situação, isentar ou voltar a cobrar, e o pagamento. Na falta sem multa: lançar a multa da falta
+ * (a mesma rota da folha da sessão). Cancelamento sem multa (no prazo, ou desmarcado pela clínica)
+ * não tem o que cobrar. Decide quem decide a multa (`decideMulta`); o pagamento segue
+ * `registraPagamento`, dentro de `SituacaoDoPagamento`.
+ */
+export function MultaDaSessao({
+  sessaoId,
+  situacao,
+  multa,
+  descricao,
+}: {
+  sessaoId: string;
+  situacao: string;
+  multa: MultaDaClinica | null;
+  descricao: string;
+}) {
+  const t = useT();
+  const qc = useQueryClient();
+  const recarregar = useRecarregar();
+  const { role, eu, soOlhar } = useNovo();
+  const decide = !soOlhar && decideMulta(role, eu?.cargos ?? []);
+  const [isentar, setIsentar] = React.useState(false);
+  const pagamentos = usePagamentosDoPaciente(multa?.contact_id ?? "", multa !== null);
+  const invalidar = () => {
+    void qc.invalidateQueries({ queryKey: ["clinica", "multas"] });
+    void qc.invalidateQueries({ queryKey: ["agenda", "clinica-multas"] });
+    recarregar();
+  };
+  const cobrar = useMutation({
+    mutationFn: async (id: string) =>
+      apiClient.post(`/api/v1/clinica/multas/${encodeURIComponent(id)}/cobrar`, {}),
+    onSuccess: () => {
+      toast.success(t("A multa voltou a ser cobrada."));
+      invalidar();
+    },
+    onError: (e) => showApiError(e),
+  });
+  const lancar = useMutation({
+    mutationFn: async () =>
+      apiClient.post(`/api/v1/clinica/agenda/${encodeURIComponent(sessaoId)}/multa-da-falta`, {}),
+    onSuccess: () => {
+      toast.success(t("Multa da falta lançada, a cobrar."));
+      invalidar();
+    },
+    onError: (e) => showApiError(e),
+  });
+
+  if (role === "viewer") return null;
+  if (!multa) {
+    if (situacao !== "no_show") return null;
+    return (
+      <span
+        className="flex flex-wrap items-center justify-end gap-2"
+        data-testid="novo-historico-multa"
+      >
+        <span className="n-fraco text-xs">{t("Sem multa")}</span>
+        {decide && (
+          <button
+            type="button"
+            className="n-botao n-botao-suave n-botao-pequeno"
+            disabled={lancar.isPending}
+            onClick={() => lancar.mutate()}
+            data-testid="novo-historico-cobrar-falta"
+          >
+            {t("Cobrar multa pela falta")}
+          </button>
+        )}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="flex flex-wrap items-center justify-end gap-2"
+      data-testid="novo-historico-multa"
+    >
+      {multa.status === "pendente" && (
+        <span className="n-selo n-selo-aviso">
+          {t("Multa a cobrar")}
+          {multa.valor_cents !== null ? ` · ${formatCents(multa.valor_cents, multa.currency)}` : ""}
+        </span>
+      )}
+      {multa.status === "isenta" && (
+        <span className="n-selo n-selo-neutro">{t("Multa isenta")}</span>
+      )}
+      {decide && multa.status === "pendente" && (
+        <button
+          type="button"
+          className="n-botao n-botao-suave n-botao-pequeno"
+          onClick={() => setIsentar(true)}
+          data-testid="novo-historico-isentar"
+        >
+          {t("Não cobrar (isentar)")}
+        </button>
+      )}
+      {decide && multa.status === "isenta" && (
+        <button
+          type="button"
+          className="n-botao n-botao-suave n-botao-pequeno"
+          disabled={cobrar.isPending}
+          onClick={() => cobrar.mutate(multa.id)}
+          data-testid="novo-historico-voltar-a-cobrar"
+        >
+          {t("Voltar a cobrar")}
+        </button>
+      )}
+      {pagamentos.data && multa.status !== "isenta" && (
+        <SituacaoDoPagamento
+          alvo={{ multa_id: multa.id }}
+          pagamento={pagamentoDe(pagamentos.data, { multa_id: multa.id })}
+          valorCents={multa.valor_cents}
+          moeda={multa.currency}
+          descricao={`${t("Multa")} · ${descricao}`}
+          compacta
+          seloAPagar={false}
+        />
+      )}
+      {isentar && <FolhaIsentarMulta multa={multa} aoFechar={() => setIsentar(false)} />}
+    </span>
+  );
+}
+
 export function CartaoDeMultas({ contactId, fuso }: { contactId: string; fuso: string }) {
   const t = useT();
   const tag = useTagDeIdioma();
@@ -74,17 +214,7 @@ export function CartaoDeMultas({ contactId, fuso }: { contactId: string; fuso: s
     },
     onError: (e) => showApiError(e),
   });
-  const multas = useQuery({
-    queryKey: ["clinica", "multas", "paciente", contactId],
-    enabled: role !== "viewer",
-    retry: false,
-    queryFn: async () =>
-      (
-        await apiClient.get<{ data: MultaDaClinica[] }>(
-          `/api/v1/clinica/multas?contact_id=${encodeURIComponent(contactId)}`,
-        )
-      ).data,
-  });
+  const multas = useMultasDoPaciente(contactId, role !== "viewer");
   // Pendentes primeiro; dentro de cada grupo, a sessão mais recente no topo.
   const lista = [...(multas.data ?? [])].sort(
     (a, b) =>

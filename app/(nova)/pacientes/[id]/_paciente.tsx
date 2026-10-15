@@ -41,7 +41,7 @@ import {
 import { FolhaAgendar } from "@/components/novo/FolhaAgendar";
 import { FolhaDeEvolucao } from "@/components/novo/FolhaDeEvolucao";
 import { FolhaDoPaciente } from "@/components/novo/FolhaDoPaciente";
-import { CartaoDeMultas } from "@/components/novo/Multas";
+import { CartaoDeMultas, MultaDaSessao, useMultasDoPaciente } from "@/components/novo/Multas";
 import { CartaoDePacotes } from "@/components/novo/PacotesNaFicha";
 import { SituacaoDoPagamento } from "@/components/novo/Pagamentos";
 import { useActiveOrg } from "@/hooks/auth/AuthProvider";
@@ -74,6 +74,7 @@ export function Paciente({ contactId }: { contactId: string }) {
     (donoId && nomesDosProfissionais.data?.get(donoId)) || null;
   const pacotes = usePacotesDoPaciente(contactId);
   const pagamentos = usePagamentosDoPaciente(contactId, role !== "viewer");
+  const multas = useMultasDoPaciente(contactId, role !== "viewer");
   const moeda = moedaServidaOu(useActiveOrg()?.currency);
   const ehProfissional = veProntuario;
   const prontuario = useProntuario(contactId, ehProfissional);
@@ -324,6 +325,16 @@ export function Paciente({ contactId }: { contactId: string }) {
                             moeda={moeda}
                             descricao={`${s.tipo?.nome ?? s.titulo} · ${dataCurta(s.iniciaEm, fuso, tag)}`}
                             compacta
+                          />
+                        )}
+                      {/* Falta e cancelamento: cobrar ou isentar a multa, e o pagamento dela. */}
+                      {(s.situacao === "cancelled" || (s.situacao === "no_show" && s.tipo)) &&
+                        multas.data && (
+                          <MultaDaSessao
+                            sessaoId={s.id}
+                            situacao={s.situacao}
+                            multa={multas.data.find((m) => m.appointment_id === s.id) ?? null}
+                            descricao={`${s.tipo?.nome ?? s.titulo} · ${dataCurta(s.iniciaEm, fuso, tag)}`}
                           />
                         )}
                     </span>

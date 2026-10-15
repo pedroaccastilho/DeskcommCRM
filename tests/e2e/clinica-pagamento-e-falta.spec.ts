@@ -7,7 +7,9 @@
  *     lança a multa da falta (30% do preço do tipo), a cobrar;
  *   - na ficha, a multa da falta tem "Registrar pagamento": Pix, e ela passa a paga;
  *   - na venda do pacote, "O paciente já pagou?" registra o pagamento junto;
- *   - no histórico, a sessão avulsa realizada tem "Registrar pagamento", com o preço do tipo.
+ *   - no histórico, a sessão avulsa realizada tem "Registrar pagamento", com o preço do tipo;
+ *   - no histórico, a falta sem multa deixa cobrar, a multa se isenta e volta a cobrar, e a do
+ *     cancelamento em cima da hora se paga ali mesmo.
  * Confere no banco a falta, a multa, cada pagamento e a forma.
  *
  * ⚠️ Instalar é da INSTALAÇÃO e não se desfaz, como em `clinica-prontuario`.
@@ -227,11 +229,12 @@ test.describe("Pagamento e multa por falta na interface nova", () => {
       const historico = page
         .locator("section")
         .filter({ has: page.getByRole("heading", { name: /^Histórico recente/ }) });
-      await historico.getByTestId("novo-registrar-pagamento").first().click();
+      const realizada = historico.locator("li").filter({ hasText: "Realizado" });
+      await realizada.getByTestId("novo-registrar-pagamento").click();
       await expect(folhaPagamento).toBeVisible({ timeout: ESPERA });
       await folhaPagamento.getByTestId("novo-forma-cartao_debito").click();
       await folhaPagamento.getByTestId("novo-confirmar-pagamento").click();
-      await expect(historico.getByTestId("novo-pago").first()).toContainText("Cartão de débito", {
+      await expect(realizada.getByTestId("novo-pago")).toContainText("Cartão de débito", {
         timeout: ESPERA,
       });
 
@@ -288,6 +291,100 @@ test.describe("Pagamento e multa por falta na interface nova", () => {
         timeout: ESPERA,
       });
       await expect(page.getByTestId("novo-multas")).toContainText("A cobrar", { timeout: ESPERA });
+
+      // ── 5. Falta e cancelamento no histórico da ficha ─────────────────────────
+      // Pedido do Pedro (2026-10-15): no histórico, cada falta e cancelamento diz a multa e deixa
+      // cobrar, isentar e registrar o pagamento. Uma falta de ontem registrada SEM multa, e um
+      // cancelamento em cima da hora, de três dias atrás, com a multa a cobrar.
+      const ontem = new Date(Date.now() - 86_400_000);
+      const tresDias = new Date(Date.now() - 3 * 86_400_000);
+      const { data: maisSessoes, error: erroMais } = await admin
+        .from("calendar_appointments")
+        .insert([
+          {
+            ...sessaoBase,
+            starts_at: ontem.toISOString(),
+            ends_at: new Date(ontem.getTime() + 50 * 60_000).toISOString(),
+            status: "no_show",
+          },
+          {
+            ...sessaoBase,
+            starts_at: tresDias.toISOString(),
+            ends_at: new Date(tresDias.getTime() + 50 * 60_000).toISOString(),
+            status: "cancelled",
+          },
+        ] as never)
+        .select("id, status");
+      if (erroMais || !maisSessoes) throw new Error(`appointments insert: ${erroMais?.message}`);
+      const outras = maisSessoes as Array<{ id: string; status: string }>;
+      const faltaSemMultaId = outras.find((x) => x.status === "no_show")!.id;
+      const canceladaId = outras.find((x) => x.status === "cancelled")!.id;
+      await admin.from("clinica_multas").insert({
+        organization_id: orgId,
+        appointment_id: canceladaId,
+        contact_id: contactId,
+        percentual: 30,
+        antecedencia_horas: 2,
+        valor_cents: 4500,
+        origem: "cancelamento",
+      } as never);
+
+      await page.reload();
+      // O histórico vem do mais novo: a falta de hoje, a de ontem, a avulsa e o cancelamento.
+      const linhasDoHistorico = historico.locator("li");
+      await expect(linhasDoHistorico).toHaveCount(4, { timeout: ESPERA });
+      const linhaDaFaltaDeOntem = linhasDoHistorico.nth(1);
+      await expect(linhaDaFaltaDeOntem).toContainText("Faltou");
+      await expect(linhaDaFaltaDeOntem.getByText("Sem multa")).toBeVisible({ timeout: ESPERA });
+      await linhaDaFaltaDeOntem.getByTestId("novo-historico-cobrar-falta").click();
+      await expect(page.getByText("Multa da falta lançada, a cobrar.")).toBeVisible({
+        timeout: ESPERA,
+      });
+      await expect(linhaDaFaltaDeOntem).toContainText("Multa a cobrar", { timeout: ESPERA });
+      await expect(linhaDaFaltaDeOntem).toContainText("45,00");
+
+      // Isentar pelo histórico, e voltar a cobrar.
+      await linhaDaFaltaDeOntem.getByTestId("novo-historico-isentar").click();
+      const folhaIsentar = page.getByTestId("novo-folha-isentar-multa");
+      await folhaIsentar.getByRole("button", { name: "Isentar multa" }).click();
+      await expect(linhaDaFaltaDeOntem).toContainText("Multa isenta", { timeout: ESPERA });
+      await page.screenshot({ path: path.join(EVIDENCIA, "6-historico-falta-isenta.png") });
+      await linhaDaFaltaDeOntem.getByTestId("novo-historico-voltar-a-cobrar").click();
+      await expect(linhaDaFaltaDeOntem).toContainText("Multa a cobrar", { timeout: ESPERA });
+
+      // O cancelamento em cima da hora: a multa a cobrar, paga no crédito pelo histórico.
+      const linhaCancelada = linhasDoHistorico.nth(3);
+      await expect(linhaCancelada).toContainText("Cancelado");
+      await expect(linhaCancelada).toContainText("Multa a cobrar", { timeout: ESPERA });
+      await linhaCancelada.getByTestId("novo-registrar-pagamento").click();
+      await folhaPagamento.getByTestId("novo-forma-cartao_credito").click();
+      await folhaPagamento.getByTestId("novo-confirmar-pagamento").click();
+      await expect(linhaCancelada.getByTestId("novo-pago")).toContainText("Cartão de crédito", {
+        timeout: ESPERA,
+      });
+      await page.screenshot({
+        path: path.join(EVIDENCIA, "7-historico-com-multas.png"),
+        fullPage: true,
+      });
+
+      const { data: multasDoHistorico } = await admin
+        .from("clinica_multas")
+        .select("appointment_id, origem, status, valor_cents")
+        .in("appointment_id", [faltaSemMultaId, canceladaId]);
+      const doHistorico = (multasDoHistorico ?? []) as Array<{
+        appointment_id: string;
+        origem: string;
+        status: string;
+        valor_cents: number;
+      }>;
+      expect(doHistorico.find((m) => m.appointment_id === faltaSemMultaId)).toMatchObject({
+        origem: "falta",
+        status: "pendente",
+        valor_cents: 4500,
+      });
+      expect(doHistorico.find((m) => m.appointment_id === canceladaId)).toMatchObject({
+        status: "paga",
+      });
 
       // Celular, sem rolagem lateral.
       await page.setViewportSize({ width: 390, height: 844 });
